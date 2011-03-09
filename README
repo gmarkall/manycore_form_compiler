@@ -1,0 +1,8 @@
+Manycore Form Compiler
+======================
+
+This is a rewrite of the MCFC that I was previously working on, that makes more
+sensible use of the FEniCS UFL library.
+
+This is just for me to experiment with things at the moment. It is not to be
+taken seriously :-)
