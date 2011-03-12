@@ -92,10 +92,13 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
-        name = buildCoefficientName(tree)
-	baseExpr = Variable(name)
-	offsetExpr = NullExpression()
-	coeffExpr = Subscript(baseExpr, offsetExpr)
+        name = buildCoefficientQuadName(tree)
+	base = Variable(name)
+	
+	# Build the subscript.
+	indices = [GaussIndex()]
+	offset = buildOffset(indices)
+	coeffExpr = Subscript(base, offset)
 	self._exprStack.append(coeffExpr)
 
 def buildExpression(form, tree):
@@ -127,6 +130,11 @@ def buildCoefficientName(tree):
     name = 'c%d' % (count)
     return name
 
+def buildCoefficientQuadName(tree):
+    count = tree.count()
+    name = 'c_q%d' %(count)
+    return name
+
 class KernelParameterComputer(Transformer):
 
     def compute(self, tree):
@@ -134,21 +142,25 @@ class KernelParameterComputer(Transformer):
 	self.visit(tree)
 	return self._parameters
 
-    def component_tensor(self, tree, *ops):
+    # The expression structure does not affect the parameters.
+    def expr(self, tree, *ops):
         pass
 
-    def indexed(self, three, *ops):
-        pass
-
-    def index_sum(self, tree, *ops):
-        pass
-
-    def sum(self, tree, *ops):
-        pass
-
-    def product(self, tree, *ops):
-        pass
-
+#    def component_tensor(self, tree, *ops):
+#        pass
+#
+#    def indexed(self, three, *ops):
+#        pass
+#
+#    def index_sum(self, tree, *ops):
+#        pass
+#
+#    def sum(self, tree, *ops):
+#        pass
+#
+#    def product(self, tree, *ops):
+#        pass
+#
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
 	parameter = Variable(name, Pointer(Real()))
@@ -156,6 +168,11 @@ class KernelParameterComputer(Transformer):
 
     def argument(self, tree):
         name = buildArgumentName(tree)
+	parameter = Variable(name, Pointer(Real()))
+	self._parameters.append(parameter)
+
+    def coefficient(self, tree):
+        name = buildCoefficientName(tree)
 	parameter = Variable(name, Pointer(Real()))
 	self._parameters.append(parameter)
 
@@ -330,6 +347,9 @@ def buildKernel(form):
     statements = [loopNest]
     body = Scope(statements)
     kernel = FunctionDefinition(t, name, params, body)
+    
+    # Make this a Cuda kernel.
+    kernel.setCudaKernel(True)
     return kernel
 
 def getScopeFromNest(nest, depth):

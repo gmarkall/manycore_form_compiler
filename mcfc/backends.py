@@ -99,11 +99,18 @@ class FunctionDefinition(BackendASTNode):
 	self._params = params
 	self._body = body
 
+    def setCudaKernel(self, isCudaKernel):
+        if isCudaKernel:
+	    self._modifier = "__global__ "
+	else:
+	    self._modifier = ""
+
     def unparse(self):
+        mod = self._modifier
         t = self._t.unparse()
         params = self._params.unparse()
 	body = self._body.unparse()
-        code = '%s %s%s\n%s' % (t, self._name, params, body)
+        code = '%s%s %s%s\n%s' % (mod, t, self._name, params, body)
 	return code
 
 class Scope(BackendASTNode):
