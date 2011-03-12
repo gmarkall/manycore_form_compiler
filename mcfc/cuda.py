@@ -278,7 +278,7 @@ def findPartitions(tree):
 def buildElementLoop():
     indVarName = eleInductionVariable()
     var = Variable(indVarName, Integer())
-    init = AssignmentOp(var, threadId)
+    init = InitialisationOp(var, threadId)
     test = LessThanOp(var, numElements)
     inc = PlusAssignmentOp(var, threadCount)
     ast = ForLoop(init, test, inc)

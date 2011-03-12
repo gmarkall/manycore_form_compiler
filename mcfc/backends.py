@@ -76,7 +76,7 @@ class ForLoop(BackendASTNode):
         return self._body
 
     def unparse(self):
-        init = self._init.unparse(False)
+        init = self._init.unparse()
 	test = self._test.unparse(False)
 	inc = self._inc.unparse()
 	body = self._body.unparse()
@@ -183,6 +183,17 @@ class PlusAssignmentOp(BinaryOp):
     def __init__(self, lhs, rhs):
         BinaryOp.__init__(self, lhs, rhs, '+=')
 
+class InitialisationOp(AssignmentOp):
+
+    def __init__(self, lhs, rhs):
+        AssignmentOp.__init__(self, lhs, rhs)
+
+    def unparse(self):
+        t = self._lhs._t.unparse()
+        assignment = AssignmentOp.unparse(self, False)
+	code = '%s %s' % (t, assignment)
+	return code
+
 class LessThanOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
@@ -234,7 +245,7 @@ class Pointer(Type):
 
 def buildSimpleForLoop(indVarName, upperBound):
     var = Variable(indVarName, Integer())
-    init = AssignmentOp(var, Literal(0))
+    init = InitialisationOp(var, Literal(0))
     test = LessThanOp(var, Literal(upperBound))
     inc = PlusPlusOp(var)
     ast = ForLoop(init, test, inc)
