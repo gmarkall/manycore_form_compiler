@@ -115,8 +115,7 @@ def buildExpression(form, tree):
 
 def buildArgumentName(tree):
     element = tree.element()
-    count = tree.count()
-    name = '%s_%d' % (element.shortstr(), count)
+    name = element.shortstr()
     return name
 
 def buildSpatialDerivativeName(tree):
@@ -140,27 +139,13 @@ class KernelParameterComputer(Transformer):
     def compute(self, tree):
         self._parameters = list(statutoryParameters)
 	self.visit(tree)
+	self._parameters = uniqify(self._parameters)
 	return self._parameters
 
     # The expression structure does not affect the parameters.
     def expr(self, tree, *ops):
         pass
 
-#    def component_tensor(self, tree, *ops):
-#        pass
-#
-#    def indexed(self, three, *ops):
-#        pass
-#
-#    def index_sum(self, tree, *ops):
-#        pass
-#
-#    def sum(self, tree, *ops):
-#        pass
-#
-#    def product(self, tree, *ops):
-#        pass
-#
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
 	parameter = Variable(name, Pointer(Real()))
@@ -438,6 +423,19 @@ class DimIndex(CodeIndex):
 
     def name(self):
         return dimInductionVariable(self._count)
+
+# From http://www.peterbe.com/plog/uniqifiers-benchmark. This is version f5.
+def uniqify(seq, idfun=None):
+    if idfun is None:
+        def idfun(x): return x
+    seen = {}
+    result = []
+    for item in seq:
+        marker = idfun(item)
+        if marker in seen: continue
+        seen[marker] = 1
+        result.append(item)
+    return result
 
 # Global variables for code generation.
 # Eventually these need to be set by the caller of the code generator

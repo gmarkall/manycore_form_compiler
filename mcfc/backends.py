@@ -30,6 +30,12 @@ class Variable(BackendASTNode):
 	else:
 	    self._t = t
 
+    def __hash__(self):
+        return self._name.__hash__()
+
+    def __eq__(self, other):
+        return self._name == other._name
+
     def unparse(self):
         code = self._name
 	return code
