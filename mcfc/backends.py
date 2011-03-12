@@ -310,7 +310,7 @@ localTensor = Variable("localTensor", Pointer(Real()) )
 # Utility functions
 
 def buildSimpleForLoop(indVarName, upperBound):
-    var = Variable(indVarName)
+    var = Variable(indVarName, Integer())
     init = AssignmentOp(var, Literal(0))
     test = LessThanOp(var, Literal(upperBound))
     inc = PlusPlusOp(var)

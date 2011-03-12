@@ -3,6 +3,8 @@ from ufl.algorithms.transformations import Transformer
 from ufl.algorithms.preprocess import preprocess
 
 statutoryParameters = [ localTensor, numElements, timestep, detwei ]
+threadCount = Variable("THREAD_COUNT")
+threadId = Variable("THREAD_ID")
 
 class KernelParameterComputer(Transformer):
 
@@ -49,18 +51,23 @@ class LoopNestBuilder(Transformer):
 	rank = form_data.rank
 	integrand = form.integrals()[0].integrand()
 
+        # The element loop is the outermost loop
+	loop = buildElementLoop()
+	outerLoop = loop
+
 	# Build the loop over the first rank, which always exists
 	indVarName = rankInductionVariable(0)
-	outerLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
-	loop = outerLoop
+	rankLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+        loop.append(rankLoop)
+	loop = rankLoop
 
 	# Add another loop for each rank of the form (probably no
 	# more than one more... )
 	for r in range(1,rank):
 	    indVarName = rankInductionVariable(r)
-	    newLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
-	    loop.append(newLoop)
-	    loop = newLoop
+	    rankLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+	    loop.append(rankLoop)
+	    loop = rankLoop
 	
         # Add a loop for the quadrature
 	indVarName = gaussInductionVariable()
@@ -76,9 +83,9 @@ class LoopNestBuilder(Transformer):
 	# Add loops for each dimension as necessary. 
         for d in range(self._maxIndexSumDepth):
 	    indVarName = dimInductionVariable(d)
-	    newLoop = buildSimpleForLoop(indVarName, numDimensions)
-	    loop.append(newLoop)
-	    loop = newLoop
+	    dimLoop = buildSimpleForLoop(indVarName, numDimensions)
+	    loop.append(dimLoop)
+	    loop = dimLoop
 
 	# Hand back the outer loop, so it can be inserted into some
 	# scope.
@@ -104,6 +111,18 @@ class LoopNestBuilder(Transformer):
 
     def terminal(self, tree):
         pass
+
+def buildElementLoop():
+    indVarName = eleInductionVariable()
+    var = Variable(indVarName, Integer())
+    init = AssignmentOp(var, threadId)
+    test = LessThanOp(var, numElements)
+    inc = PlusAssignmentOp(var, threadCount)
+    ast = ForLoop(init, test, inc)
+    return ast
+
+def eleInductionVariable():
+    return "i_ele"
 
 def gaussInductionVariable():
     return "i_g"
