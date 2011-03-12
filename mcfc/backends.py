@@ -1,70 +1,4 @@
-from ufl.algorithms.transformations import Transformer
-
-class ExpressionBuilder(Transformer):
-
-    def build(self, tree):
-        self._exprStack = []
-        self.visit(tree)
-
-	expr = self._exprStack.pop()
-
-	if len(self._exprStack) is not 0:
-	    raise RuntimeError("Expression stack not empty.")
-
-	return expr
-
-    def component_tensor(self, tree, *ops):
-        pass
-
-    def indexed(self, tree, *ops):
-        pass
-
-    def index_sum(self, tree, *ops):
-        pass
-
-    def constant_value(self, tree):
-        value = Literal(tree.value())
-	self._exprStack.append(value)
-
-    def sum(self, tree, *ops):
-	rhs = self._exprStack.pop()
-        lhs = self._exprStack.pop()
-	add = AddOp(lhs, rhs)
-	self._exprStack.append(add)
-
-    def product(self, tree, *ops):
-	rhs = self._exprStack.pop()
-        lhs = self._exprStack.pop()
-	multiply = MultiplyOp(lhs, rhs)
-	self._exprStack.append(multiply)
-
-    def spatial_derivative(self, tree):
-        name = buildSpatialDerivativeName(tree)
-	baseExpr = Variable(name)
-	offsetExpr = NullExpression()
-	spatialDerivExpr = Subscript(baseExpr, offsetExpr)
-	self._exprStack.append(spatialDerivExpr)
- 
-    def argument(self, tree):
-        name = buildArgumentName(tree)
-        baseExpr = Variable(name)
-	offsetExpr = NullExpression()
-	argExpr = Subscript(baseExpr, offsetExpr)
-        self._exprStack.append(argExpr)
-
-    def coefficient(self, tree):
-        name = buildCoefficientName(tree)
-	baseExpr = Variable(name)
-	offsetExpr = NullExpression()
-	coeffExpr = Subscript(baseExpr, offsetExpr)
-	self._exprStack.append(coeffExpr)
-
-def buildExpression(tree):
-    EB = ExpressionBuilder()
-    lhs = Subscript(localTensor, NullExpression())
-    rhs = EB.build(tree)
-    expr = PlusAssignmentOp(lhs, rhs)
-    return expr
+"""Backends.py - provides the C++/CUDA/OpenCL ASTs and unparsing"""
 
 class BackendASTNode:
     pass
@@ -251,23 +185,6 @@ class PlusPlusOp(BackendASTNode):
         code = '%s++' % (expr)
 	return code
 
-def buildArgumentName(tree):
-    element = tree.element()
-    count = tree.count()
-    name = '%s_%d' % (element.shortstr(), count)
-    return name
-
-def buildSpatialDerivativeName(tree):
-    argument = tree.operands()[0]
-    argName = buildArgumentName(argument)
-    spatialDerivName = 'd_%s' % (argName)
-    return spatialDerivName
-
-def buildCoefficientName(tree):
-    count = tree.count()
-    name = 'c%d' % (count)
-    return name
-
 # Types
 
 class Type:
@@ -299,13 +216,6 @@ class Pointer(Type):
         base = self._base.unparse()
 	code = '%s*' % (base)
 	return code
-
-# Variables
-
-numElements = Variable("n_ele", Integer() )
-detwei = Variable("detwei", Pointer(Real()) )
-timestep = Variable("dt", Real() )
-localTensor = Variable("localTensor", Pointer(Real()) )
 
 # Utility functions
 
