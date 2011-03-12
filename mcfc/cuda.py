@@ -1,5 +1,6 @@
 from backends import *
 from ufl.algorithms.transformations import Transformer
+from ufl.algorithms.preprocess import preprocess
 
 statutoryParameters = [ localTensor, numElements, timestep, detwei ]
 
@@ -43,24 +44,87 @@ def buildParameterList(tree):
 
 class LoopNestBuilder(Transformer):
 
-    def build(self, tree):
-        form_data = tree.form_data()
+    def build(self, form):
+        form_data = form.form_data()
 	rank = form_data.rank
-	indVarName = 'i_r_0'
+	integrand = form.integrals()[0].integrand()
+
+	# Build the loop over the first rank, which always exists
+	indVarName = rankInductionVariable(0)
 	outerLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
 	loop = outerLoop
+
+	# Add another loop for each rank of the form (probably no
+	# more than one more... )
 	for r in range(1,rank):
-	    indVarName = 'i_r_%d' % (r)
+	    indVarName = rankInductionVariable(r)
 	    newLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
 	    loop.append(newLoop)
 	    loop = newLoop
+	
+        # Add a loop for the quadrature
+	indVarName = gaussInductionVariable()
+	gaussLoop = buildSimpleForLoop(indVarName, numGaussPoints)
+	loop.append(gaussLoop)
+	loop = gaussLoop
+
+	# Determine how many dimension loops we need by inspection
+	self._indexSumDepth = 0
+	self._maxIndexSumDepth = 0
+	self.visit(integrand)
+
+	# Add loops for each dimension as necessary. 
+        for d in range(self._maxIndexSumDepth):
+	    indVarName = dimInductionVariable(d)
+	    newLoop = buildSimpleForLoop(indVarName, numDimensions)
+	    loop.append(newLoop)
+	    loop = newLoop
+
+	# Hand back the outer loop, so it can be inserted into some
+	# scope.
 	return outerLoop
+
+    # We count the nesting depth of IndexSums to determine
+    # how many dimension loops we need.
+    def index_sum(self, tree):
+	
+	summand, indices = tree.operands()
+
+        self._indexSumDepth = self._indexSumDepth + 1
+	if self._indexSumDepth > self._maxIndexSumDepth:
+	    self._maxIndexSumDepth = self._indexSumDepth
+
+	self.visit(summand)
+
+	self._indexSumDepth = self._indexSumDepth - 1
+
+    # We don't care about any other node
+    def expr(self, tree, *ops):
+        pass
+
+    def terminal(self, tree):
+        pass
+
+def gaussInductionVariable():
+    return "i_g"
+
+def rankInductionVariable(count):
+    name = "i_r_%d" % (count)
+    return name
+
+def dimInductionVariable(count):
+    name = "i_d_%d" % (count)
+    return name
 
 def buildLoopNest(form):
     LNB = LoopNestBuilder()
     return LNB.build(form)
 
 def buildKernel(form):
+
+    if form.form_data() is None:
+        form = preprocess(form)
+
     integrand = form.integrals()[0].integrand()
     rank = form.form_data().rank
     t = Void()
@@ -84,5 +148,7 @@ def getScopeFromNest(nest, depth):
     return body
 
 # Global variables for code generation.
-# Eventually these need to be set by the callee of the code generator
+# Eventually these need to be set by the caller of the code generator
 numNodesPerEle = 3
+numDimensions = 2
+numGaussPoints = 6

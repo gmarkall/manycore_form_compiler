@@ -22,7 +22,7 @@ class ExpressionBuilder(Transformer):
     def index_sum(self, tree, *ops):
         pass
 
-    def int_value(self, tree):
+    def constant_value(self, tree):
         value = Literal(tree.value())
 	self._exprStack.append(value)
 
@@ -51,6 +51,13 @@ class ExpressionBuilder(Transformer):
 	offsetExpr = NullExpression()
 	argExpr = Subscript(baseExpr, offsetExpr)
         self._exprStack.append(argExpr)
+
+    def coefficient(self, tree):
+        name = buildCoefficientName(tree)
+	baseExpr = Variable(name)
+	offsetExpr = NullExpression()
+	coeffExpr = Subscript(baseExpr, offsetExpr)
+	self._exprStack.append(coeffExpr)
 
 def buildExpression(tree):
     EB = ExpressionBuilder()
@@ -255,6 +262,11 @@ def buildSpatialDerivativeName(tree):
     argName = buildArgumentName(argument)
     spatialDerivName = 'd_%s' % (argName)
     return spatialDerivName
+
+def buildCoefficientName(tree):
+    count = tree.count()
+    name = 'c%d' % (count)
+    return name
 
 # Types
 
