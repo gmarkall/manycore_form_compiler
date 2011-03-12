@@ -95,9 +95,13 @@ class ExpressionBuilder(Transformer):
         name = buildCoefficientQuadName(tree)
 	base = Variable(name)
 	
-	# Build the subscript.
+	# Build the subscript based on the nesting depth of IndexSums.
 	indices = [GaussIndex()]
+        depth = self._indexSumDepth
+        for r in range(depth+1): # Need to add one, since depth started at -1
+	    indices.append(DimIndex(r))
 	offset = buildOffset(indices)
+
 	coeffExpr = Subscript(base, offset)
 	self._exprStack.append(coeffExpr)
 
