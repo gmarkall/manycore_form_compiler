@@ -18,12 +18,21 @@ class ExpressionBuilder(Transformer):
 
     def build(self, tree):
         self._exprStack = []
+	# When we pass through the first IndexSum, this will get incremented
+	# to 0, which is the count of the first dim index
+	self._indexSumDepth = -1 
         self.visit(tree)
 
 	expr = self._exprStack.pop()
 
 	if len(self._exprStack) is not 0:
 	    raise RuntimeError("Expression stack not empty.")
+
+        # Everything needs to be multiplied by detwei
+	indices = [ElementIndex(), GaussIndex()]
+	offset = buildOffset(indices)
+	detweiExpr = Subscript(detwei, offset)
+	expr = MultiplyOp(expr, detweiExpr)
 
 	return expr
 
@@ -33,8 +42,13 @@ class ExpressionBuilder(Transformer):
     def indexed(self, tree, *ops):
         pass
 
-    def index_sum(self, tree, *ops):
-        pass
+    # We need to keep track of how many IndexSums we passed through
+    # so that we know which dim index we're dealing with.
+    def index_sum(self, tree):
+        summand, indices = tree.operands()
+	self._indexSumDepth = self._indexSumDepth + 1
+        self.visit(summand)
+	self._indexSumDepth = self._indexSumDepth - 1
 
     def constant_value(self, tree):
         value = Literal(tree.value())
@@ -54,16 +68,27 @@ class ExpressionBuilder(Transformer):
 
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
-	baseExpr = Variable(name)
-	offsetExpr = NullExpression()
-	spatialDerivExpr = Subscript(baseExpr, offsetExpr)
+	base = Variable(name)
+
+	# Build the subscript based on the argument count and the
+	# nesting depth of IndexSums of the expression.
+	argument = tree.operands()[0]
+	count = argument.count()
+	depth = self._indexSumDepth
+	indices = [ElementIndex(), RankIndex(count), GaussIndex(), DimIndex(depth)]
+	offset = buildOffset(indices)
+	spatialDerivExpr = Subscript(base, offset)
 	self._exprStack.append(spatialDerivExpr)
  
     def argument(self, tree):
         name = buildArgumentName(tree)
-        baseExpr = Variable(name)
-	offsetExpr = NullExpression()
-	argExpr = Subscript(baseExpr, offsetExpr)
+        base = Variable(name)
+
+	# Build the subscript based on the argument count
+	count = tree.count()
+	indices = [ElementIndex(), RankIndex(count), GaussIndex()]
+	offset = buildOffset(indices)
+	argExpr = Subscript(base, offset)
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
@@ -73,11 +98,16 @@ class ExpressionBuilder(Transformer):
 	coeffExpr = Subscript(baseExpr, offsetExpr)
 	self._exprStack.append(coeffExpr)
 
-def buildExpression(tree):
+def buildExpression(form, tree):
+    "Build the expression represented by the subtree tree of form."
+    # Build the rhs expression
     EB = ExpressionBuilder()
-    lhs = Subscript(localTensor, NullExpression())
     rhs = EB.build(tree)
+
+    # Assign expression to the local tensor value
+    lhs = buildLocalTensorAccessor(form)
     expr = PlusAssignmentOp(lhs, rhs)
+
     return expr
 
 def buildArgumentName(tree):
@@ -291,7 +321,7 @@ def buildKernel(form):
     # Insert the expressions into the loop nest
     partitions = findPartitions(integrand)
     for (tree, depth) in partitions:
-        expression = buildExpression(tree)
+        expression = buildExpression(form, tree)
 	exprDepth = depth + rank + 2 # 2 = Ele loop + gauss loop
 	loopBody = getScopeFromNest(loopNest, exprDepth)
 	loopBody.prepend(expression)
@@ -372,6 +402,22 @@ class ElementIndex(CodeIndex):
 
     def name(self):
         return eleInductionVariable()
+
+class GaussIndex(CodeIndex):
+
+    def extent(self):
+        return Literal(numGaussPoints)
+
+    def name(self):
+        return gaussInductionVariable()
+
+class DimIndex(CodeIndex):
+
+    def extent(self):
+        return Literal(numDimensions)
+
+    def name(self):
+        return dimInductionVariable(self._count)
 
 # Global variables for code generation.
 # Eventually these need to be set by the caller of the code generator
