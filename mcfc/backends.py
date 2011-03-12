@@ -108,6 +108,35 @@ class Literal(BackendASTNode):
         code = self._value
 	return code
 
+class ForLoop(BackendASTNode):
+    
+    def __init__(self, init, test, inc, body=None):
+        self._init = init
+	self._test = test
+	self._inc = inc
+	if body is None:
+	    self._body = Scope()
+	else:
+	    self._body = body
+
+    def append(self, statement):
+        self._body.append(statement)
+
+    def prepend(self, statement):
+        self._body.prepend(statement)
+
+    def body(self):
+        return self._body
+
+    def unparse(self):
+        init = self._init.unparse(False)
+	test = self._test.unparse(False)
+	inc = self._inc.unparse()
+	body = self._body.unparse()
+        code = 'for(%s; %s; %s)\n' % (init, test, inc)
+	code = code + body
+	return code
+
 class ParameterList(BackendASTNode):
 
     def __init__(self, params):
@@ -138,20 +167,31 @@ class FunctionDefinition(BackendASTNode):
 
 class Scope(BackendASTNode):
 
-    def __init__(self, statements=[]):
-        self._statements = statements
+    def __init__(self, statements=None):
+        if statements is None:
+	    self._statements = []
+	else:
+	    self._statements = statements
 
-    def appendStatement(self, statement):
+    def append(self, statement):
         self._statements.append(statement)
 
-    def prependStatement(self, statement):
+    def prepend(self, statement):
         self._statements.insert(0, statement)
 
+    def find(self, matches):
+        for s in self._statements:
+	    if matches(s):
+	        return s
+
     def unparse(self):
-        code = '{'
+        indent = getIndent()
+	code = '%s{' % (indent)
+	indent = incIndent()
 	for s in self._statements:
-	    code = code + '\n' + s.unparse() + ';'
-	code = code + '\n}'
+	    code = code + '\n' + indent + s.unparse() + ';'
+	indent = decIndent()
+	code = code + '\n' + indent + '}'
 	return code
 
 class BinaryOp(BackendASTNode):
@@ -161,10 +201,12 @@ class BinaryOp(BackendASTNode):
 	self._rhs = rhs
 	self._op = op
 
-    def unparse(self):
+    def unparse(self, bracketed=True):
         lhs = self._lhs.unparse()
 	rhs = self._rhs.unparse()
-        code = '(%s %s %s)' % (lhs, self._op, rhs)
+        code = '%s %s %s' % (lhs, self._op, rhs)
+	if bracketed:
+	    code = '(' + code + ')'
 	return code
 
 class MultiplyOp(BinaryOp):
@@ -186,6 +228,21 @@ class PlusAssignmentOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
         BinaryOp.__init__(self, lhs, rhs, '+=')
+
+class LessThanOp(BinaryOp):
+
+    def __init__(self, lhs, rhs):
+        BinaryOp.__init__(self, lhs, rhs, '<')
+
+class PlusPlusOp(BackendASTNode):
+
+    def __init__(self, expr):
+        self._expr = expr
+
+    def unparse(self):
+        expr = self._expr.unparse()
+        code = '%s++' % (expr)
+	return code
 
 def buildArgumentName(tree):
     element = tree.element()
@@ -238,3 +295,31 @@ detwei = Variable("detwei", Pointer(Real()) )
 timestep = Variable("dt", Real() )
 localTensor = Variable("localTensor", Pointer(Real()) )
 
+# Utility functions
+
+def buildSimpleForLoop(indVarName, upperBound):
+    var = Variable(indVarName)
+    init = AssignmentOp(var, Literal(0))
+    test = LessThanOp(var, Literal(upperBound))
+    inc = PlusPlusOp(var)
+    ast = ForLoop(init, test, inc)
+    return ast
+
+# Unparser-specific functions
+
+indentLevel = 0
+indentSize = 2
+
+def getIndent():
+    return ' ' * indentLevel
+
+def incIndent():
+    global indentLevel
+    indentLevel = indentLevel + indentSize
+    return getIndent()
+
+def decIndent():
+    global indentLevel
+    indentLevel = indentLevel - indentSize
+    return getIndent()
+    
