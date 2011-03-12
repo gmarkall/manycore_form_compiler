@@ -149,10 +149,16 @@ def buildKernel(form):
     t = Void()
     name = "kernel" # Fix later
     params = buildParameterList(integrand)
-    expression = buildExpression(integrand)
+    #expression = buildExpression(integrand)
     loop = buildLoopNest(form)
-    innerLoopBody = getScopeFromNest(loop, rank)
-    innerLoopBody.append(expression)
+
+    # Initialise the local tensor values to 0
+    initialiser = buildLocalTensorInitialiser(form)
+    depth = rank + 1 # Rank + element loop
+    innerLoopBody = getScopeFromNest(loop, depth)
+    innerLoopBody.prepend(initialiser)
+
+    # Build the function with the loop nest inside
     statements = [loop]
     body = Scope(statements)
     kernel = FunctionDefinition(t, name, params, body)
@@ -165,6 +171,63 @@ def getScopeFromNest(nest, depth):
         loop = body.find(lambda x: isinstance(x, ForLoop))
 	body = loop.body()
     return body
+
+def buildLocalTensorInitialiser(form):
+    form_data = form.form_data()
+    rank = form_data.rank
+    # First index is the element index
+    indices = [ElementIndex()]
+
+    # One rank index for each rank
+    for r in range(rank):
+        indices.append(RankIndex(r))
+    offset = buildOffset(indices)
+    
+    # Initialise this element to 0.0
+    lhs = Subscript(localTensor, offset)
+    rhs = Literal(0.0)
+    initialiser = AssignmentOp(lhs, rhs)
+    return initialiser
+
+def buildOffset(indices):
+    # Start our expression with the first index
+    name = indices[0].name()
+    offset = Variable(name)
+    
+    # Compute the expression for all indices
+    for v in range(1,len(indices)):
+        subindices = indices[:v]
+	name = indices[v].name()
+	expr = Variable(name)
+	
+	# Find the correct offset for this index
+	for u in range(len(subindices)):
+	    multiplier = subindices[u].extent()
+	    expr = MultiplyOp(multiplier, expr)
+	offset = AddOp(offset, expr)
+    
+    return offset
+
+class CodeIndex:
+
+    def __init__(self, count=None):
+        self._count = count
+
+class RankIndex(CodeIndex):
+    
+    def extent(self):
+        return Literal(numNodesPerEle)
+
+    def name(self):
+        return rankInductionVariable(self._count)
+
+class ElementIndex(CodeIndex):
+
+    def extent(self):
+        return numElements
+
+    def name(self):
+        return eleInductionVariable()
 
 # Global variables for code generation.
 # Eventually these need to be set by the caller of the code generator
