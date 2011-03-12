@@ -86,9 +86,6 @@ def main():
 
     return 0
 
-if __name__ == "__main__":
-    sys.exit(main())
-
 
 def Coefficient(arg):
     return ufl.coefficient.Coefficient(arg)
@@ -237,3 +234,8 @@ def unparse(st):
     value = StringIO.StringIO()
     Unparser(st,value)
     return value.getvalue().rstrip('\n')
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
