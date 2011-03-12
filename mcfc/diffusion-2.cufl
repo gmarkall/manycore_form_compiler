@@ -1,0 +1,33 @@
+# T=state.scalar_fields["Tracer",n]
+T = state.scalar_fields[('Tracer', n)]
+# mu=state.tensor_fields["TracerDiffusivity",c]
+mu = state.tensor_fields[('TracerDiffusivity', c)]
+# 
+# t=Coefficient(T)
+t = Coefficient(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 3) & source(T)
+# p=TrialFunction(T)
+p = Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), -1) & source(T)
+# q=TestFunction(T)
+q = Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), -2) & source(T)
+# z=Coefficient(mu)
+z = Coefficient(TensorElement('Lagrange', Cell('triangle', 1, Space(2)), 1, (2, 2), None), 4) & source(mu)
+# 
+# i,j=indices(2)
+#(i, j) = (Index(16), Index(17))
+# 
+# M=p*q*dx
+M = Form([Integral(Product(Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 0), Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 1)), Measure('cell', 0, None))])
+# #d=-grad(q)[i]*z[i,j]*grad(p)[j]*dx
+# d=-dot(dot(grad(q),z),grad(p))*dx
+d = Form([Integral(Product(IntValue(-1, (), (), {}), IndexSum(Product(Indexed(ComponentTensor(IndexSum(Product(Indexed(Coefficient(TensorElement('Lagrange', Cell('triangle', 1, Space(2)), 1, (2, 2), None), 0), MultiIndex((Index(0), Index(1)), {Index(0): 2, Index(1): 2})), Indexed(ComponentTensor(SpatialDerivative(Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 0), MultiIndex((Index(2),), {Index(2): 2})), MultiIndex((Index(2),), {Index(2): 2})), MultiIndex((Index(0),), {Index(0): 2}))), MultiIndex((Index(0),), {Index(0): 2})), MultiIndex((Index(1),), {Index(1): 2})), MultiIndex((Index(3),), {Index(3): 2})), Indexed(ComponentTensor(SpatialDerivative(Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 1), MultiIndex((Index(4),), {Index(4): 2})), MultiIndex((Index(4),), {Index(4): 2})), MultiIndex((Index(3),), {Index(3): 2}))), MultiIndex((Index(3),), {Index(3): 2}))), Measure('cell', 0, None))])
+# 
+# A=M-0.5*d
+A = Form([Integral(Sum(Product(Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 0), Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 1)), Product(IntValue(-1, (), (), {}), Product(FloatValue(0.5, (), (), {}), Product(IntValue(-1, (), (), {}), IndexSum(Product(Indexed(ComponentTensor(IndexSum(Product(Indexed(Coefficient(TensorElement('Lagrange', Cell('triangle', 1, Space(2)), 1, (2, 2), None), 0), MultiIndex((Index(0), Index(1)), {Index(0): 2, Index(1): 2})), Indexed(ComponentTensor(SpatialDerivative(Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 0), MultiIndex((Index(2),), {Index(2): 2})), MultiIndex((Index(2),), {Index(2): 2})), MultiIndex((Index(0),), {Index(0): 2}))), MultiIndex((Index(0),), {Index(0): 2})), MultiIndex((Index(1),), {Index(1): 2})), MultiIndex((Index(3),), {Index(3): 2})), Indexed(ComponentTensor(SpatialDerivative(Argument(FiniteElement('Lagrange', Cell('triangle', 1, Space(2)), 1), 1), MultiIndex((Index(4),), {Index(4): 2})), MultiIndex((Index(4),), {Index(4): 2})), MultiIndex((Index(3),), {Index(3): 2}))), MultiIndex((Index(3),), {Index(3): 2})))))), Measure('cell', 0, None))])
+# rhs=action(M+0.5*d,t)
+rhs = action((M + (0.5 * d)), t)
+# tnew=solve(A,rhs)
+tnew = solve(A, rhs)
+# 
+# state.scalar_fields["Tracer",n+1]=tnew
+state.scalar_fields[('Tracer', (n + 1))] = tnew
+
