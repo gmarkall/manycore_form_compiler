@@ -8,8 +8,6 @@ from uflParser import uflParser
 import visualiser
 # AST Utilities
 import asttools
-# Animal cruelty
-import duckpuncher
 
 def main():
 
