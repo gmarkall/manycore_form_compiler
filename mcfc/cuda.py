@@ -92,17 +92,6 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
-        #name = buildCoefficientQuadName(tree)
-	#base = Variable(name)
-	
-	# Build the subscript based on the nesting depth of IndexSums.
-	#indices = [GaussIndex()]
-        #depth = self._indexSumDepth
-        #for r in range(depth+1): # Need to add one, since depth started at -1
-	#    indices.append(DimIndex(r))
-	#offset = buildOffset(indices)
-
-	#coeffExpr = Subscript(base, offset)
 	coeffExpr = buildCoeffQuadratureAccessor(tree)
 	self._exprStack.append(coeffExpr)
 
@@ -226,38 +215,42 @@ def buildQuadratureLoopNest(form):
     # Outer loop over gauss points
     indVar = gaussInductionVariable()
     gaussLoop = buildSimpleForLoop(indVar, numGaussPoints)
-    loop = gaussLoop
+    #loop = gaussLoop
 
-    # How many loops over dimensions do we need?
-    maxRank = 0
+    # Build a loop nest for each coefficient containing expressions
+    # to compute its value
     for coeff in coefficients:
         rank = coeff.rank()
-	if rank > maxRank:
-	    maxRank = rank
+	loop = gaussLoop
 
-    # Build loops over the correct number of dimensions
-    for r in range(maxRank):
-        indVar = dimInductionVariable(r)
-	dimLoop = buildSimpleForLoop(indVar, numDimensions)
-	loop.append(dimLoop)
-	loop = dimLoop
+        # Build loop over the correct number of dimensions
+        for r in range(rank):
+            indVar = dimInductionVariable(r)
+	    dimLoop = buildSimpleForLoop(indVar, numDimensions)
+	    loop.append(dimLoop)
+	    loop = dimLoop
 
-    # One loop over the basis functions
-    indVar = rankInductionVariable(0)
-    basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
-    loop.append(basisLoop)
-    
-    # Build the expressions to compute the values of each coefficient
-    for coeff in coefficients:
-        # First build the initialiser
-	rank = coeff.rank()
-	depth = rank
-	scope = getScopeFromNest(gaussLoop, depth)
+        # Add initialiser here
         accessor = buildCoeffQuadratureAccessor(coeff)
 	initialiser = AssignmentOp(accessor, Literal(0.0))
-	scope.prepend(initialiser)
+	loop.append(initialiser)
 
-	# Then the bit the computes the value
+        # One loop over the basis functions
+        indVar = rankInductionVariable(0)
+        basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
+        loop.append(basisLoop)
+    
+        # Add the expression to compute the value inside the basis loop
+	indices = [RankIndex(0)]
+	for r in range(rank):
+	    index = DimIndex(r)
+	    indices.insert(0, index)
+        offset = buildOffset(indices)
+	coeffAtBasis = Variable(buildCoefficientName(coeff))
+	rhs = Subscript(coeffAtBasis, offset)
+	computation = PlusAssignmentOp(accessor, rhs)
+	basisLoop.append(computation)
+
         depth = rank + 1 # Plus the loop over basis functions
 
     return gaussLoop
@@ -269,7 +262,7 @@ def buildCoeffQuadratureAccessor(coeff):
     # Build the subscript based on the rank
     indices = [GaussIndex()]
     depth = coeff.rank()
-    for r in range(depth+1): # Need to add one, since depth started at -1
+    for r in range(depth): # Need to add one, since depth started at -1
 	indices.append(DimIndex(r))
     offset = buildOffset(indices)
 
