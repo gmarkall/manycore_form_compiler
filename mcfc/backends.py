@@ -237,33 +237,52 @@ class Type:
     def unparse_post(self):
         return ''
 
-######
-### need to sort out unparsing of modifiers
-######
-
 class Void(Type):
     
     def unparse(self):
         modifier = Type.unparse(self)
-        code = '%svoid' % (
-	return "void"
+	internal = self.unparse_internal()
+        code = '%s%s' % (modifier, internal)
+	return code
+
+    def unparse_internal(self):
+        return 'void'
 
 class Real(Type):
 
     def unparse(self):
-        return "double"
+        modifier = Type.unparse(self)
+	internal = self.unparse_internal()
+        code = '%s%s' % (modifier, internal)
+	return code
+
+    def unparse_internal(self):
+        return 'double'
 
 class Integer(Type):
 
     def unparse(self):
-        return "int"
+        modifier = Type.unparse(self)
+	internal = self.unparse_internal()
+        code = '%s%s' % (modifier, internal)
+	return code
+
+    def unparse_internal(self):
+        return 'int'
 
 class Pointer(Type):
 
     def __init__(self, base):
-        self._base = base
+        Type.__init__(self)
+	self._base = base
 
     def unparse(self):
+        modifier = Type.unparse(self)
+	internal = self.unparse_internal()
+        code = '%s%s' % (modifier, internal)
+	return code
+
+    def unparse_internal(self):
         base = self._base.unparse()
 	code = '%s*' % (base)
 	return code
@@ -275,7 +294,13 @@ class Array(Type):
 	self._length = length
 
     def unparse(self):
-        return self._base.unparse()
+        modifier = Type.unparse(self)
+        internal = self.unparse_internal()
+        code = '%s%s' % (modifier, internal)
+        return code
+
+    def unparse_internal(self):
+        return self._base.unparse_internal()
 
     def unparse_post(self):
         length = self._length.unparse()
