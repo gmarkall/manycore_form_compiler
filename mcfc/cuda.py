@@ -92,17 +92,18 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
-        name = buildCoefficientQuadName(tree)
-	base = Variable(name)
+        #name = buildCoefficientQuadName(tree)
+	#base = Variable(name)
 	
 	# Build the subscript based on the nesting depth of IndexSums.
-	indices = [GaussIndex()]
-        depth = self._indexSumDepth
-        for r in range(depth+1): # Need to add one, since depth started at -1
-	    indices.append(DimIndex(r))
-	offset = buildOffset(indices)
+	#indices = [GaussIndex()]
+        #depth = self._indexSumDepth
+        #for r in range(depth+1): # Need to add one, since depth started at -1
+	#    indices.append(DimIndex(r))
+	#offset = buildOffset(indices)
 
-	coeffExpr = Subscript(base, offset)
+	#coeffExpr = Subscript(base, offset)
+	coeffExpr = buildCoeffQuadratureAccessor(tree)
 	self._exprStack.append(coeffExpr)
 
 def buildExpression(form, tree):
@@ -217,6 +218,64 @@ def buildLoopNest(form):
     # scope.
     return outerLoop
 
+def buildQuadratureLoopNest(form):
+    
+    form_data = form.form_data()
+    coefficients = form_data.coefficients
+
+    # Outer loop over gauss points
+    indVar = gaussInductionVariable()
+    gaussLoop = buildSimpleForLoop(indVar, numGaussPoints)
+    loop = gaussLoop
+
+    # How many loops over dimensions do we need?
+    maxRank = 0
+    for coeff in coefficients:
+        rank = coeff.rank()
+	if rank > maxRank:
+	    maxRank = rank
+
+    # Build loops over the correct number of dimensions
+    for r in range(maxRank):
+        indVar = dimInductionVariable(r)
+	dimLoop = buildSimpleForLoop(indVar, numDimensions)
+	loop.append(dimLoop)
+	loop = dimLoop
+
+    # One loop over the basis functions
+    indVar = rankInductionVariable(0)
+    basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
+    loop.append(basisLoop)
+    
+    # Build the expressions to compute the values of each coefficient
+    for coeff in coefficients:
+        # First build the initialiser
+	rank = coeff.rank()
+	depth = rank
+	scope = getScopeFromNest(gaussLoop, depth)
+        accessor = buildCoeffQuadratureAccessor(coeff)
+	initialiser = AssignmentOp(accessor, Literal(0.0))
+	scope.prepend(initialiser)
+
+	# Then the bit the computes the value
+        depth = rank + 1 # Plus the loop over basis functions
+
+    return gaussLoop
+
+def buildCoeffQuadratureAccessor(coeff):
+    name = buildCoefficientQuadName(coeff)
+    base = Variable(name)
+    
+    # Build the subscript based on the rank
+    indices = [GaussIndex()]
+    depth = coeff.rank()
+    for r in range(depth+1): # Need to add one, since depth started at -1
+	indices.append(DimIndex(r))
+    offset = buildOffset(indices)
+
+    coeffExpr = Subscript(base, offset)
+    return coeffExpr
+
 class IndexSumCounter(Transformer):
     "Count how many IndexSums are nested inside a tree."
 
@@ -308,7 +367,8 @@ def buildKernel(form):
         form = preprocess(form)
 
     integrand = form.integrals()[0].integrand()
-    rank = form.form_data().rank
+    form_data = form.form_data()
+    rank = form_data.rank
     
     # Things for kernel declaration.
     t = Void()
@@ -336,6 +396,12 @@ def buildKernel(form):
     statements = [loopNest]
     body = Scope(statements)
     kernel = FunctionDefinition(t, name, params, body)
+    
+    # If there's any coefficients, we need to build a loop nest
+    # that calculates their values at the quadrature points
+    if form_data.num_coefficients > 0:
+        quadLoopNest = buildQuadratureLoopNest(form)
+	loopNest.prepend(quadLoopNest)
     
     # Make this a Cuda kernel.
     kernel.setCudaKernel(True)
