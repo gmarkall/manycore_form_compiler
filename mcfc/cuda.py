@@ -207,6 +207,23 @@ def buildLoopNest(form):
     # scope.
     return outerLoop
 
+def buildCoeffQuadDeclarations(form):
+    form_data = form.form_data()
+    coefficients = form_data.coefficients
+    declarations = []
+
+    for coeff in coefficients:
+        name = buildCoefficientQuadName(coeff)
+	rank = coeff.rank()
+	length = numGaussPoints * pow(numDimensions, rank)
+	t = Array(Real(), Literal(length))
+	t.setCudaShared(True)
+	var = Variable(name, t)
+	decl = Declaration(var)
+	declarations.append(decl)
+
+    return declarations
+
 def buildQuadratureLoopNest(form):
     
     form_data = form.form_data()
@@ -215,7 +232,6 @@ def buildQuadratureLoopNest(form):
     # Outer loop over gauss points
     indVar = gaussInductionVariable()
     gaussLoop = buildSimpleForLoop(indVar, numGaussPoints)
-    #loop = gaussLoop
 
     # Build a loop nest for each coefficient containing expressions
     # to compute its value
@@ -393,8 +409,11 @@ def buildKernel(form):
     # If there's any coefficients, we need to build a loop nest
     # that calculates their values at the quadrature points
     if form_data.num_coefficients > 0:
-        quadLoopNest = buildQuadratureLoopNest(form)
+        declarations = buildCoeffQuadDeclarations(form)
+	quadLoopNest = buildQuadratureLoopNest(form)
 	loopNest.prepend(quadLoopNest)
+	for decl in declarations:
+	    loopNest.prepend(decl)
     
     # Make this a Cuda kernel.
     kernel.setCudaKernel(True)

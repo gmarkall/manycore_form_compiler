@@ -43,7 +43,8 @@ class Variable(BackendASTNode):
     def unparse_declaration(self):
         name = self._name
 	t = self._t.unparse()
-	code = '%s %s' % (t, name)
+	t_post = self._t.unparse_post()
+	code = '%s %s%s' % (t, name, t_post)
 	return code
 
 class Literal(BackendASTNode):
@@ -209,17 +210,43 @@ class PlusPlusOp(BackendASTNode):
         code = '%s++' % (expr)
 	return code
 
+class Declaration(BackendASTNode):
+    
+    def __init__(self, var):
+        self._var = var
+
+    def unparse(self):
+        return self._var.unparse_declaration()
+
 # Types
 
 class Type:
     
+    def __init__(self):
+        self._modifier = ''
+
+    def setCudaShared(self, isCudaShared):
+        if isCudaShared:
+	    self._modifier = '__shared__ '
+	else:
+	    self._modifier = ''
+
     def unparse(self):
-        return ""
+	return self._modifier
+
+    def unparse_post(self):
+        return ''
+
+######
+### need to sort out unparsing of modifiers
+######
 
 class Void(Type):
     
     def unparse(self):
-        return "void"
+        modifier = Type.unparse(self)
+        code = '%svoid' % (
+	return "void"
 
 class Real(Type):
 
@@ -239,6 +266,20 @@ class Pointer(Type):
     def unparse(self):
         base = self._base.unparse()
 	code = '%s*' % (base)
+	return code
+
+class Array(Type):
+
+    def __init__(self, base, length):
+        self._base = base
+	self._length = length
+
+    def unparse(self):
+        return self._base.unparse()
+
+    def unparse_post(self):
+        length = self._length.unparse()
+	code = '[%s]' % (length)
 	return code
 
 # Utility functions
