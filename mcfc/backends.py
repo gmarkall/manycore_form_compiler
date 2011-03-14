@@ -225,6 +225,12 @@ class Type:
     def __init__(self):
         self._modifier = ''
 
+    def unparse(self):
+        modifier = Type.unparse(self)
+	internal = self.unparse_internal()
+        code = '%s%s' % (modifier, internal)
+	return code
+
     def setCudaShared(self, isCudaShared):
         if isCudaShared:
 	    self._modifier = '__shared__ '
@@ -239,33 +245,15 @@ class Type:
 
 class Void(Type):
     
-    def unparse(self):
-        modifier = Type.unparse(self)
-	internal = self.unparse_internal()
-        code = '%s%s' % (modifier, internal)
-	return code
-
     def unparse_internal(self):
         return 'void'
 
 class Real(Type):
 
-    def unparse(self):
-        modifier = Type.unparse(self)
-	internal = self.unparse_internal()
-        code = '%s%s' % (modifier, internal)
-	return code
-
     def unparse_internal(self):
         return 'double'
 
 class Integer(Type):
-
-    def unparse(self):
-        modifier = Type.unparse(self)
-	internal = self.unparse_internal()
-        code = '%s%s' % (modifier, internal)
-	return code
 
     def unparse_internal(self):
         return 'int'
@@ -275,12 +263,6 @@ class Pointer(Type):
     def __init__(self, base):
         Type.__init__(self)
 	self._base = base
-
-    def unparse(self):
-        modifier = Type.unparse(self)
-	internal = self.unparse_internal()
-        code = '%s%s' % (modifier, internal)
-	return code
 
     def unparse_internal(self):
         base = self._base.unparse()
@@ -292,12 +274,6 @@ class Array(Type):
     def __init__(self, base, length):
         self._base = base
 	self._length = length
-
-    def unparse(self):
-        modifier = Type.unparse(self)
-        internal = self.unparse_internal()
-        code = '%s%s' % (modifier, internal)
-        return code
 
     def unparse_internal(self):
         return self._base.unparse_internal()
