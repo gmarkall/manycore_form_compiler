@@ -519,9 +519,12 @@ def uniqify(seq, idfun=None):
         result.append(item)
     return result
 
-def buildState():
+def buildStateType():
+    return Pointer(Class('StateHolder'))
 
-    state = Variable('state', Pointer(Class('StateHolder')))
+def buildState():
+    t = buildStateType()
+    state = Variable('state', t)
     decl = Declaration(state)
     return decl
 
@@ -529,6 +532,13 @@ def buildInitialiser(AST):
 
     func = FunctionDefinition(Void(), 'initialise_gpu_')
     func.setExternC(True)
+
+    # Call the state constructor
+    state = Variable('state')
+    newState = New(Class('StateHolder'))
+    construct = AssignmentOp(state, newState)
+    func.append(construct)
+    
     return func
 
 # Global variables for code generation.

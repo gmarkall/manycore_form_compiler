@@ -102,6 +102,23 @@ class ParameterList(BackendASTNode):
 	code = code + ")"
 	return code
 
+class ExpressionList(BackendASTNode):
+
+    def __init__(self, expressions=None):
+        if expressions is None:
+	    self._expressions = []
+	else:
+	    self._expressions = expressions
+
+    def unparse(self):
+        code = '('
+	if len(self._expressions) > 0:
+	    code = code + self._expressions[0].unparse()
+	    for e in self._expressions[1:]:
+	        code = code + ', ' + e.unparse()
+	code = code + ')'
+	return code
+
 class FunctionDefinition(BackendASTNode):
 
     def __init__(self, t, name, params=None, body=None):
@@ -129,6 +146,12 @@ class FunctionDefinition(BackendASTNode):
 	    self._modifier = 'extern "C" '
 	else:
 	    self._modifier = ''
+
+    def append(self, statement):
+        self._body.append(statement)
+
+    def prepend(self, statement):
+        self._body.prepend(statement)
 
     def unparse(self):
         mod = self._modifier
@@ -165,6 +188,21 @@ class Scope(BackendASTNode):
 	    code = code + '\n' + indent + s.unparse() + ';'
 	indent = decIndent()
 	code = code + '\n' + indent + '}'
+	return code
+
+class New(BackendASTNode):
+
+    def __init__(self, t, params=None):
+        self._t = t
+	if params is None:
+	    self._params = ExpressionList()
+	else:
+	    self._params = params
+
+    def unparse(self):
+        t = self._t.unparse_internal()
+	params = self._params.unparse()
+        code = 'new %s%s' % (t, params)
 	return code
 
 class BinaryOp(BackendASTNode):
