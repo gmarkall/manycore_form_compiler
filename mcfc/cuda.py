@@ -519,6 +519,18 @@ def uniqify(seq, idfun=None):
         result.append(item)
     return result
 
+def buildState():
+
+    state = Variable('state', Pointer(Class('StateHolder')))
+    decl = Declaration(state)
+    return decl
+
+def buildInitialiser(AST):
+
+    func = FunctionDefinition(Void(), 'initialise_gpu_')
+    func.setExternC(True)
+    return func
+
 # Global variables for code generation.
 # Eventually these need to be set by the caller of the code generator
 numNodesPerEle = 3

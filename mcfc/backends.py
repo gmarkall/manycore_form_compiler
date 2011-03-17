@@ -87,30 +87,48 @@ class ForLoop(BackendASTNode):
 
 class ParameterList(BackendASTNode):
 
-    def __init__(self, params):
-        self._params = params
+    def __init__(self, params=None):
+        if params is None:
+	    self._params = []
+	else:
+	    self._params = params
 
     def unparse(self):
         code = "("
-	code = code + self._params[0].unparse_declaration()
-	for p in self._params[1:]:
-	    code = code + ", " + p.unparse_declaration()
+	if len(self._params) > 0:
+	    code = code + self._params[0].unparse_declaration()
+	    for p in self._params[1:]:
+	        code = code + ", " + p.unparse_declaration()
 	code = code + ")"
 	return code
 
 class FunctionDefinition(BackendASTNode):
 
-    def __init__(self, t, name, params, body):
+    def __init__(self, t, name, params=None, body=None):
         self._t = t
 	self._name = name
-	self._params = params
-	self._body = body
+
+	if params is None:
+	    self._params = ParameterList()
+	else:
+	    self._params = params
+
+	if body is None:
+	    self._body = Scope()
+	else:
+	    self._body = body
 
     def setCudaKernel(self, isCudaKernel):
         if isCudaKernel:
 	    self._modifier = "__global__ "
 	else:
 	    self._modifier = ""
+
+    def setExternC(self, isExternC):
+        if isExternC:
+	    self._modifier = 'extern "C" '
+	else:
+	    self._modifier = ''
 
     def unparse(self):
         mod = self._modifier
@@ -226,7 +244,7 @@ class Type:
         self._modifier = ''
 
     def unparse(self):
-        modifier = Type.unparse(self)
+        modifier = self.unparse_modifier()
 	internal = self.unparse_internal()
         code = '%s%s' % (modifier, internal)
 	return code
@@ -237,7 +255,7 @@ class Type:
 	else:
 	    self._modifier = ''
 
-    def unparse(self):
+    def unparse_modifier(self):
 	return self._modifier
 
     def unparse_post(self):
@@ -272,6 +290,7 @@ class Pointer(Type):
 class Array(Type):
 
     def __init__(self, base, length):
+        Type.__init__(self)
         self._base = base
 	self._length = length
 
@@ -282,6 +301,15 @@ class Array(Type):
         length = self._length.unparse()
 	code = '[%s]' % (length)
 	return code
+
+class Class(Type):
+
+    def __init__(self, name):
+        Type.__init__(self)
+        self._name = name
+
+    def unparse_internal(self):
+        return self._name
 
 # Utility functions
 
