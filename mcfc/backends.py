@@ -161,6 +161,21 @@ class FunctionDefinition(BackendASTNode):
         code = '%s%s %s%s\n%s' % (mod, t, self._name, params, body)
 	return code
 
+class FunctionCall(BackendASTNode):
+
+    def __init__(self, name, params=None):
+        self._name = name
+	if params is None:
+	    self._params = ExpressionList()
+	else:
+	    self._params = params
+
+    def unparse(self):
+        name = self._name
+	params = self._params.unparse()
+        code = '%s%s' % (name, params)
+	return code
+
 class Scope(BackendASTNode):
 
     def __init__(self, statements=None):
@@ -255,6 +270,11 @@ class LessThanOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
         BinaryOp.__init__(self, lhs, rhs, '<')
+
+class ArrowOp(BinaryOp):
+    
+    def __init__(self, lhs, rhs):
+        BinaryOp.__init__(self, lhs, rhs, '->')
 
 class PlusPlusOp(BackendASTNode):
 

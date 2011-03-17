@@ -539,6 +539,11 @@ def buildInitialiser(AST):
     construct = AssignmentOp(state, newState)
     func.append(construct)
     
+    # Call the state initialiser
+    call = FunctionCall('initialise')
+    arrow = ArrowOp(state, call)
+    func.append(arrow)
+
     return func
 
 # Global variables for code generation.
