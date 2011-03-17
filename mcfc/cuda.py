@@ -544,7 +544,57 @@ def buildInitialiser(AST):
     arrow = ArrowOp(state, call)
     func.append(arrow)
 
+    ########################
+    #### Extract necessary fields here
+    ##########################
+
+    # Allocate memory and transfer to GPU
+    call = FunctionCall('allocateAllGPUMemory')
+    arrow = ArrowOp(state, call)
+    func.append(arrow)
+
+    call = FunctionCall('transferAllFields')
+    arrow = ArrowOp(state, call)
+    func.append(arrow)
+    
+    ########################
+    #### Insert new necessary fields here
+    ##########################
+
+    ########################
+    #### Get num_ele, num_nodes etc
+    ##########################
+
+    ##########################
+    ## do mallocs
+    ##########################
+
     return func
+
+class AccessedFieldFinder(AntlrVisitor):
+
+    def __init__(self):
+        AntlrVisitor.__init__(self, preOrder)
+
+    def find(self, tree):
+        self._fields = []
+	self.traverse(tree)
+	return self._fields
+
+    def visit(self, tree):
+        label = str(tree)
+
+	if label is '=':
+	    rhs = tree.getChild(1)
+	    if rhs is in ['scalar_fields', 'vector_fields', 'tensor_fields']:
+	        field = rhs.getChild(0)
+		# Strip off the quotes
+		field = field[1:-1]
+		self._fields.append(field)
+
+def findAccessedFields(tree):
+    AFF = AccessedFieldFinder()
+    return AFF.find(tree)
 
 # Global variables for code generation.
 # Eventually these need to be set by the caller of the code generator

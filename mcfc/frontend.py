@@ -6,8 +6,6 @@ from uflLexer import uflLexer
 from uflParser import uflParser
 # Visualiser, handy for debugging
 import visualiser
-# AST Utilities
-import asttools
 
 def main():
 
