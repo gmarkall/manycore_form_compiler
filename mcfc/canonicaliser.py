@@ -33,7 +33,7 @@ def init():
 # call canonicalise(filename).
 
 def canonicalise(filename):
-    
+   
     init()
 
     # Read in the AST
@@ -42,9 +42,13 @@ def canonicalise(filename):
     lines = charstolines(chars)
     fd.close
 
+    canonical = StringIO.StringIO()
+
     # Interpret the UFL file line by line
     for line in lines:
-	UFLInterpreter(line)
+	UFLInterpreter(line, canonical)
+
+    return canonical
 
 # Solve needs to return an appropriate function in order for the interpretation
 # to continue
@@ -82,7 +86,8 @@ def main():
     
     # Run canonicaliser
     print "Canonicalising " + inputfile
-    canonicalise(inputfile);
+    canonical = canonicalise(inputfile);
+    print canonical.getvalue()
 
     return 0
 
@@ -121,10 +126,12 @@ def charstolines(chars):
 
 class UFLInterpreter:
 
-    def __init__(self, line):
-        st = ast.parse(line)
-	print '# ' + line
+    def __init__(self, line, f=sys.stdout):
+        self._file = f
+	st = ast.parse(line)
+	print >>self._file, '# ' + line
 	self.dispatch(st)
+	self._file.flush
 
     def dispatch(self, tree):
         if isinstance(tree, list):
@@ -177,11 +184,11 @@ class UFLInterpreter:
 	        _source = getSourceField(_rhs)
 		_newstatement = _newstatement + ' & source(' + _source + ')'
 
-	    print _newstatement
+	    print >>self._file, _newstatement
 	# This is the case where we print the original statement, not the
 	# result of executing it
 	else:
-	    print _statement
+	    print >>self._file, _statement
 
 def isToBeExecuted(lhs,rhs):
     # We don't want to put the result of executing certain functions
