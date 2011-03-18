@@ -54,11 +54,14 @@ class __fake_field_dict__():
         field_name, timestep = key
 
 	if (self.rank==0):
-            field = ufl.finiteelement.FiniteElement("Lagrange", "triangle", 1)
+	    degree = _finiteElements[field_name]
+            field = ufl.finiteelement.FiniteElement("Lagrange", "triangle", degree)
         elif(self.rank==1):
-	    field = ufl.finiteelement.VectorElement("Lagrange", "triangle", 1)
+	    degree = _vectorElements[field_name]
+	    field = ufl.finiteelement.VectorElement("Lagrange", "triangle", degree)
         elif(self.rank==2):
-	    field = ufl.finiteelement.TensorElement("Lagrange", "triangle", 1)
+	    degree = _tensorElements[field_name]
+	    field = ufl.finiteelement.TensorElement("Lagrange", "triangle", degree)
 
 	return field
 
@@ -70,3 +73,11 @@ class __fake_field_dict__():
 scalar_fields = __fake_field_dict__(0)
 vector_fields = __fake_field_dict__(1)
 tensor_fields = __fake_field_dict__(2)
+
+# We need to know the basis for each field in code generation. This should be
+# read from an flml file - however, for now for testing, just a list of the
+# usual names I use and their order will do.
+
+_finiteElements = { 'Tracer': 1 }
+_vectorElements = { 'Velocity': 1, 'NewVelocity': 1 }
+_tensorElements = { 'TracerDiffusivity': 1 }
