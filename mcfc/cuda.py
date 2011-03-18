@@ -1,4 +1,5 @@
 from backends import *
+from visitor import *
 from ufl.algorithms.transformations import Transformer
 from ufl.algorithms.preprocess import preprocess
 
@@ -544,9 +545,14 @@ def buildInitialiser(AST):
     arrow = ArrowOp(state, call)
     func.append(arrow)
 
-    ########################
-    #### Extract necessary fields here
-    ##########################
+    # Extract accessed fields
+    accessedFields = findAccessedFields(AST)
+    for field in accessedFields:
+        fieldString = '"' + field + '"'
+        params = ExpressionList([Literal(fieldString)])
+        call = FunctionCall('extractField',params)
+	arrow = ArrowOp(state, call)
+	func.append(arrow)
 
     # Allocate memory and transfer to GPU
     call = FunctionCall('allocateAllGPUMemory')
@@ -584,13 +590,16 @@ class AccessedFieldFinder(AntlrVisitor):
     def visit(self, tree):
         label = str(tree)
 
-	if label is '=':
+	if label == '=':
 	    rhs = tree.getChild(1)
-	    if rhs is in ['scalar_fields', 'vector_fields', 'tensor_fields']:
-	        field = rhs.getChild(0)
+	    if str(rhs) in ['scalar_fields', 'vector_fields', 'tensor_fields']:
+		field = str(rhs.getChild(0))
 		# Strip off the quotes
 		field = field[1:-1]
 		self._fields.append(field)
+
+    def pop(self):
+        pass
 
 def findAccessedFields(tree):
     AFF = AccessedFieldFinder()
