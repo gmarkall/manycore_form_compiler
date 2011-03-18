@@ -22,6 +22,15 @@ def main():
         print "No input."
 	sys.exit(-1)
 
+    root = readSource(inputFile)
+
+    outputFile = inputFile[:-4] + "pdf"
+    v = visualiser.Visualiser(outputFile)
+    v.visualise(root)
+
+    return 0
+
+def readSource(inputFile):
     charStream = antlr3.ANTLRFileStream(inputFile)
     lexer = uflLexer(charStream)
     tokens = antlr3.CommonTokenStream(lexer)
@@ -30,11 +39,7 @@ def main():
     r = parser.file_input()
     root = r.tree
 
-    outputFile = inputFile[:-4] + "pdf"
-    v = visualiser.Visualiser(outputFile)
-    v.visualise(root)
-
-    return 0
+    return root
 
 if __name__ == "__main__":
     sys.exit(main())
