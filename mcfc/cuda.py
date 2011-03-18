@@ -563,9 +563,14 @@ def buildInitialiser(AST):
     arrow = ArrowOp(state, call)
     func.append(arrow)
     
-    ########################
-    #### Insert new necessary fields here
-    ##########################
+    # Insert temporary fields into state
+    solveResultFields = findSolveResults(AST)
+    for field in solveResultFields:
+        fieldString = '"' + field + '"'
+	params = ExpressionList([Literal(fieldString)])
+	call = FunctionCall('insertTemporaryField',params)
+	arrow = ArrowOp(state, call)
+	func.append(arrow)
 
     ########################
     #### Get num_ele, num_nodes etc
@@ -604,6 +609,32 @@ class AccessedFieldFinder(AntlrVisitor):
 def findAccessedFields(tree):
     AFF = AccessedFieldFinder()
     return AFF.find(tree)
+
+class SolveResultFinder(AntlrVisitor):
+
+    def __init__(self):
+        AntlrVisitor.__init__(self, preOrder)
+
+    def find(self, tree):
+        self._results = []
+	self.traverse(tree)
+	return self._results
+
+    def visit(self, tree):
+        label = str(tree)
+
+	if label == '=':
+	    rhs = tree.getChild(1)
+	    if str(rhs) == 'solve':
+	        result = str(tree.getChild(0))
+		self._results.append(result)
+
+    def pop(self):
+        pass
+
+def findSolveResults(tree):
+    SRF = SolveResultFinder()
+    return SRF.find(tree)
 
 # Global variables for code generation.
 # Eventually these need to be set by the caller of the code generator
