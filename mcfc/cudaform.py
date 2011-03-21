@@ -1,5 +1,6 @@
+# Python libs
+import sys
 # MCFC libs
-from codegeneration import *
 from form import *
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
@@ -174,18 +175,18 @@ def buildLoopNest(form):
     outerLoop = loop
 
     # Build the loop over the first rank, which always exists
-    indVarName = rankInductionVariable(0)
-    rankLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
-    loop.append(rankLoop)
-    loop = rankLoop
+    indVarName = basisInductionVariable(0)
+    basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+    loop.append(basisLoop)
+    loop = basisLoop
 
     # Add another loop for each rank of the form (probably no
     # more than one more... )
     for r in range(1,rank):
-	indVarName = rankInductionVariable(r)
-	rankLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
-	loop.append(rankLoop)
-	loop = rankLoop
+	indVarName = basisInductionVariable(r)
+	basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+	loop.append(basisLoop)
+	loop = basisLoop
     
     # Add a loop for the quadrature
     indVarName = gaussInductionVariable()
@@ -255,7 +256,7 @@ def buildQuadratureLoopNest(form):
 	loop.append(initialiser)
 
         # One loop over the basis functions
-        indVar = rankInductionVariable(0)
+        indVar = basisInductionVariable(0)
         basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
         loop.append(basisLoop)
     
@@ -303,7 +304,7 @@ def eleInductionVariable():
 def gaussInductionVariable():
     return "i_g"
 
-def rankInductionVariable(count):
+def basisInductionVariable(count):
     name = "i_r_%d" % (count)
     return name
 
@@ -423,8 +424,6 @@ def uniqify(seq, idfun=None):
         result.append(item)
     return result
 
-# Global variables for code generation.
-# Eventually these need to be set by the caller of the code generator
-numNodesPerEle = 3
-numDimensions = 2
-numGaussPoints = 6
+# Register this implementation with form.py
+impl = sys.modules[__name__]
+registerImplementation(impl)

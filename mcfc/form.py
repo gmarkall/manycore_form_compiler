@@ -1,6 +1,9 @@
 """form.py - contains the code shared by different form backends, e.g.
 cudaform.py, op2form.py, etc."""
 
+# MCFC libs
+from codegeneration import *
+# UFL libs
 from ufl.algorithms.transformations import Transformer
 
 class IndexSumCounter(Transformer):
@@ -77,33 +80,45 @@ class CodeIndex:
 class RankIndex(CodeIndex):
     
     def extent(self):
-        return Literal(numNodesPerEle)
+        return Literal(_impl.numNodesPerEle)
 
     def name(self):
-        return rankInductionVariable(self._count)
+        return _impl.basisInductionVariable(self._count)
 
 class ElementIndex(CodeIndex):
 
     def extent(self):
-        return numElements
+        return _impl.numElements
 
     def name(self):
-        return eleInductionVariable()
+        return _impl.eleInductionVariable()
 
 class GaussIndex(CodeIndex):
 
     def extent(self):
-        return Literal(numGaussPoints)
+        return Literal(_impl.numGaussPoints)
 
     def name(self):
-        return gaussInductionVariable()
+        return _impl.gaussInductionVariable()
 
 class DimIndex(CodeIndex):
 
     def extent(self):
-        return Literal(numDimensions)
+        return Literal(_impl.numDimensions)
 
     def name(self):
-        return dimInductionVariable(self._count)
+        return _impl.dimInductionVariable(self._count)
 
+# Global variables for code generation.
+# Eventually these need to be set by the caller of the code generator
+numNodesPerEle = 3
+numDimensions = 2
+numGaussPoints = 6
 
+# Implementation registation
+
+def registerImplementation(implementation):
+    global _impl
+    _impl = implementation
+
+_impl = None
