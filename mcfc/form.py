@@ -109,6 +109,29 @@ class DimIndex(CodeIndex):
     def name(self):
         return _impl.dimInductionVariable(self._count)
 
+def buildOffset(indices):
+    """Given a list of indices, return an AST that computes
+    the offset into an array using those indices. The order is
+    important."""
+
+    # Start our expression with the first index
+    name = indices[0].name()
+    offset = Variable(name)
+    
+    # Compute the expression for all indices
+    for v in range(1,len(indices)):
+        subindices = indices[:v]
+	name = indices[v].name()
+	expr = Variable(name)
+	
+	# Find the correct offset for this index
+	for u in range(len(subindices)):
+	    multiplier = subindices[u].extent()
+	    expr = MultiplyOp(multiplier, expr)
+	offset = AddOp(offset, expr)
+    
+    return offset
+
 # Global variables for code generation.
 # Eventually these need to be set by the caller of the code generator
 numNodesPerEle = 3

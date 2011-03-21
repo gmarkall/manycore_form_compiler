@@ -392,25 +392,6 @@ def buildLocalTensorAccessor(form):
     return expr
     
 
-def buildOffset(indices):
-    # Start our expression with the first index
-    name = indices[0].name()
-    offset = Variable(name)
-    
-    # Compute the expression for all indices
-    for v in range(1,len(indices)):
-        subindices = indices[:v]
-	name = indices[v].name()
-	expr = Variable(name)
-	
-	# Find the correct offset for this index
-	for u in range(len(subindices)):
-	    multiplier = subindices[u].extent()
-	    expr = MultiplyOp(multiplier, expr)
-	offset = AddOp(offset, expr)
-    
-    return offset
-
 # From http://www.peterbe.com/plog/uniqifiers-benchmark. This is version f5.
 def uniqify(seq, idfun=None):
     if idfun is None:
