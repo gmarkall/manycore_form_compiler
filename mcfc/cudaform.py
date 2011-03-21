@@ -312,7 +312,7 @@ def dimInductionVariable(count):
     name = "i_d_%d" % (count)
     return name
 
-def buildKernel(form):
+def compile(form):
 
     if form.form_data() is None:
         form = preprocess(form)
