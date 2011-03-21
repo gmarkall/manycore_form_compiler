@@ -2,6 +2,7 @@
 import sys
 # MCFC libs
 from form import *
+from utilities import uniqify
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
 from ufl.algorithms.preprocess import preprocess
@@ -383,20 +384,6 @@ def buildLocalTensorAccessor(form):
     expr = Subscript(localTensor, offset)
     return expr
     
-
-# From http://www.peterbe.com/plog/uniqifiers-benchmark. This is version f5.
-def uniqify(seq, idfun=None):
-    if idfun is None:
-        def idfun(x): return x
-    seen = {}
-    result = []
-    for item in seq:
-        marker = idfun(item)
-        if marker in seen: continue
-        seen[marker] = 1
-        result.append(item)
-    return result
-
 # Register this implementation with form.py
 impl = sys.modules[__name__]
 registerImplementation(impl)
