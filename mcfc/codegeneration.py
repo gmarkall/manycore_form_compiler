@@ -380,6 +380,14 @@ def buildSimpleForLoop(indVarName, upperBound):
     ast = ForLoop(init, test, inc)
     return ast
 
+def getScopeFromNest(nest, depth):
+    body = nest.body()
+    # Descend through the bodies until we reach the correct one
+    for i in range(1,depth):
+        loop = body.find(lambda x: isinstance(x, ForLoop))
+	body = loop.body()
+    return body
+
 # Unparser-specific functions
 
 indentLevel = 0

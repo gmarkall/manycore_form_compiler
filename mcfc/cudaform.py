@@ -361,14 +361,6 @@ def compile(form):
     kernel.setCudaKernel(True)
     return kernel
 
-def getScopeFromNest(nest, depth):
-    body = nest.body()
-    # Descend through the bodies until we reach the correct one
-    for i in range(1,depth):
-        loop = body.find(lambda x: isinstance(x, ForLoop))
-	body = loop.body()
-    return body
-
 def buildLocalTensorInitialiser(form):
     lhs = buildLocalTensorAccessor(form)
     rhs = Literal(0.0)
