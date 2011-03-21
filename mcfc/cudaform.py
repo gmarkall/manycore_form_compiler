@@ -410,43 +410,6 @@ def buildOffset(indices):
     
     return offset
 
-class CodeIndex:
-
-    def __init__(self, count=None):
-        self._count = count
-
-class RankIndex(CodeIndex):
-    
-    def extent(self):
-        return Literal(numNodesPerEle)
-
-    def name(self):
-        return rankInductionVariable(self._count)
-
-class ElementIndex(CodeIndex):
-
-    def extent(self):
-        return numElements
-
-    def name(self):
-        return eleInductionVariable()
-
-class GaussIndex(CodeIndex):
-
-    def extent(self):
-        return Literal(numGaussPoints)
-
-    def name(self):
-        return gaussInductionVariable()
-
-class DimIndex(CodeIndex):
-
-    def extent(self):
-        return Literal(numDimensions)
-
-    def name(self):
-        return dimInductionVariable(self._count)
-
 # From http://www.peterbe.com/plog/uniqifiers-benchmark. This is version f5.
 def uniqify(seq, idfun=None):
     if idfun is None:

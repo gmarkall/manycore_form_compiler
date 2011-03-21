@@ -1,7 +1,7 @@
-from ufl.algorithms.transformations import Transformer
-
 """form.py - contains the code shared by different form backends, e.g.
 cudaform.py, op2form.py, etc."""
+
+from ufl.algorithms.transformations import Transformer
 
 class IndexSumCounter(Transformer):
     "Count how many IndexSums are nested inside a tree."
@@ -64,5 +64,46 @@ class Partitioner(Transformer):
 def findPartitions(tree):
     part = Partitioner()
     return part.partition(tree)
+
+# Code indices represent induction variables in a loop. A list of CodeIndexes is
+# supplied to buildOffset, in order for it to build the computation of a
+# subscript.
+
+class CodeIndex:
+
+    def __init__(self, count=None):
+        self._count = count
+
+class RankIndex(CodeIndex):
+    
+    def extent(self):
+        return Literal(numNodesPerEle)
+
+    def name(self):
+        return rankInductionVariable(self._count)
+
+class ElementIndex(CodeIndex):
+
+    def extent(self):
+        return numElements
+
+    def name(self):
+        return eleInductionVariable()
+
+class GaussIndex(CodeIndex):
+
+    def extent(self):
+        return Literal(numGaussPoints)
+
+    def name(self):
+        return gaussInductionVariable()
+
+class DimIndex(CodeIndex):
+
+    def extent(self):
+        return Literal(numDimensions)
+
+    def name(self):
+        return dimInductionVariable(self._count)
 
 
