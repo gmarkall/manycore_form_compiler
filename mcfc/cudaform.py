@@ -2,7 +2,7 @@
 import sys
 # MCFC libs
 from form import *
-from utilities import uniqify
+from utilities import uniqify, Dispatcher
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
 from ufl.algorithms.preprocess import preprocess
@@ -20,6 +20,10 @@ threadCount = Variable("THREAD_COUNT")
 threadId = Variable("THREAD_ID")
 
 class ExpressionBuilder(Transformer):
+
+    def __init__(self):
+        Transformer.__init__(self)
+        self._subscriptIndexer = SubscriptIndexer()
 
     def build(self, tree):
         self._exprStack = []
@@ -89,9 +93,7 @@ class ExpressionBuilder(Transformer):
         name = buildArgumentName(tree)
         base = Variable(name)
 
-	# Build the subscript based on the argument count
-	count = tree.count()
-	indices = [ElementIndex(), RankIndex(count), GaussIndex()]
+        indices = self._subscriptIndexer.indices(tree)
 	offset = buildOffset(indices)
 	argExpr = Subscript(base, offset)
         self._exprStack.append(argExpr)
@@ -111,6 +113,25 @@ def buildExpression(form, tree):
     expr = PlusAssignmentOp(lhs, rhs)
 
     return expr
+
+class SubscriptIndexer(Dispatcher):
+
+    def indices(self, tree):
+        return self.dispatch(tree)
+
+    def _SpatialDerivative(self,tree):
+	# Build the subscript based on the argument count and the
+	# nesting depth of IndexSums of the expression.
+	argument = tree.operands()[0]
+	count = argument.count()
+	depth = self._indexSumDepth
+	indices = [ElementIndex(), RankIndex(count), GaussIndex(), DimIndex(depth)]
+
+    def _Argument(self, tree):
+	# Build the subscript based on the argument count
+        count = tree.count()
+        indices = [ElementIndex(), RankIndex(count), GaussIndex()]
+	return indices
 
 def buildArgumentName(tree):
     element = tree.element()
