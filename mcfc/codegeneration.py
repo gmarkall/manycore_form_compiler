@@ -1,4 +1,5 @@
-"""Backends.py - provides the C++/CUDA/OpenCL ASTs and unparsing"""
+"""codegeneration.py - provides tools to build a C++/CUDA/OpenCL ASTs and 
+unparse it to a file."""
 
 class BackendASTNode:
     pass

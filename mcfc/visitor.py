@@ -1,3 +1,5 @@
+"""visitor.py - Provides an object for traversing ANTLR ASTs."""
+
 class AntlrVisitor:
 
     def __init__(self, order):
@@ -15,52 +17,6 @@ class AntlrVisitor:
 	    self.visit(tree)
 
 	self.pop()
-
-class UFLVisitor:
-
-    def __init__(self, order):
-        self._order = order
-
-    def traverse(self, tree):
-        if self._order == preOrder:
-	    self.visit(tree)
-
-	for op in tree.operands():
-	    self.traverse(op)
-	
-	if self._order == postOrder:
-	    self.visit(tree)
-
-    def visit(self, tree):
-        meth = getattr(self, "_"+tree.__class__.__name__)
-	meth(tree)
-
-    def _Product(self, tree):
-        print "Product"
-
-    def _Sum(self, tree):
-        print "Sum"
-
-    def _SpatialDerivative(self, tree):
-        print "SpatialDerivative"
-
-    def _ComponentTensor(self, tree):
-        print "ComponentTensor"
-
-    def _Indexed(self, tree):
-        print "Indexed"
-
-    def _IndexSum(self, tree):
-        print "IndexSum"
-
-    def _Argument(self, tree):
-        print "Argument"
-
-    def _MultiIndex(self, tree):
-        print "MultiIndex"
-
-    def _IntValue(self, tree):
-        print "IntValue"
 
 class TraversalOrder:
 
