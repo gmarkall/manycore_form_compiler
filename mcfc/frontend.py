@@ -20,7 +20,7 @@ import canonicaliser
 def main():
 
     opts,args = get_options()
-    keys = opts.keys
+    keys = opts.keys()
 
     if len(args) > 0: 
         inputFile = args[0]
@@ -35,7 +35,7 @@ def main():
         if 'o' in keys:
 	    outputFile = opts['o']
 	else:
-	    outputFile = inputFile[:-4] + "pdf"
+	    outputFile = inputFile[:-3] + "pdf"
         visualise(root, outputFile)
 	return 0
 	
@@ -61,12 +61,11 @@ def get_options():
 def visualise(ast, filename):
 
     v = visualiser.Visualiser(filename)
-    v.visualise(root)
+    v.visualise(ast)
 
 def readSource(inputFile):
 
     canned = canonicaliser.canonicalise(inputFile)
-    print canned
     charStream = antlr3.ANTLRStringStream(canned)
     lexer = uflLexer(charStream)
     tokens = antlr3.CommonTokenStream(lexer)
