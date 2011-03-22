@@ -4,8 +4,9 @@
 
     Options can be: 
     
-      --visualise, -v (to output a visualisation of the AST)
-      -o:<filename>   (to specify the output filename)"""
+      --visualise, -v to output a visualisation of the AST
+      -o:<filename>   to specify the output filename
+      -p, --print     to print code to screen"""
 
 # Python libs
 import sys, getopt, pprint
@@ -40,13 +41,28 @@ def main():
         visualise(ast, outputFile)
 	return 0
 
-    driver.drive(ast, uflObjects)
+    if 'o' in keys:
+        outputFile = opts[o]
+    else:
+        outputFile = inputFile[:-3] +'cu'
+
+    if 'print' in keys or 'p' in keys:
+        screen = True
+	fd = sys.stdout
+    else:
+        screen = False
+	fd = open(outputFile, 'w')
+
+    driver.drive(ast, uflObjects, fd)
+
+    if not screen:
+        fd.close()
 
     return 0
 
 def get_options():
     try: 
-        opts, args = getopt.getopt(sys.argv[1:], "hvo:", ["visualise"])
+        opts, args = getopt.getopt(sys.argv[1:], "hvpo:", ["visualise", "print"])
     except getopt.error, msg:
         print msg
 	print __doc__

@@ -28,7 +28,7 @@ class FormFinder(AntlrVisitor):
     def pop(self):
         pass
 
-def drive(ast, uflObjects):
+def drive(ast, uflObjects, fd):
 
     formBackend = cudaform.CudaFormBackend()
     assemblerBackend = cudaassembler.CudaAssemblerBackend()
@@ -40,12 +40,12 @@ def drive(ast, uflObjects):
         o = uflObjects[form]
 	name = form + '_' + str(count)
 	code = formBackend.compile(name, o)
-	print code.unparse()
-	print
+	print >>fd, code.unparse()
+	print >>fd
 
     # Build assembler
     state = assemblerBackend.buildState()
     initialiser = assemblerBackend.buildInitialiser(ast)
-    print state.unparse()
-    print
-    print initialiser.unparse()
+    print >>fd, state.unparse()
+    print >>fd
+    print >>fd, initialiser.unparse()
