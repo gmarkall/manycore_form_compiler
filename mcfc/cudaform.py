@@ -14,6 +14,22 @@ statutoryParameters = [ localTensor, numElements, timestep, detwei ]
 threadCount = Variable("THREAD_COUNT")
 threadId = Variable("THREAD_ID")
 
+# The ElementIndex is here and not form.py because not all backends need
+# an element index (e.g. OP2).
+
+class ElementIndex(CodeIndex):
+
+    def extent(self):
+        return numElements
+
+    def name(self):
+        return eleInductionVariable()
+
+def eleInductionVariable():
+    return "i_ele"
+
+# Expression builders
+
 class CudaExpressionBuilder(ExpressionBuilder):
 
     def subscript(self, tree, depth=None):
@@ -41,6 +57,28 @@ class CudaExpressionBuilder(ExpressionBuilder):
 	indices = [ElementIndex(), GaussIndex()]
 	return indices
 
+    def subscript_LocalTensor(self, form):
+	form_data = form.form_data()
+	rank = form_data.rank
+	
+	# First index is the element index
+	indices = [ElementIndex()]
+
+	# One rank index for each rank
+	for r in range(rank):
+	    indices.append(RankIndex(r))
+
+        return indices
+
+    def subscript_CoeffQuadrature(self, coeff):
+	# Build the subscript based on the rank
+	indices = [GaussIndex()]
+	depth = coeff.rank()
+	for r in range(depth): # Need to add one, since depth started at -1
+	    indices.append(DimIndex(r))
+	
+	return indices
+
 class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def subscript(self, tree):
@@ -50,6 +88,8 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 	    index = DimIndex(r)
 	    indices.insert(0, index)
 	return indices
+
+# For generating the kernel parameter list
 
 class KernelParameterComputer(Transformer):
 
@@ -78,58 +118,6 @@ class KernelParameterComputer(Transformer):
 	parameter = Variable(name, Pointer(Real()))
 	self._parameters.append(parameter)
 
-def buildParameterList(tree):
-    KPC = KernelParameterComputer()
-    params = KPC.compute(tree)
-    paramList = ParameterList(params)
-    return paramList
-
-def buildLoopNest(form):
-    form_data = form.form_data()
-    rank = form_data.rank
-    integrand = form.integrals()[0].integrand()
-
-    # The element loop is the outermost loop
-    loop = buildElementLoop()
-    outerLoop = loop
-
-    # Build the loop over the first rank, which always exists
-    indVarName = basisInductionVariable(0)
-    basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
-    loop.append(basisLoop)
-    loop = basisLoop
-
-    # Add another loop for each rank of the form (probably no
-    # more than one more... )
-    for r in range(1,rank):
-	indVarName = basisInductionVariable(r)
-	basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
-	loop.append(basisLoop)
-	loop = basisLoop
-    
-    # Add a loop for the quadrature
-    indVarName = gaussInductionVariable()
-    gaussLoop = buildSimpleForLoop(indVarName, numGaussPoints)
-    loop.append(gaussLoop)
-    loop = gaussLoop
-
-    # Determine how many dimension loops we need by inspection.
-    # We count the nesting depth of IndexSums to determine
-    # how many dimension loops we need.
-    ISC = IndexSumCounter()
-    numDimLoops = ISC.count(integrand)
-
-    # Add loops for each dimension as necessary. 
-    for d in range(numDimLoops):
-	indVarName = dimInductionVariable(d)
-	dimLoop = buildSimpleForLoop(indVarName, numDimensions)
-	loop.append(dimLoop)
-	loop = dimLoop
-
-    # Hand back the outer loop, so it can be inserted into some
-    # scope.
-    return outerLoop
-
 def buildCoeffQuadDeclarations(form):
     form_data = form.form_data()
     coefficients = form_data.coefficients
@@ -147,20 +135,12 @@ def buildCoeffQuadDeclarations(form):
 
     return declarations
 
-def buildElementLoop():
-    indVarName = eleInductionVariable()
-    var = Variable(indVarName, Integer())
-    init = InitialisationOp(var, threadId)
-    test = LessThanOp(var, numElements)
-    inc = PlusAssignmentOp(var, threadCount)
-    ast = ForLoop(init, test, inc)
-    return ast
-
 class CudaFormBackend(FormBackend):
 
     def __init__(self):
         self._expressionBuilder = CudaExpressionBuilder()
 	self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
+	self._kernelParameterComputer = KernelParameterComputer()
 
     def compile(self, form):
 
@@ -174,10 +154,10 @@ class CudaFormBackend(FormBackend):
 	# Things for kernel declaration.
 	t = Void()
 	name = "kernel" # Fix later
-	params = buildParameterList(integrand)
+	params = self.buildParameterList(integrand)
 	
 	# Build the loop nest
-	loopNest = buildLoopNest(form)
+	loopNest = self.buildLoopNest(form)
 
 	# Initialise the local tensor values to 0
 	initialiser = self.buildLocalTensorInitialiser(form)
@@ -234,7 +214,7 @@ class CudaFormBackend(FormBackend):
 		loop = dimLoop
 
 	    # Add initialiser here
-	    initialiser = buildCoeffQuadratureInitialiser(coeff)
+	    initialiser = self.buildCoeffQuadratureInitialiser(coeff)
 	    loop.append(initialiser)
 
 	    # One loop over the basis functions
@@ -250,31 +230,64 @@ class CudaFormBackend(FormBackend):
 
 	return gaussLoop
 
-
-    def subscript_LocalTensor(self, form):
+    def buildLoopNest(self, form):
 	form_data = form.form_data()
 	rank = form_data.rank
+	integrand = form.integrals()[0].integrand()
+
+	# The element loop is the outermost loop
+	loop = self.buildElementLoop()
+	outerLoop = loop
+
+	# Build the loop over the first rank, which always exists
+	indVarName = basisInductionVariable(0)
+	basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+	loop.append(basisLoop)
+	loop = basisLoop
+
+	# Add another loop for each rank of the form (probably no
+	# more than one more... )
+	for r in range(1,rank):
+	    indVarName = basisInductionVariable(r)
+	    basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+	    loop.append(basisLoop)
+	    loop = basisLoop
 	
-	# First index is the element index
-	indices = [ElementIndex()]
+	# Add a loop for the quadrature
+	indVarName = gaussInductionVariable()
+	gaussLoop = buildSimpleForLoop(indVarName, numGaussPoints)
+	loop.append(gaussLoop)
+	loop = gaussLoop
 
-	# One rank index for each rank
-	for r in range(rank):
-	    indices.append(RankIndex(r))
+	# Determine how many dimension loops we need by inspection.
+	# We count the nesting depth of IndexSums to determine
+	# how many dimension loops we need.
+	ISC = IndexSumCounter()
+	numDimLoops = ISC.count(integrand)
 
-        return indices
+	# Add loops for each dimension as necessary. 
+	for d in range(numDimLoops):
+	    indVarName = dimInductionVariable(d)
+	    dimLoop = buildSimpleForLoop(indVarName, numDimensions)
+	    loop.append(dimLoop)
+	    loop = dimLoop
 
-# The ElementIndex is here and not form.py because not all backends need
-# an element index (e.g. OP2).
+	# Hand back the outer loop, so it can be inserted into some
+	# scope.
+	return outerLoop
 
-class ElementIndex(CodeIndex):
+    def buildElementLoop(self):
+	indVarName = eleInductionVariable()
+	var = Variable(indVarName, Integer())
+	init = InitialisationOp(var, threadId)
+	test = LessThanOp(var, numElements)
+	inc = PlusAssignmentOp(var, threadCount)
+	ast = ForLoop(init, test, inc)
+	return ast
 
-    def extent(self):
-        return numElements
+    def buildParameterList(self,tree):
+	params = self._kernelParameterComputer.compute(tree)
+	paramList = ParameterList(params)
+	return paramList
 
-    def name(self):
-        return eleInductionVariable()
-
-def eleInductionVariable():
-    return "i_ele"
 

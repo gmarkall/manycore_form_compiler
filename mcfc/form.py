@@ -79,8 +79,32 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
-	coeffExpr = buildCoeffQuadratureAccessor(tree)
+	coeffExpr = self.buildCoeffQuadratureAccessor(tree)
 	self._exprStack.append(coeffExpr)
+
+    def buildCoeffQuadratureAccessor(self, coeff):
+	name = buildCoefficientQuadName(coeff)
+	base = Variable(name)
+	
+	indices = self.subscript_CoeffQuadrature(coeff)
+	offset = buildOffset(indices)
+
+	coeffExpr = Subscript(base, offset)
+	return coeffExpr
+
+    def buildLocalTensorAccessor(self, form):
+	indices = self.subscript_LocalTensor(form)
+	offset = buildOffset(indices)
+	
+	# Subscript the local tensor variable
+	expr = Subscript(localTensor, offset)
+	return expr
+
+    def subscript_LocalTensor(self, form):
+        raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
+
+    def subscript_CoeffQuadrature(self, coeff):
+        raise NotImplementedError("You're supposed to implement subscript_CoeffQuadrature()!")
 
     def subscript(self, tree):
         raise NotImplementedError("You're supposed to implement subscript()!")
@@ -112,7 +136,7 @@ class FormBackend:
 	rhs = self._expressionBuilder.build(tree)
 
 	# Assign expression to the local tensor value
-	lhs = self.buildLocalTensorAccessor(form)
+	lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
 	expr = PlusAssignmentOp(lhs, rhs)
 
 	return expr
@@ -120,83 +144,24 @@ class FormBackend:
     def buildQuadratureExpression(self, coeff):
 	rhs = self._quadratureExpressionBuilder.build(coeff)
 
-	lhs = buildCoeffQuadratureAccessor(coeff)
+	lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
 	expr = PlusAssignmentOp(lhs, rhs)
 	
 	return expr
     
     def buildLocalTensorInitialiser(self, form):
-	lhs = self.buildLocalTensorAccessor(form)
+	lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
 	rhs = Literal(0.0)
 	initialiser = AssignmentOp(lhs, rhs)
 	return initialiser
 
-    def buildLocalTensorAccessor(self, form):
-	indices = self.subscript_LocalTensor(form)
-	offset = buildOffset(indices)
-	
-	# Subscript the local tensor variable
-	expr = Subscript(localTensor, offset)
-	return expr
-
-    def subscript_LocalTensor(self, form):
-        raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
+    def buildCoeffQuadratureInitialiser(self, coeff):
+	accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
+	initialiser = AssignmentOp(accessor, Literal(0.0))
+	return initialiser
 
     def compile(self, form):
         raise NotImplementedError("You're supposed to implement compile()!")
-
-# Name builders
-
-def buildArgumentName(tree):
-    element = tree.element()
-    name = element.shortstr()
-    return name
-
-def buildSpatialDerivativeName(tree):
-    argument = tree.operands()[0]
-    argName = buildArgumentName(argument)
-    spatialDerivName = 'd_%s' % (argName)
-    return spatialDerivName
-
-def buildCoefficientName(tree):
-    count = tree.count()
-    name = 'c%d' % (count)
-    return name
-
-def buildCoefficientQuadName(tree):
-    count = tree.count()
-    name = 'c_q%d' %(count)
-    return name
-
-################################
-## This is here for temporary convenience.
-## in a bit we will make the quadrature expressionbuilder 
-## into an object that provides the main functionality 
-## like the expressionbuilder.
-################
-
-def buildCoeffQuadratureInitialiser(coeff):
-    accessor = buildCoeffQuadratureAccessor(coeff)
-    initialiser = AssignmentOp(accessor, Literal(0.0))
-    return initialiser
-
-def buildCoeffQuadratureAccessor(coeff):
-    name = buildCoefficientQuadName(coeff)
-    base = Variable(name)
-    
-    # Build the subscript based on the rank
-    indices = [GaussIndex()]
-    depth = coeff.rank()
-    for r in range(depth): # Need to add one, since depth started at -1
-	indices.append(DimIndex(r))
-    offset = buildOffset(indices)
-
-    coeffExpr = Subscript(base, offset)
-    return coeffExpr
-
-########################
-## end temp convenience
-########################
 
 class IndexSumCounter(Transformer):
     "Count how many IndexSums are nested inside a tree."
@@ -293,21 +258,6 @@ class DimIndex(CodeIndex):
     def name(self):
         return dimInductionVariable(self._count)
 
-# Set the names of the induction variables
-
-def gaussInductionVariable():
-    return "i_g"
-
-def basisInductionVariable(count):
-    name = "i_r_%d" % (count)
-    return name
-
-def dimInductionVariable(count):
-    name = "i_d_%d" % (count)
-    return name
-
-#
-
 def buildOffset(indices):
     """Given a list of indices, return an AST that computes
     the offset into an array using those indices. The order is
@@ -330,6 +280,42 @@ def buildOffset(indices):
 	offset = AddOp(offset, expr)
     
     return offset
+
+# Name builders
+
+def buildArgumentName(tree):
+    element = tree.element()
+    name = element.shortstr()
+    return name
+
+def buildSpatialDerivativeName(tree):
+    argument = tree.operands()[0]
+    argName = buildArgumentName(argument)
+    spatialDerivName = 'd_%s' % (argName)
+    return spatialDerivName
+
+def buildCoefficientName(tree):
+    count = tree.count()
+    name = 'c%d' % (count)
+    return name
+
+def buildCoefficientQuadName(tree):
+    count = tree.count()
+    name = 'c_q%d' %(count)
+    return name
+
+# Names of induction variables
+
+def gaussInductionVariable():
+    return "i_g"
+
+def basisInductionVariable(count):
+    name = "i_r_%d" % (count)
+    return name
+
+def dimInductionVariable(count):
+    name = "i_d_%d" % (count)
+    return name
 
 # Global variables for code generation.
 # Eventually these need to be set by the caller of the code generator
