@@ -6,6 +6,9 @@ cudaform.py, and the necessary solves."""
 # MCFC libs
 from assembler import *
 from codegeneration import *
+import state
+# FEniCS UFL libs
+import ufl.finiteelement
 
 class CudaAssemblerBackend(AssemblerBackend):
 
@@ -18,7 +21,9 @@ class CudaAssemblerBackend(AssemblerBackend):
 	decl = Declaration(state)
 	return decl
 
-    def buildInitialiser(self, AST):
+    def buildInitialiser(self, ast, uflObjects):
+
+        self._uflObjects = uflObjects
 
 	func = FunctionDefinition(Void(), 'initialise_gpu_')
 	func.setExternC(True)
@@ -35,7 +40,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.append(arrow)
 
 	# Extract accessed fields
-	accessedFields = findAccessedFields(AST)
+	accessedFields = findAccessedFields(ast)
 	for field in accessedFields:
 	    fieldString = '"' + field + '"'
 	    params = ExpressionList([Literal(fieldString)])
@@ -53,10 +58,12 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.append(arrow)
 	
 	# Insert temporary fields into state
-	solveResultFields = findSolveResults(AST)
+	solveResultFields = findSolveResults(ast)
 	for field in solveResultFields:
+	    similarField = self.findSimilarField(field)
+	    similarFieldString = '"' + similarField + '"'
 	    fieldString = '"' + field + '"'
-	    params = ExpressionList([Literal(fieldString)])
+	    params = ExpressionList([Literal(fieldString), Literal(similarFieldString)])
 	    call = FunctionCall('insertTemporaryField',params)
 	    arrow = ArrowOp(state, call)
 	    func.append(arrow)
@@ -71,3 +78,22 @@ class CudaAssemblerBackend(AssemblerBackend):
 
 	return func
 
+    def findSimilarField(self, field):
+        obj = self._uflObjects[field]
+	element = obj.element()
+	degree = element.degree()
+	
+	if isinstance(element, ufl.finiteelement.FiniteElement):
+	    sourceFields = state._finiteElements
+	elif isinstance(element, ufl.finiteelement.FiniteElement):
+	    sourceFields = state._vectorElements
+	elif isinstance(element, ufl.finiteelement.FiniteElement):
+	    sourceFields = state._tensorElements
+	else:
+	    print "Oops."
+
+	for k in sourceFields:
+	    if sourceFields[k] == degree:
+	        return k
+	
+	print "Big oops."

@@ -45,7 +45,7 @@ def drive(ast, uflObjects, fd):
 
     # Build assembler
     state = assemblerBackend.buildState()
-    initialiser = assemblerBackend.buildInitialiser(ast)
+    initialiser = assemblerBackend.buildInitialiser(ast, uflObjects)
     print >>fd, state.unparse()
     print >>fd
     print >>fd, initialiser.unparse()
