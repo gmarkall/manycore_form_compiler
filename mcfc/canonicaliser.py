@@ -212,7 +212,7 @@ def isToBeExecuted(lhs,rhs):
     
     # Check if the function is one to avoid executing
     name = rhs.func.id
-    if name in ['solve', 'action']:
+    if name in ['solve']:
 	return False
     else:
 	return True
