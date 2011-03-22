@@ -1,4 +1,5 @@
 import cudaform
+import cudaassembler
 from visitor import *
 
 import ufl.form
@@ -30,13 +31,21 @@ class FormFinder(AntlrVisitor):
 def drive(ast, uflObjects):
 
     formBackend = cudaform.CudaFormBackend()
+    assemblerBackend = cudaassembler.CudaAssemblerBackend()
     formFinder = FormFinder()
 
+    # Build forms
     forms = formFinder.find(ast)
-
     for form, count in forms:
         o = uflObjects[form]
 	name = form + '_' + str(count)
-	ast = formBackend.compile(name, o)
-	print ast.unparse()
+	code = formBackend.compile(name, o)
+	print code.unparse()
 	print
+
+    # Build assembler
+    state = assemblerBackend.buildState()
+    initialiser = assemblerBackend.buildInitialiser(ast)
+    print state.unparse()
+    print
+    print initialiser.unparse()

@@ -1,5 +1,10 @@
 from visitor import *
 
+# Placeholder; will probably fill with things later on.
+# Should be inherited by all assembler implementations.
+class AssemblerBackend:
+    pass
+
 class AccessedFieldFinder(AntlrVisitor):
 
     def __init__(self):

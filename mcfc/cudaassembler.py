@@ -7,65 +7,67 @@ cudaform.py, and the necessary solves."""
 from assembler import *
 from codegeneration import *
 
-def buildStateType():
-    return Pointer(Class('StateHolder'))
+class CudaAssemblerBackend(AssemblerBackend):
 
-def buildState():
-    t = buildStateType()
-    state = Variable('state', t)
-    decl = Declaration(state)
-    return decl
+    def buildStateType(self):
+	return Pointer(Class('StateHolder'))
 
-def buildInitialiser(AST):
+    def buildState(self):
+	t = self.buildStateType()
+	state = Variable('state', t)
+	decl = Declaration(state)
+	return decl
 
-    func = FunctionDefinition(Void(), 'initialise_gpu_')
-    func.setExternC(True)
+    def buildInitialiser(self, AST):
 
-    # Call the state constructor
-    state = Variable('state')
-    newState = New(Class('StateHolder'))
-    construct = AssignmentOp(state, newState)
-    func.append(construct)
-    
-    # Call the state initialiser
-    call = FunctionCall('initialise')
-    arrow = ArrowOp(state, call)
-    func.append(arrow)
+	func = FunctionDefinition(Void(), 'initialise_gpu_')
+	func.setExternC(True)
 
-    # Extract accessed fields
-    accessedFields = findAccessedFields(AST)
-    for field in accessedFields:
-        fieldString = '"' + field + '"'
-        params = ExpressionList([Literal(fieldString)])
-        call = FunctionCall('extractField',params)
+	# Call the state constructor
+	state = Variable('state')
+	newState = New(Class('StateHolder'))
+	construct = AssignmentOp(state, newState)
+	func.append(construct)
+	
+	# Call the state initialiser
+	call = FunctionCall('initialise')
 	arrow = ArrowOp(state, call)
 	func.append(arrow)
 
-    # Allocate memory and transfer to GPU
-    call = FunctionCall('allocateAllGPUMemory')
-    arrow = ArrowOp(state, call)
-    func.append(arrow)
+	# Extract accessed fields
+	accessedFields = findAccessedFields(AST)
+	for field in accessedFields:
+	    fieldString = '"' + field + '"'
+	    params = ExpressionList([Literal(fieldString)])
+	    call = FunctionCall('extractField',params)
+	    arrow = ArrowOp(state, call)
+	    func.append(arrow)
 
-    call = FunctionCall('transferAllFields')
-    arrow = ArrowOp(state, call)
-    func.append(arrow)
-    
-    # Insert temporary fields into state
-    solveResultFields = findSolveResults(AST)
-    for field in solveResultFields:
-        fieldString = '"' + field + '"'
-	params = ExpressionList([Literal(fieldString)])
-	call = FunctionCall('insertTemporaryField',params)
+	# Allocate memory and transfer to GPU
+	call = FunctionCall('allocateAllGPUMemory')
 	arrow = ArrowOp(state, call)
 	func.append(arrow)
 
-    ########################
-    #### Get num_ele, num_nodes etc
-    ##########################
+	call = FunctionCall('transferAllFields')
+	arrow = ArrowOp(state, call)
+	func.append(arrow)
+	
+	# Insert temporary fields into state
+	solveResultFields = findSolveResults(AST)
+	for field in solveResultFields:
+	    fieldString = '"' + field + '"'
+	    params = ExpressionList([Literal(fieldString)])
+	    call = FunctionCall('insertTemporaryField',params)
+	    arrow = ArrowOp(state, call)
+	    func.append(arrow)
 
-    ##########################
-    ## do mallocs
-    ##########################
+	########################
+	#### Get num_ele, num_nodes etc
+	##########################
 
-    return func
+	##########################
+	## do mallocs
+	##########################
+
+	return func
 
