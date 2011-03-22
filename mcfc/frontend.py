@@ -16,6 +16,7 @@ from uflParser import uflParser
 # MCFC libs
 import visualiser
 import canonicaliser
+import driver
 
 def main():
 
@@ -30,7 +31,6 @@ def main():
 	sys.exit(-1)
 
     ast, uflObjects = readSource(inputFile)
-    pprint.pprint(uflObjects)
 
     if 'visualise' in keys or 'v' in keys:
         if 'o' in keys:
@@ -39,6 +39,8 @@ def main():
 	    outputFile = inputFile[:-3] + "pdf"
         visualise(ast, outputFile)
 	return 0
+
+    driver.drive(ast, uflObjects)
 
     return 0
 
