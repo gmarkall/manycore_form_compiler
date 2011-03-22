@@ -1,5 +1,3 @@
-# Python libs
-import sys
 # MCFC libs
 from form import *
 from utilities import uniqify
@@ -55,6 +53,25 @@ def buildExpression(form, tree):
     lhs = buildLocalTensorAccessor(form)
     expr = PlusAssignmentOp(lhs, rhs)
 
+    return expr
+
+class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
+
+    def subscript(self, tree):
+	rank = tree.rank()
+	indices = [RankIndex(0)]
+	for r in range(rank):
+	    index = DimIndex(r)
+	    indices.insert(0, index)
+	return indices
+
+def buildQuadratureExpression(coeff):
+    QEB = CudaQuadratureExpressionBuilder()
+    rhs = QEB.build(coeff)
+
+    lhs = buildCoeffQuadratureAccessor(coeff)
+    expr = PlusAssignmentOp(lhs, rhs)
+    
     return expr
 
 class KernelParameterComputer(Transformer):
@@ -176,8 +193,7 @@ def buildQuadratureLoopNest(form):
 	    loop = dimLoop
 
         # Add initialiser here
-        accessor = buildCoeffQuadratureAccessor(coeff)
-	initialiser = AssignmentOp(accessor, Literal(0.0))
+        initialiser = buildCoeffQuadratureInitialiser(coeff)
 	loop.append(initialiser)
 
         # One loop over the basis functions
@@ -186,14 +202,7 @@ def buildQuadratureLoopNest(form):
         loop.append(basisLoop)
     
         # Add the expression to compute the value inside the basis loop
-	indices = [RankIndex(0)]
-	for r in range(rank):
-	    index = DimIndex(r)
-	    indices.insert(0, index)
-        offset = buildOffset(indices)
-	coeffAtBasis = Variable(buildCoefficientName(coeff))
-	rhs = Subscript(coeffAtBasis, offset)
-	computation = PlusAssignmentOp(accessor, rhs)
+        computation = buildQuadratureExpression(coeff)
 	basisLoop.append(computation)
 
         depth = rank + 1 # Plus the loop over basis functions

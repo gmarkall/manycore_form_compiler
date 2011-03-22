@@ -88,6 +88,18 @@ class ExpressionBuilder(Transformer):
     def subscript_detwei(self, tree):
         raise NotImplementedError("You're supposed to implement subscript_detwei()!")
 
+class QuadratureExpressionBuilder:
+
+    def build(self, tree):
+        indices = self.subscript(tree)
+	offset = buildOffset(indices)
+	coeffAtBasis = Variable(buildCoefficientName(tree))
+	expr = Subscript(coeffAtBasis, offset)
+	return expr
+
+    def subscript(self, tree):
+        raise NotImplementedError("You're supposed to implement subscript()!")
+
 def buildArgumentName(tree):
     element = tree.element()
     name = element.shortstr()
@@ -115,6 +127,11 @@ def buildCoefficientQuadName(tree):
 ## into an object that provides the main functionality 
 ## like the expressionbuilder.
 ################
+
+def buildCoeffQuadratureInitialiser(coeff):
+    accessor = buildCoeffQuadratureAccessor(coeff)
+    initialiser = AssignmentOp(accessor, Literal(0.0))
+    return initialiser
 
 def buildCoeffQuadratureAccessor(coeff):
     name = buildCoefficientQuadName(coeff)
