@@ -48,7 +48,7 @@ def canonicalise(filename):
     for line in lines:
 	UFLInterpreter(line, canonical)
 
-    return canonical
+    return canonical.getvalue()
 
 # Solve needs to return an appropriate function in order for the interpretation
 # to continue
