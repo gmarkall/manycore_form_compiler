@@ -16,6 +16,8 @@ statutoryParameters = [ localTensor, numElements, timestep, detwei ]
 threadCount = Variable("THREAD_COUNT")
 threadId = Variable("THREAD_ID")
 
+# ExpressionBuilder
+
 class CudaExpressionBuilder(ExpressionBuilder):
 
     def subscript(self, tree, depth=None):
@@ -207,20 +209,6 @@ def buildElementLoop():
     ast = ForLoop(init, test, inc)
     return ast
 
-def eleInductionVariable():
-    return "i_ele"
-
-def gaussInductionVariable():
-    return "i_g"
-
-def basisInductionVariable(count):
-    name = "i_r_%d" % (count)
-    return name
-
-def dimInductionVariable(count):
-    name = "i_d_%d" % (count)
-    return name
-
 def compile(form):
 
     if form.form_data() is None:
@@ -291,7 +279,18 @@ def buildLocalTensorAccessor(form):
     # Subscript the local tensor variable
     expr = Subscript(localTensor, offset)
     return expr
-    
-# Register this implementation with form.py
-impl = sys.modules[__name__]
-registerImplementation(impl)
+
+# The ElementIndex is here and not form.py because not all backends need
+# an element index (e.g. OP2).
+
+class ElementIndex(CodeIndex):
+
+    def extent(self):
+        return numElements
+
+    def name(self):
+        return eleInductionVariable()
+
+def eleInductionVariable():
+    return "i_ele"
+

@@ -208,34 +208,41 @@ class CodeIndex:
 class RankIndex(CodeIndex):
     
     def extent(self):
-        return Literal(_impl.numNodesPerEle)
+        return Literal(numNodesPerEle)
 
     def name(self):
-        return _impl.basisInductionVariable(self._count)
-
-class ElementIndex(CodeIndex):
-
-    def extent(self):
-        return _impl.numElements
-
-    def name(self):
-        return _impl.eleInductionVariable()
+        return basisInductionVariable(self._count)
 
 class GaussIndex(CodeIndex):
 
     def extent(self):
-        return Literal(_impl.numGaussPoints)
+        return Literal(numGaussPoints)
 
     def name(self):
-        return _impl.gaussInductionVariable()
+        return gaussInductionVariable()
 
 class DimIndex(CodeIndex):
 
     def extent(self):
-        return Literal(_impl.numDimensions)
+        return Literal(numDimensions)
 
     def name(self):
-        return _impl.dimInductionVariable(self._count)
+        return dimInductionVariable(self._count)
+
+# Set the names of the induction variables
+
+def gaussInductionVariable():
+    return "i_g"
+
+def basisInductionVariable(count):
+    name = "i_r_%d" % (count)
+    return name
+
+def dimInductionVariable(count):
+    name = "i_d_%d" % (count)
+    return name
+
+#
 
 def buildOffset(indices):
     """Given a list of indices, return an AST that computes
@@ -265,14 +272,6 @@ def buildOffset(indices):
 numNodesPerEle = 3
 numDimensions = 2
 numGaussPoints = 6
-
-# Implementation registation
-
-def registerImplementation(implementation):
-    global _impl
-    _impl = implementation
-
-_impl = None
 
 # Variables used globally
 
