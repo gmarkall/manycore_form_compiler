@@ -65,7 +65,8 @@ def visualise(ast, filename):
 
 def readSource(inputFile):
 
-    canned = canonicaliser.canonicalise(inputFile)
+    canned, tempFields = canonicaliser.canonicalise(inputFile)
+    print tempFields
     charStream = antlr3.ANTLRStringStream(canned)
     lexer = uflLexer(charStream)
     tokens = antlr3.CommonTokenStream(lexer)
