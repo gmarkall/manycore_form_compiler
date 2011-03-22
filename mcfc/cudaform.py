@@ -126,7 +126,7 @@ class CudaFormBackend(FormBackend):
 	self._kernelParameterComputer = KernelParameterComputer()
 	self._indexSumCounter = IndexSumCounter()
 
-    def compile(self, form):
+    def compile(self, name, form):
 
 	if form.form_data() is None:
 	    form = preprocess(form)
@@ -137,7 +137,6 @@ class CudaFormBackend(FormBackend):
 	
 	# Things for kernel declaration.
 	t = Void()
-	name = "kernel" # Fix later
 	params = self.buildParameterList(integrand)
 	
 	# Build the loop nest
