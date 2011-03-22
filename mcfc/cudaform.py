@@ -42,7 +42,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def subscript_Argument(self, tree):
 	# Build the subscript based on the argument count
         count = tree.count()
-        indices = [ElementIndex(), RankIndex(count), GaussIndex()]
+        indices = [ElementIndex(), BasisIndex(count), GaussIndex()]
 	return indices
 
     def subscript_SpatialDerivative(self,tree,depth):
@@ -50,7 +50,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
 	# nesting depth of IndexSums of the expression.
 	argument = tree.operands()[0]
 	count = argument.count()
-	indices = [ElementIndex(), RankIndex(count), GaussIndex(), DimIndex(depth)]
+	indices = [ElementIndex(), BasisIndex(count), GaussIndex(), DimIndex(depth)]
 	return indices
 
     def subscript_detwei(self):
@@ -66,7 +66,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
 
 	# One rank index for each rank
 	for r in range(rank):
-	    indices.append(RankIndex(r))
+	    indices.append(BasisIndex(r))
 
         return indices
 
@@ -83,7 +83,7 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def subscript(self, tree):
 	rank = tree.rank()
-	indices = [RankIndex(0)]
+	indices = [BasisIndex(0)]
 	for r in range(rank):
 	    index = DimIndex(r)
 	    indices.insert(0, index)

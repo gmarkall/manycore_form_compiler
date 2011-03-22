@@ -250,7 +250,7 @@ class CodeIndex:
     def __init__(self, count=None):
         self._count = count
 
-class RankIndex(CodeIndex):
+class BasisIndex(CodeIndex):
     
     def extent(self):
         return Literal(numNodesPerEle)
