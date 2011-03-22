@@ -12,5 +12,8 @@ A = Form([Integral(Sum(Product(Argument(FiniteElement('Lagrange', Cell('triangle
 
 import cudaform
 import cudaassembler
+import frontend
+
+source = frontend.readSource('diffusion-1.cufl')
 
 CFB = cudaform.CudaFormBackend()
