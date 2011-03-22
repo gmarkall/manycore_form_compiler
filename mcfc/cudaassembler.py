@@ -105,9 +105,42 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    assignment = AssignmentOp(lhs, rhs)
 	    func.append(assignment)
 
-	##########################
-	## do mallocs
-	##########################
+        # Get the number of values per node and use it to calculate the
+	# size of all the local vector entries. For now we'll use the same
+	# logic as before, that we're only solving on one field, so we can
+	# get these things from the last similar field that we found.
+        numValsPerNode = Variable('numValsPerNode', Integer())
+	params = ExpressionList([Literal(similarFieldString)])
+	call = FunctionCall('getValsPerNode', params)
+	lhs = Declaration(numValsPerNode)
+        rhs = ArrowOp(state, call)
+	assignment = AssignmentOp(lhs, rhs)
+	func.append(assignment)
+	
+        numVectorEntries = Variable('numVectorEntries', Integer())
+	params = ExpressionList([Literal(similarFieldString)])
+	call = FunctionCall('getNodesPerEle', params)
+	lhs = Declaration(numVectorEntries)
+        rhs = ArrowOp(state, call)
+	assignment = AssignmentOp(lhs, rhs)
+	func.append(assignment)
+	
+        # Now multiply numVectorEntries by numValsPerNode to get the correct
+	# size of the storage required
+	mult = MultiplyOp(numVectorEntries, numValsPerNode)
+	assignment = AssignmentOp(numVectorEntries, mult)
+	func.append(assignment)
+
+	# The space for the local matrix storage is simply the local vector
+	# storage size squared. (I'm tired, some of these comments are a bit
+	# nonsensey. note to self, tidy them up.)
+	numMatrixEntries = Variable('numMatrixEntries', Integer())
+	rhs = MultiplyOp(numVectorEntries, numVectorEntries)
+	assignment = AssignmentOp(Declaration(numMatrixEntries), rhs)
+	func.append(assignment)
+
+	# Generate Mallocs for the local matrix and vector, and the solution
+	# vector.
 
 	return func
 
