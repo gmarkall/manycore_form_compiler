@@ -68,9 +68,42 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    arrow = ArrowOp(state, call)
 	    func.append(arrow)
 
-	########################
-	#### Get num_ele, num_nodes etc
-	##########################
+	# Get num_ele, num_nodes etc
+        numEle = Variable("numEle", Integer())
+	call = FunctionCall('getNumEle')
+        arrow = ArrowOp(state, call)
+	assignment = AssignmentOp(Declaration(numEle), arrow)
+	func.append(assignment)
+
+        numNodes = Variable("numNodes", Integer())
+	call = FunctionCall('getNumNodes')
+        arrow = ArrowOp(state, call)
+	assignment = AssignmentOp(Declaration(numNodes), arrow)
+	func.append(assignment)
+
+        # Get sparsity of the field we're solving for
+	sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
+	# We can use the similarFieldString from earlier, since its
+	# the only field we're solving on for now. When we start working
+	# with solving multiple fields, this logic will need re-working.
+	# (For each solve field, we should use the similar field and
+	# generate a new sparsity from that)
+	params = ExpressionList([Literal(similarFieldString)])
+	call = FunctionCall('getSparsity', params)
+	arrow = ArrowOp(state, call)
+	assignment = AssignmentOp(Declaration(sparsity), arrow)
+	func.append(assignment)
+
+        # Initialise matrix_colm, findrm, etc.
+	matrixVars = ['matrix_colm', 'matrix_findrm', 'matrix_colm_size', 'matrix_findrm_size']
+	sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm',      'getSizeFindrm'     ]
+
+	for var, source in zip(matrixVars, sourceFns):
+	    lhs = Variable(var)
+	    call = FunctionCall(source)
+	    rhs = ArrowOp(sparsity, call)
+	    assignment = AssignmentOp(lhs, rhs)
+	    func.append(assignment)
 
 	##########################
 	## do mallocs
