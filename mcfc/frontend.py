@@ -8,7 +8,7 @@
       -o:<filename>   (to specify the output filename)"""
 
 # Python libs
-import sys, getopt
+import sys, getopt, pprint
 # ANTLR runtime and generated code
 import antlr3
 from uflLexer import uflLexer
@@ -29,16 +29,16 @@ def main():
 	print __doc__
 	sys.exit(-1)
 
-    root = readSource(inputFile)
+    ast, uflObjects = readSource(inputFile)
+    pprint.pprint(uflObjects)
 
     if 'visualise' in keys or 'v' in keys:
         if 'o' in keys:
 	    outputFile = opts['o']
 	else:
 	    outputFile = inputFile[:-3] + "pdf"
-        visualise(root, outputFile)
+        visualise(ast, outputFile)
 	return 0
-	
 
     return 0
 
@@ -65,8 +65,7 @@ def visualise(ast, filename):
 
 def readSource(inputFile):
 
-    canned, tempFields = canonicaliser.canonicalise(inputFile)
-    print tempFields
+    canned, uflObjects = canonicaliser.canonicalise(inputFile)
     charStream = antlr3.ANTLRStringStream(canned)
     lexer = uflLexer(charStream)
     tokens = antlr3.CommonTokenStream(lexer)
@@ -74,8 +73,8 @@ def readSource(inputFile):
     parser = uflParser(tokens)
     r = parser.file_input()
     root = r.tree
-
-    return root
+    
+    return root, uflObjects
 
 if __name__ == "__main__":
     sys.exit(main())

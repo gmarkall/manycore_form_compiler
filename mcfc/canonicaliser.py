@@ -26,9 +26,9 @@ def init():
     # Symbolic values that we need during the interpretation of UFL
     global c, n, dt
     # List of the temporary fields, and their elements
-    global _temporaryFields
+    global _uflObjects
 
-    _temporaryFields = {}
+    _uflObjects = {}
     n = state.TemporalIndex()
     c = state.ConstantTemporalIndex()
     dt = SymbolicValue("dt")
@@ -52,7 +52,7 @@ def canonicalise(filename):
     for line in lines:
 	UFLInterpreter(line, canonical)
 
-    return canonical.getvalue(), _temporaryFields
+    return canonical.getvalue(), _uflObjects
 
 # Solve needs to return an appropriate function in order for the interpretation
 # to continue
@@ -155,7 +155,9 @@ class UFLInterpreter:
 	    
     def _Assign(self, tree):
 
-        # Since we execute code from the source file in this function,
+	global _uflObjects
+        
+	# Since we execute code from the source file in this function,
 	# all locals are prefixed with _ to prevent name collision.
  
         # Get the left-hand side of the assignment
@@ -170,21 +172,18 @@ class UFLInterpreter:
 	
 	# Get hold of the result of the execution
 	_result = eval(_target)
-	# If the result of executing the RHS is a coefficient, we need
-	# to stash the coefficient because it is a temporary field
-	global _temporaryFields
-	if isinstance(_result, ufl.coefficient.Coefficient):
-	    _temporaryFields[_target] = _result
+        # If the result of executing the RHS is a form, we need to
+	# preprocess it
+        if isinstance(_result, ufl.form.Form):
+	    _result = ufl.algorithms.preprocess(_result)
 
+        # Stash the resulting object
+	_uflObjects[_target] = _result
+	    
 	if isToBeExecuted(_lhs,_rhs):
 	    # Create an assignment statement that assigns the result of 
 	    # executing the statement to the LHS.
-	    
-	    # If the result of executing the RHS is a form, we need to
-	    # preprocess it
-	    if isinstance(_result, ufl.form.Form):
-		_result = ufl.algorithms.preprocess(_result)
-
+	   
 	    # Construct the representation that we are going to print
 	    _newstatement = _target + ' = ' + repr(_result)
             
