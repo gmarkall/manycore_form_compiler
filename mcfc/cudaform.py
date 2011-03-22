@@ -118,23 +118,6 @@ class KernelParameterComputer(Transformer):
 	parameter = Variable(name, Pointer(Real()))
 	self._parameters.append(parameter)
 
-def buildCoeffQuadDeclarations(form):
-    form_data = form.form_data()
-    coefficients = form_data.coefficients
-    declarations = []
-
-    for coeff in coefficients:
-        name = buildCoefficientQuadName(coeff)
-	rank = coeff.rank()
-	length = numGaussPoints * pow(numDimensions, rank)
-	t = Array(Real(), Literal(length))
-	t.setCudaShared(True)
-	var = Variable(name, t)
-	decl = Declaration(var)
-	declarations.append(decl)
-
-    return declarations
-
 class CudaFormBackend(FormBackend):
 
     def __init__(self):
@@ -181,7 +164,7 @@ class CudaFormBackend(FormBackend):
 	# If there's any coefficients, we need to build a loop nest
 	# that calculates their values at the quadrature points
 	if form_data.num_coefficients > 0:
-	    declarations = buildCoeffQuadDeclarations(form)
+	    declarations = self.buildCoeffQuadDeclarations(form)
 	    quadLoopNest = self.buildQuadratureLoopNest(form)
 	    loopNest.prepend(quadLoopNest)
 	    for decl in declarations:
@@ -190,6 +173,14 @@ class CudaFormBackend(FormBackend):
 	# Make this a Cuda kernel.
 	kernel.setCudaKernel(True)
 	return kernel
+
+    def buildCoeffQuadDeclarations(self, form):
+        # The FormBackend's list of variables to declare is
+	# fine, but we want them to be __shared__
+        declarations = FormBackend.buildCoeffQuadDeclarations(self, form)
+	for decl in declarations:
+	    decl.setCudaShared(True)
+	return declarations
 
     def buildQuadratureLoopNest(self, form):
 	

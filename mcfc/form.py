@@ -160,6 +160,22 @@ class FormBackend:
 	initialiser = AssignmentOp(accessor, Literal(0.0))
 	return initialiser
 
+    def buildCoeffQuadDeclarations(self, form):
+	form_data = form.form_data()
+	coefficients = form_data.coefficients
+	declarations = []
+
+	for coeff in coefficients:
+	    name = buildCoefficientQuadName(coeff)
+	    rank = coeff.rank()
+	    length = numGaussPoints * pow(numDimensions, rank)
+	    t = Array(Real(), Literal(length))
+	    var = Variable(name, t)
+	    decl = Declaration(var)
+	    declarations.append(decl)
+
+	return declarations
+
     def compile(self, form):
         raise NotImplementedError("You're supposed to implement compile()!")
 

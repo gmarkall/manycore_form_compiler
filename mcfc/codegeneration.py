@@ -37,6 +37,9 @@ class Variable(BackendASTNode):
     def __eq__(self, other):
         return self._name == other._name
 
+    def setCudaShared(self, isCudaShared):
+        self._t.setCudaShared(isCudaShared)
+
     def unparse(self):
         code = self._name
 	return code
@@ -291,6 +294,9 @@ class Declaration(BackendASTNode):
     
     def __init__(self, var):
         self._var = var
+
+    def setCudaShared(self, isCudaShared):
+        self._var.setCudaShared(isCudaShared)
 
     def unparse(self):
         return self._var.unparse_declaration()
