@@ -12,3 +12,5 @@ A = Form([Integral(Sum(Product(Argument(FiniteElement('Lagrange', Cell('triangle
 
 import cudaform
 import cudaassembler
+
+CFB = cudaform.CudaFormBackend()

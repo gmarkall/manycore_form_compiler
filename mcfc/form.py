@@ -100,6 +100,53 @@ class QuadratureExpressionBuilder:
     def subscript(self, tree):
         raise NotImplementedError("You're supposed to implement subscript()!")
 
+class FormBackend:
+
+    def __init__(self):
+        self._expressionBuilder = None
+	self._quadratureExpressionBuilder = None
+
+    def buildExpression(self, form, tree):
+	"Build the expression represented by the subtree tree of form."
+	# Build the rhs expression
+	rhs = self._expressionBuilder.build(tree)
+
+	# Assign expression to the local tensor value
+	lhs = self.buildLocalTensorAccessor(form)
+	expr = PlusAssignmentOp(lhs, rhs)
+
+	return expr
+        
+    def buildQuadratureExpression(self, coeff):
+	rhs = self._quadratureExpressionBuilder.build(coeff)
+
+	lhs = buildCoeffQuadratureAccessor(coeff)
+	expr = PlusAssignmentOp(lhs, rhs)
+	
+	return expr
+    
+    def buildLocalTensorInitialiser(self, form):
+	lhs = self.buildLocalTensorAccessor(form)
+	rhs = Literal(0.0)
+	initialiser = AssignmentOp(lhs, rhs)
+	return initialiser
+
+    def buildLocalTensorAccessor(self, form):
+	indices = self.subscript_LocalTensor(form)
+	offset = buildOffset(indices)
+	
+	# Subscript the local tensor variable
+	expr = Subscript(localTensor, offset)
+	return expr
+
+    def subscript_LocalTensor(self, form):
+        raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
+
+    def compile(self, form):
+        raise NotImplementedError("You're supposed to implement compile()!")
+
+# Name builders
+
 def buildArgumentName(tree):
     element = tree.element()
     name = element.shortstr()

@@ -14,8 +14,6 @@ statutoryParameters = [ localTensor, numElements, timestep, detwei ]
 threadCount = Variable("THREAD_COUNT")
 threadId = Variable("THREAD_ID")
 
-# ExpressionBuilder
-
 class CudaExpressionBuilder(ExpressionBuilder):
 
     def subscript(self, tree, depth=None):
@@ -43,18 +41,6 @@ class CudaExpressionBuilder(ExpressionBuilder):
 	indices = [ElementIndex(), GaussIndex()]
 	return indices
 
-def buildExpression(form, tree):
-    "Build the expression represented by the subtree tree of form."
-    # Build the rhs expression
-    EB = CudaExpressionBuilder()
-    rhs = EB.build(tree)
-
-    # Assign expression to the local tensor value
-    lhs = buildLocalTensorAccessor(form)
-    expr = PlusAssignmentOp(lhs, rhs)
-
-    return expr
-
 class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def subscript(self, tree):
@@ -64,15 +50,6 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 	    index = DimIndex(r)
 	    indices.insert(0, index)
 	return indices
-
-def buildQuadratureExpression(coeff):
-    QEB = CudaQuadratureExpressionBuilder()
-    rhs = QEB.build(coeff)
-
-    lhs = buildCoeffQuadratureAccessor(coeff)
-    expr = PlusAssignmentOp(lhs, rhs)
-    
-    return expr
 
 class KernelParameterComputer(Transformer):
 
@@ -170,45 +147,6 @@ def buildCoeffQuadDeclarations(form):
 
     return declarations
 
-def buildQuadratureLoopNest(form):
-    
-    form_data = form.form_data()
-    coefficients = form_data.coefficients
-
-    # Outer loop over gauss points
-    indVar = gaussInductionVariable()
-    gaussLoop = buildSimpleForLoop(indVar, numGaussPoints)
-
-    # Build a loop nest for each coefficient containing expressions
-    # to compute its value
-    for coeff in coefficients:
-        rank = coeff.rank()
-	loop = gaussLoop
-
-        # Build loop over the correct number of dimensions
-        for r in range(rank):
-            indVar = dimInductionVariable(r)
-	    dimLoop = buildSimpleForLoop(indVar, numDimensions)
-	    loop.append(dimLoop)
-	    loop = dimLoop
-
-        # Add initialiser here
-        initialiser = buildCoeffQuadratureInitialiser(coeff)
-	loop.append(initialiser)
-
-        # One loop over the basis functions
-        indVar = basisInductionVariable(0)
-        basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
-        loop.append(basisLoop)
-    
-        # Add the expression to compute the value inside the basis loop
-        computation = buildQuadratureExpression(coeff)
-	basisLoop.append(computation)
-
-        depth = rank + 1 # Plus the loop over basis functions
-
-    return gaussLoop
-
 def buildElementLoop():
     indVarName = eleInductionVariable()
     var = Variable(indVarName, Integer())
@@ -218,76 +156,113 @@ def buildElementLoop():
     ast = ForLoop(init, test, inc)
     return ast
 
-def compile(form):
+class CudaFormBackend(FormBackend):
 
-    if form.form_data() is None:
-        form = preprocess(form)
+    def __init__(self):
+        self._expressionBuilder = CudaExpressionBuilder()
+	self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
 
-    integrand = form.integrals()[0].integrand()
-    form_data = form.form_data()
-    rank = form_data.rank
-    
-    # Things for kernel declaration.
-    t = Void()
-    name = "kernel" # Fix later
-    params = buildParameterList(integrand)
-    
-    # Build the loop nest
-    loopNest = buildLoopNest(form)
+    def compile(self, form):
 
-    # Initialise the local tensor values to 0
-    initialiser = buildLocalTensorInitialiser(form)
-    depth = rank + 1 # Rank + element loop
-    loopBody = getScopeFromNest(loopNest, depth)
-    loopBody.prepend(initialiser)
+	if form.form_data() is None:
+	    form = preprocess(form)
 
-    # Insert the expressions into the loop nest
-    partitions = findPartitions(integrand)
-    for (tree, depth) in partitions:
-        expression = buildExpression(form, tree)
-	exprDepth = depth + rank + 2 # 2 = Ele loop + gauss loop
-	loopBody = getScopeFromNest(loopNest, exprDepth)
-	loopBody.prepend(expression)
+	integrand = form.integrals()[0].integrand()
+	form_data = form.form_data()
+	rank = form_data.rank
+	
+	# Things for kernel declaration.
+	t = Void()
+	name = "kernel" # Fix later
+	params = buildParameterList(integrand)
+	
+	# Build the loop nest
+	loopNest = buildLoopNest(form)
 
-    # Build the function with the loop nest inside
-    statements = [loopNest]
-    body = Scope(statements)
-    kernel = FunctionDefinition(t, name, params, body)
-    
-    # If there's any coefficients, we need to build a loop nest
-    # that calculates their values at the quadrature points
-    if form_data.num_coefficients > 0:
-        declarations = buildCoeffQuadDeclarations(form)
-	quadLoopNest = buildQuadratureLoopNest(form)
-	loopNest.prepend(quadLoopNest)
-	for decl in declarations:
-	    loopNest.prepend(decl)
-    
-    # Make this a Cuda kernel.
-    kernel.setCudaKernel(True)
-    return kernel
+	# Initialise the local tensor values to 0
+	initialiser = self.buildLocalTensorInitialiser(form)
+	depth = rank + 1 # Rank + element loop
+	loopBody = getScopeFromNest(loopNest, depth)
+	loopBody.prepend(initialiser)
 
-def buildLocalTensorInitialiser(form):
-    lhs = buildLocalTensorAccessor(form)
-    rhs = Literal(0.0)
-    initialiser = AssignmentOp(lhs, rhs)
-    return initialiser
+	# Insert the expressions into the loop nest
+	partitions = findPartitions(integrand)
+	for (tree, depth) in partitions:
+	    expression = self.buildExpression(form, tree)
+	    exprDepth = depth + rank + 2 # 2 = Ele loop + gauss loop
+	    loopBody = getScopeFromNest(loopNest, exprDepth)
+	    loopBody.prepend(expression)
 
-def buildLocalTensorAccessor(form):
-    form_data = form.form_data()
-    rank = form_data.rank
-    
-    # First index is the element index
-    indices = [ElementIndex()]
+	# Build the function with the loop nest inside
+	statements = [loopNest]
+	body = Scope(statements)
+	kernel = FunctionDefinition(t, name, params, body)
+	
+	# If there's any coefficients, we need to build a loop nest
+	# that calculates their values at the quadrature points
+	if form_data.num_coefficients > 0:
+	    declarations = buildCoeffQuadDeclarations(form)
+	    quadLoopNest = self.buildQuadratureLoopNest(form)
+	    loopNest.prepend(quadLoopNest)
+	    for decl in declarations:
+		loopNest.prepend(decl)
+	
+	# Make this a Cuda kernel.
+	kernel.setCudaKernel(True)
+	return kernel
 
-    # One rank index for each rank
-    for r in range(rank):
-        indices.append(RankIndex(r))
-    offset = buildOffset(indices)
-    
-    # Subscript the local tensor variable
-    expr = Subscript(localTensor, offset)
-    return expr
+    def buildQuadratureLoopNest(self, form):
+	
+	form_data = form.form_data()
+	coefficients = form_data.coefficients
+
+	# Outer loop over gauss points
+	indVar = gaussInductionVariable()
+	gaussLoop = buildSimpleForLoop(indVar, numGaussPoints)
+
+	# Build a loop nest for each coefficient containing expressions
+	# to compute its value
+	for coeff in coefficients:
+	    rank = coeff.rank()
+	    loop = gaussLoop
+
+	    # Build loop over the correct number of dimensions
+	    for r in range(rank):
+		indVar = dimInductionVariable(r)
+		dimLoop = buildSimpleForLoop(indVar, numDimensions)
+		loop.append(dimLoop)
+		loop = dimLoop
+
+	    # Add initialiser here
+	    initialiser = buildCoeffQuadratureInitialiser(coeff)
+	    loop.append(initialiser)
+
+	    # One loop over the basis functions
+	    indVar = basisInductionVariable(0)
+	    basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
+	    loop.append(basisLoop)
+	
+	    # Add the expression to compute the value inside the basis loop
+	    computation = self.buildQuadratureExpression(coeff)
+	    basisLoop.append(computation)
+
+	    depth = rank + 1 # Plus the loop over basis functions
+
+	return gaussLoop
+
+
+    def subscript_LocalTensor(self, form):
+	form_data = form.form_data()
+	rank = form_data.rank
+	
+	# First index is the element index
+	indices = [ElementIndex()]
+
+	# One rank index for each rank
+	for r in range(rank):
+	    indices.append(RankIndex(r))
+
+        return indices
 
 # The ElementIndex is here and not form.py because not all backends need
 # an element index (e.g. OP2).
