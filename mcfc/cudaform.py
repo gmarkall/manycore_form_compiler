@@ -124,6 +124,7 @@ class CudaFormBackend(FormBackend):
         self._expressionBuilder = CudaExpressionBuilder()
 	self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
 	self._kernelParameterComputer = KernelParameterComputer()
+	self._indexSumCounter = IndexSumCounter()
 
     def compile(self, form):
 
@@ -253,8 +254,7 @@ class CudaFormBackend(FormBackend):
 	# Determine how many dimension loops we need by inspection.
 	# We count the nesting depth of IndexSums to determine
 	# how many dimension loops we need.
-	ISC = IndexSumCounter()
-	numDimLoops = ISC.count(integrand)
+	numDimLoops = self._indexSumCounter.count(integrand)
 
 	# Add loops for each dimension as necessary. 
 	for d in range(numDimLoops):
