@@ -52,8 +52,11 @@ def drive(ast, uflObjects, fd):
     state = assemblerBackend.buildState()
     initialiser = assemblerBackend.buildInitialiser(ast, uflObjects)
     finaliser = assemblerBackend.buildFinaliser(ast, uflObjects)
+    runModel = assemblerBackend.buildRunModel(ast, uflObjects)
     print >>fd, state.unparse()
     print >>fd
     print >>fd, initialiser.unparse()
     print >>fd
     print >>fd, finaliser.unparse()
+    print >>fd
+    print >>fd, runModel.unparse()

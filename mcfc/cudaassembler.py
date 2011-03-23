@@ -69,17 +69,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    func.append(arrow)
 
 	# Get num_ele, num_nodes etc
-        numEle = Variable("numEle", Integer())
-	call = FunctionCall('getNumEle')
-        arrow = ArrowOp(state, call)
-	assignment = AssignmentOp(Declaration(numEle), arrow)
-	func.append(assignment)
-
-        numNodes = Variable("numNodes", Integer())
-	call = FunctionCall('getNumNodes')
-        arrow = ArrowOp(state, call)
-	assignment = AssignmentOp(Declaration(numNodes), arrow)
-	func.append(assignment)
+        numEle = self.buildAndAppendNumEle(func)
+	numNodes = self.buildAndAppendNumNodes(func)
 
         # Get sparsity of the field we're solving for
 	sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
@@ -227,3 +218,47 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    scope.append(Declaration(var))
 
         return scope
+
+    def simpleBuildAndAppend(self, func, var, t, provider):
+        state = Variable('state')
+	varAst = Variable(var, t)
+	call = FunctionCall('provider')
+	arrow = ArrowOp(state, call)
+	assignment = AssignmentOp(Declaration(varAst), arrow)
+	func.append(assignment)
+	return varAst
+
+    def buildAndAppendNumEle(self, func):
+	return self.simpleBuildAndAppend(func, 'numEle', Integer(), 'getNumEle')
+
+    def buildAndAppendNumNodes(self, func):
+	return self.simpleBuildAndAppend(func, 'numNodes', Integer(), 'getNumNodes')
+
+    def buildAndAppendDetwei(self, func):
+	return self.simpleBuildAndAppend(func, 'detwei', Pointer(Real()), 'getDetwei')
+
+    def buildAndAppendEleNodes(self, func):
+	return self.simpleBuildAndAppend(func, 'eleNodes', Pointer(Integer()), 'getEleNodes')
+
+    def buildAndAppendCoordinates(self, func):
+	return self.simpleBuildAndAppend(func, 'coordinates', Pointer(Real()), 'getCoordinates')
+
+    def buildAndAppendDn(self, func):
+	return self.simpleBuildAndAppend(func, 'dn', Pointer(Real()), 'getReferenceDn')
+        
+    def buildAndAppendQuadWeights(self, func):
+	return self.simpleBuildAndAppend(func, 'quadWeights', Pointer(Real()), 'getQuadWeights')
+
+    def buildRunModel(self, ast, uflObjects):
+        func = FunctionDefinition(Void(), 'run_model_')
+	func.setExternC(True)
+
+        numEle = self.buildAndAppendNumEle(func)
+	numNodes = self.buildAndAppendNumNodes(func)
+        detwei = self.buildAndAppendDetwei(func)
+        eleNodes = self.buildAndAppendEleNodes(func)
+	coordinates = self.buildAndAppendCoordinates(func)
+	dn = self.buildAndAppendDn(func)
+	quadWeights = self.buildAndAppendQuadWeights(func)
+
+	return func
