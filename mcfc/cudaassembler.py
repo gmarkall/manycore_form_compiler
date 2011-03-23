@@ -307,7 +307,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.append(assignment)
 
         # Create a call to transform_to_physical.
-        params = ExpressionList()
+        paramList = [coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle]
+	params = ExpressionList(paramList)
 	t2pCall = CudaKernelCall('transform_to_physical', params, gridXDim, blockXDim, shMemSize)
 	func.append(t2pCall)
 
