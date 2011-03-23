@@ -95,14 +95,15 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.append(assignment)
 
         # Initialise matrix_colm, findrm, etc.
-	matrixVars = ['matrix_colm', 'matrix_findrm', 'matrix_colm_size', 'matrix_findrm_size']
-	sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm',      'getSizeFindrm'     ]
+	# When you tidy this up, put these in a dict???
+	matrixVars = [Variable('matrix_colm'), Variable('matrix_findrm'), \
+	              Variable('matrix_colm_size'), Variable('matrix_findrm_size')]
+	sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm', 'getSizeFindrm']
 
 	for var, source in zip(matrixVars, sourceFns):
-	    lhs = Variable(var)
 	    call = FunctionCall(source)
 	    rhs = ArrowOp(sparsity, call)
-	    assignment = AssignmentOp(lhs, rhs)
+	    assignment = AssignmentOp(var, rhs)
 	    func.append(assignment)
 
         # Get the number of values per node and use it to calculate the
@@ -141,8 +142,32 @@ class CudaAssemblerBackend(AssemblerBackend):
 
 	# Generate Mallocs for the local matrix and vector, and the solution
 	# vector.
+	localVector = Variable('localVector', Pointer(Real()))
+	localMatrix = Variable('localMatrix', Pointer(Real()))
+	globalVector = Variable('globalVector', Pointer(Real()))
+	globalMatrix = Variable('globalMatrix', Pointer(Real()))
+	solutionVector = Variable('solutionVector', Pointer(Real()))
+	
+	malloc = self.buildCudaMalloc(localVector, MultiplyOp(numEle, numVectorEntries))
+	func.append(malloc)
+	malloc = self.buildCudaMalloc(localMatrix, MultiplyOp(numEle, numMatrixEntries))
+	func.append(malloc)
+	malloc = self.buildCudaMalloc(globalVector, matrixVars[2]) # matrix_colm_size
+	func.append(malloc)
+	malloc = self.buildCudaMalloc(globalMatrix, MultiplyOp(numNodes, numValsPerNode))
+	func.append(malloc)
+	malloc = self.buildCudaMalloc(solutionVector,MultiplyOp(numNodes, numValsPerNode))
+	func.append(malloc)
 
 	return func
+
+    def buildCudaMalloc(self, var, size):
+        cast = Cast(Pointer(Pointer(Void())), AddressOfOp(var))
+	sizeof = SizeOf(var.getType().getBaseType())
+	sizeArg = MultiplyOp(sizeof, size)
+        params = ExpressionList([cast, sizeArg])
+        malloc = FunctionCall('cudaMalloc', params)
+	return malloc
 
     def findSimilarField(self, field):
         obj = self._uflObjects[field]
