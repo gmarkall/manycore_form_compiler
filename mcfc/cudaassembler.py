@@ -312,4 +312,20 @@ class CudaAssemblerBackend(AssemblerBackend):
 	t2pCall = CudaKernelCall('transform_to_physical', params, gridXDim, blockXDim, shMemSize)
 	func.append(t2pCall)
 
+        # Traverse the AST looking for solves
+
+	    # Found a solve? Call the matrix assembly
+
+	    # Then call the rhs assembly
+
+	    # call the addtos
+
+	    # call the solve
+
+	    # expand the result
+
+	# Traverse the AST looking for fields that need to return to the host
+	
+	    # Found one? ok, call the method to return it.
+
 	return func
