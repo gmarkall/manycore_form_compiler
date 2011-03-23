@@ -34,6 +34,11 @@ def drive(ast, uflObjects, fd):
     assemblerBackend = cudaassembler.CudaAssemblerBackend()
     formFinder = FormFinder()
 
+    # Build headers
+    headers = assemblerBackend.buildHeadersAndGlobals(ast, uflObjects)
+    print >>fd, headers.unparse()
+    print >>fd
+
     # Build forms
     forms = formFinder.find(ast)
     for form, count in forms:
@@ -46,6 +51,9 @@ def drive(ast, uflObjects, fd):
     # Build assembler
     state = assemblerBackend.buildState()
     initialiser = assemblerBackend.buildInitialiser(ast, uflObjects)
+    finaliser = assemblerBackend.buildFinaliser(ast, uflObjects)
     print >>fd, state.unparse()
     print >>fd
     print >>fd, initialiser.unparse()
+    print >>fd
+    print >>fd, finaliser.unparse()

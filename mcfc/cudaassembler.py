@@ -188,3 +188,42 @@ class CudaAssemblerBackend(AssemblerBackend):
 	        return k
 	
 	print "Big oops."
+
+    def buildFinaliser(self, ast, uflObjects):
+        func = FunctionDefinition(Void(), 'finalise_gpu_')
+	func.setExternC(True)
+
+        state = Variable('state')
+	delete = Delete(state)
+	func.append(delete)
+
+	return func
+
+    def buildHeadersAndGlobals(self, ast, uflObjects):
+        scope = GlobalScope()
+	include = Include('cudastatic.hpp')
+	scope.append(include)
+	include = Include('cudastate.hpp')
+	scope.append(include)
+
+        # Bad copy-pasting from above. needs organising
+	localVector = Variable('localVector', Pointer(Real()))
+	localMatrix = Variable('localMatrix', Pointer(Real()))
+	globalVector = Variable('globalVector', Pointer(Real()))
+	globalMatrix = Variable('globalMatrix', Pointer(Real()))
+	solutionVector = Variable('solutionVector', Pointer(Real()))
+        
+	# Some other variables to declare
+	matrixColmSize = Variable('matrix_colm_size', Integer())
+	matrixFindrmSize = Variable('matrix_findrm_size', Integer())
+	matrixColm = Variable('matrix_colm', Pointer(Integer()))
+	matrixFindrm = Variable('matrix_findrm', Pointer(Integer()))
+
+        # Declare vars in global scope
+        declVars = [localVector, localMatrix, globalVector, globalMatrix, solutionVector, \
+	            matrixColmSize, matrixFindrmSize, matrixColm, matrixFindrm ]
+
+        for var in declVars:
+	    scope.append(Declaration(var))
+
+        return scope

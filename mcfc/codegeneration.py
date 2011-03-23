@@ -131,6 +131,7 @@ class FunctionDefinition(BackendASTNode):
     def __init__(self, t, name, params=None, body=None):
         self._t = t
 	self._name = name
+	self._modifier = ''
 
 	if params is None:
 	    self._params = ParameterList()
@@ -212,6 +213,20 @@ class Scope(BackendASTNode):
 	code = code + '\n' + indent + '}'
 	return code
 
+class GlobalScope(Scope):
+
+    def __init__(self, statements=None):
+        Scope.__init__(self, statements)
+
+    def unparse(self):
+        code = ''
+        for s in self._statements:
+	    if isinstance(s, Include):
+	        code = code + s.unparse() + '\n'
+            else:
+	        code = code + s.unparse() + ';\n'
+	return code
+
 class New(BackendASTNode):
 
     def __init__(self, t, params=None):
@@ -225,6 +240,16 @@ class New(BackendASTNode):
         t = self._t.unparse_internal()
 	params = self._params.unparse()
         code = 'new %s%s' % (t, params)
+	return code
+
+class Delete(BackendASTNode):
+
+    def __init__(self, var):
+        self._var = var
+
+    def unparse(self):
+        var = self._var.unparse()
+	code = 'delete %s' % (var)
 	return code
 
 class BinaryOp(BackendASTNode):
@@ -334,6 +359,21 @@ class SizeOf(BackendASTNode):
     def unparse(self):
         t = self._t.unparse()
 	code = 'sizeof(%s)' % (t)
+	return code
+
+class Include(BackendASTNode):
+
+    def __init__(self, header, isSystem=False):
+        self._header = header
+	self._isSystem = isSystem
+
+    def unparse(self):
+        if self._isSystem:
+	    marks = ['<', '>']
+	else:
+	    marks = ['"', '"']
+
+        code = '#include %s%s%s' % (marks[0], self._header, marks[1])
 	return code
 
 # Types
