@@ -190,6 +190,33 @@ class FunctionCall(BackendASTNode):
         code = '%s%s' % (name, params)
 	return code
 
+class CudaKernelCall(FunctionCall):
+
+    def __init__(self, name, params, gridDim, blockDim, shMemSize=None, stream=None):
+        FunctionCall.__init__(self, name, params)
+	self._gridDim = gridDim
+	self._blockDim = blockDim
+	self._shMemSize = shMemSize
+	self._stream = stream
+
+    def unparse(self):
+        name = self._name
+	params = self._params.unparse()
+	
+	gridDim = self._gridDim.unparse()
+	blockDim = self._blockDim.unparse()
+	config = '%s,%s' % (gridDim, blockDim)
+	
+	if self._shMemSize is not None:
+	    shMemSize = self._shMemSize.unparse()
+	    config = config + ',' + shMemSize
+	    if self._stream is not None:
+	        stream = self._stream.unparse()
+		config = config + ',' + stream
+	
+        code = '%s<<<%s>>>%s' % (name, config, params)
+        return code
+
 class Scope(BackendASTNode):
 
     def __init__(self, statements=None):

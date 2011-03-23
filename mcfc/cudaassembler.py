@@ -267,6 +267,9 @@ class CudaAssemblerBackend(AssemblerBackend):
     def buildAndAppendNodesPerEle(self, func):
         return self.simpleBuildAndAppend(func, 'nodesPerEle', Integer(), 'getNodesPerEle', 'Coordinate')
 
+    def buildAndAppendDShape(self, func):
+        return self.simpleBuildAndAppend(func, 'dShape', Pointer(Real()), 'getBasisFunctionDerivative', 'Coordinate')
+
     def buildRunModel(self, ast, uflObjects):
         func = FunctionDefinition(Void(), 'run_model_')
 	func.setExternC(True)
@@ -284,5 +287,28 @@ class CudaAssemblerBackend(AssemblerBackend):
 	nDim = self.buildAndAppendNDim(func)
 	nQuad = self.buildAndAppendNQuad(func)
         nodesPerEle = self.buildAndAppendNodesPerEle(func)
- 
+        dShape = self.buildAndAppendDShape(func)
+
+        # Build the block dimension declaration. Eventually this needs to be configurable
+	# (e.g. for autotuning, performance experiments.)
+	blockXDim = Variable('blockXDim', Integer())
+	assignment = AssignmentOp(Declaration(blockXDim), Literal(1))
+	func.append(assignment)
+	gridXDim = Variable('gridXDim', Integer())
+	assignment = AssignmentOp(Declaration(gridXDim), Literal(1))
+	func.append(assignment)
+
+        # Call the function that computes the amount of shared memory we need for
+	# transform_to_physical. 
+	shMemSize = Variable('shMemSize', Integer())
+	params = ExpressionList([blockXDim, nDim, nodesPerEle])
+	t2pShMemSizeCall = FunctionCall('t2p_shmemsize', params)
+	assignment = AssignmentOp(Declaration(shMemSize), t2pShMemSizeCall)
+	func.append(assignment)
+
+        # Create a call to transform_to_physical.
+        params = ExpressionList()
+	t2pCall = CudaKernelCall('transform_to_physical', params, gridXDim, blockXDim, shMemSize)
+	func.append(t2pCall)
+
 	return func
