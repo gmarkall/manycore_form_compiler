@@ -11,7 +11,6 @@ class FormFinder(AntlrVisitor):
 
     def find(self, tree):
         self._forms = []
-	self._count = 0
 	self.traverse(tree)
 	return self._forms
 
@@ -22,8 +21,7 @@ class FormFinder(AntlrVisitor):
 	    lhs = tree.getChild(0)
 	    rhs = tree.getChild(1)
 	    if str(rhs) == 'Form':
-	        self._forms.append((str(lhs), self._count))
-		self._count = self._count + 1
+	        self._forms.append(str(lhs))
     
     def pop(self):
         pass
@@ -41,9 +39,9 @@ def drive(ast, uflObjects, fd):
 
     # Build forms
     forms = formFinder.find(ast)
-    for form, count in forms:
+    for form in forms:
         o = uflObjects[form]
-	name = form + '_' + str(count)
+	name = form
 	code = formBackend.compile(name, o)
 	print >>fd, code.unparse()
 	print >>fd
