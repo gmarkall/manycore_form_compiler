@@ -94,10 +94,22 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 class KernelParameterComputer(Transformer):
 
     def compute(self, tree):
-        self._parameters = list(statutoryParameters)
+        parameters = list(statutoryParameters)
+	
+	self._coefficients = []
+	self._arguments = []
+	self._spatialDerivatives = []
+	
 	self.visit(tree)
-	self._parameters = uniqify(self._parameters)
-	return self._parameters
+	
+	self._coefficients = uniqify(self._coefficients)
+	self._arguments = uniqify(self._arguments)
+	self._spatialDerivatives = uniqify(self._spatialDerivatives)
+	
+	parameters.extend(self._coefficients)
+	parameters.extend(self._arguments)
+	parameters.extend(self._spatialDerivatives)
+	return parameters
 
     # The expression structure does not affect the parameters.
     def expr(self, tree, *ops):
@@ -106,17 +118,17 @@ class KernelParameterComputer(Transformer):
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
 	parameter = Variable(name, Pointer(Real()))
-	self._parameters.append(parameter)
+	self._spatialDerivatives.append(parameter)
 
     def argument(self, tree):
         name = buildArgumentName(tree)
 	parameter = Variable(name, Pointer(Real()))
-	self._parameters.append(parameter)
+	self._arguments.append(parameter)
 
     def coefficient(self, tree):
         name = buildCoefficientName(tree)
 	parameter = Variable(name, Pointer(Real()))
-	self._parameters.append(parameter)
+	self._coefficients.append(parameter)
 
 class CudaFormBackend(FormBackend):
 
