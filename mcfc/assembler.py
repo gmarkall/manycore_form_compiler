@@ -59,4 +59,30 @@ def findSolveResults(tree):
     SRF = SolveResultFinder()
     return SRF.find(tree)
 
+class SolveFinder(AntlrVisitor):
+    """ Traverses an antlr tree and returns the assignment node of
+    solves, rather than the solve node itself. This way we can get
+    to the target as well as the solve node."""
 
+    def __init__(self):
+        AntlrVisitor.__init__(self, preOrder)
+
+    def find(self, tree):
+        self._solves = []
+	self.traverse(tree)
+	return self._solves
+
+    def visit(self, tree):
+        label = str(tree)
+
+	if label == '=':
+	    rhs = tree.getChild(1)
+	    if str(rhs) == 'solve':
+	        self._solves.append(tree)
+    
+    def pop(self):
+        pass
+
+def findSolves(tree):
+    SF = SolveFinder()
+    return SF.find(tree)

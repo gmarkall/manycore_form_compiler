@@ -6,9 +6,12 @@ cudaform.py, and the necessary solves."""
 # MCFC libs
 from assembler import *
 from codegeneration import *
+from utilities import uniqify
 import state
 # FEniCS UFL libs
 import ufl.finiteelement
+from ufl.differentiation import SpatialDerivative
+from ufl.algorithms.transformations import Transformer
 
 class CudaAssemblerBackend(AssemblerBackend):
 
@@ -267,11 +270,17 @@ class CudaAssemblerBackend(AssemblerBackend):
     def buildAndAppendNodesPerEle(self, func):
         return self.simpleBuildAndAppend(func, 'nodesPerEle', Integer(), 'getNodesPerEle', 'Coordinate')
 
+    def buildAndAppendShape(self, func):
+        return self.simpleBuildAndAppend(func, 'shape', Pointer(Real()), 'getBasisFunction', 'Coordinate')
+
     def buildAndAppendDShape(self, func):
         return self.simpleBuildAndAppend(func, 'dShape', Pointer(Real()), 'getBasisFunctionDerivative', 'Coordinate')
 
     def buildRunModel(self, ast, uflObjects):
-        func = FunctionDefinition(Void(), 'run_model_')
+        
+	dt = Variable('dt', Real())
+	params = ParameterList([dt])
+	func = FunctionDefinition(Void(), 'run_model_', params)
 	func.setExternC(True)
 
         numEle = self.buildAndAppendNumEle(func)
@@ -287,6 +296,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	nDim = self.buildAndAppendNDim(func)
 	nQuad = self.buildAndAppendNQuad(func)
         nodesPerEle = self.buildAndAppendNodesPerEle(func)
+	shape = self.buildAndAppendShape(func)
         dShape = self.buildAndAppendDShape(func)
 
         # Build the block dimension declaration. Eventually this needs to be configurable
@@ -312,9 +322,58 @@ class CudaAssemblerBackend(AssemblerBackend):
 	t2pCall = CudaKernelCall('transform_to_physical', params, gridXDim, blockXDim, shMemSize)
 	func.append(t2pCall)
 
-        # Traverse the AST looking for solves
+        # Various parameters
+        # Bad copy-pasting from above. needs organising
+	localVector = Variable('localVector', Pointer(Real()))
+	localMatrix = Variable('localMatrix', Pointer(Real()))
+	globalVector = Variable('globalVector', Pointer(Real()))
+	globalMatrix = Variable('globalMatrix', Pointer(Real()))
+	solutionVector = Variable('solutionVector', Pointer(Real()))
 
-	    # Found a solve? Call the matrix assembly
+        # These parameters will be needed by every matrix/vector assembly
+	# see also the KernelParameterComputer in cudaform.py.
+	matrixParameters = [localMatrix, numEle, dt, detwei]
+	vectorParameters = [localVector, numEle, dt, detwei]
+
+        # Traverse the AST looking for solves
+        solves = findSolves(ast)
+	
+	for solve in solves:
+	    # Unpack the bits of information we want
+	    result = str(solve.getChild(0))
+	    solveNode = solve.getChild(1)
+	    matrix = solveNode.getChild(0)
+	    vector = solveNode.getChild(1)
+	    
+	    # Call the matrix assembly
+            form = uflObjects[str(matrix)]
+	    tree = form.integrals()[0].integrand()
+	    paramUFL = generateKernelParameters(tree, form)
+            
+	    # Figure out which parameters to pass
+	    params = ExpressionList(list(matrixParameters))
+	    needShape = False
+	    needDShape = False
+	    for obj in paramUFL:
+	        if isinstance(obj, ufl.coefficient.Coefficient):
+		    # find which field this coefficient came from
+		    field = findFieldFromCoefficient(ast, obj)
+		    varName = field+'Coeff'
+		    var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', field)
+		    # Add to parameters
+		    params.append(var)
+		if isinstance(obj, ufl.argument.Argument):
+		    needShape = True
+		if isinstance(obj, ufl.differentiation.SpatialDerivative):
+		    needDShape = True
+
+	    if needShape:
+	        params.append(shape)
+	    if needDShape:
+	        params.append(dShape)
+
+            matrixAssembly = CudaKernelCall(matrix, params, gridXDim, blockXDim)
+	    func.append(matrixAssembly)
 
 	    # Then call the rhs assembly
 
@@ -329,3 +388,93 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    # Found one? ok, call the method to return it.
 
 	return func
+
+class KernelParameterGenerator(Transformer):
+    """Mirrors the functionality of the kernelparametercomputer
+    in cudaform.py - maybe merge at some point?"""
+
+    def generate(self, tree, form):
+	self._coefficients = []
+	self._arguments = []
+	self._spatialDerivatives = []
+
+	self.visit(tree)
+
+        form_data = form.form_data()
+        formCoefficients = form_data.coefficients
+	originalCoefficients = form_data.original_coefficients
+	formArguments = form_data.arguments
+	originalArguments = form_data.original_arguments
+
+        parameters = []
+ 
+	for coeff in self._coefficients:
+	    i = formCoefficients.index(coeff)
+	    originalCoefficient = originalCoefficients[i]
+	    parameters.append(originalCoefficient)
+
+	for arg in self._arguments:
+	    i = formArguments.index(arg)
+	    originalArgument = originalArguments[i]
+	    parameters.append(originalArgument)
+	
+	for derivative in self._spatialDerivatives:
+	    arg = derivative.operands()[0]
+	    indices = derivative.operands()[1]
+	    i = formArguments.index(arg)
+	    originalArgument = originalArguments[i]
+	    parameters.append(ufl.differentiation.SpatialDerivative(originalArgument,indices))
+
+	parameters = uniqify(parameters)
+
+	return parameters
+
+    def expr(self, tree, *ops):
+        pass
+
+    def spatial_derivative(self, tree):
+        self._spatialDerivatives.append(tree)
+
+    def argument(self, tree):
+        self._arguments.append(tree)
+
+    def coefficient(self, tree):
+        self._coefficients.append(tree)
+
+def generateKernelParameters(tree, form):
+    KPG = KernelParameterGenerator()
+    return KPG.generate(tree, form)
+
+class CoefficientFieldFinder(AntlrVisitor):
+    """Given a coefficient, this class traverses the
+    AST and finds the name of the field it came from"""
+
+    def __init__(self):
+        AntlrVisitor.__init__(self, preOrder)
+
+    def find(self, ast, coeff):
+        self._count = str(coeff.count())
+	self._field = None
+	self.traverse(ast)
+	return self._field
+
+    def visit(self, tree):
+        label = str(tree)
+
+	if label == 'Coefficient':
+	    count = str(tree.getChild(1))
+	    if count == self._count:
+	        # Found the correct Field. However, we need to make sure this
+		# was a version of the field alone on the right-hand side of 
+		# an assignment.
+		field = tree.getParent()
+		fieldParent = field.getParent()
+		if str(fieldParent) == '=':
+		    self._field = str(field)
+
+    def pop(self):
+        pass
+
+def findFieldFromCoefficient(ast, coeff):
+    CFF = CoefficientFieldFinder()
+    return CFF.find(ast, coeff)
