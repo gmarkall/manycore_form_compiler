@@ -219,10 +219,19 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         return scope
 
-    def simpleBuildAndAppend(self, func, var, t, provider):
+    def simpleBuildAndAppend(self, func, var, t, provider, param=None):
+        """Build and append a variable declaration to func. It initialises
+        itself by the return value from the provided state method. A string
+	parameter can also be passed to the state method (e.g. to choose a 
+	different field"""
+        params = ExpressionList()
+        if param is not None:
+	     paramString = Literal('"'+param+'"')
+	     params.append(paramString)
+
         state = Variable('state')
 	varAst = Variable(var, t)
-	call = FunctionCall('provider')
+	call = FunctionCall(provider, params)
 	arrow = ArrowOp(state, call)
 	assignment = AssignmentOp(Declaration(varAst), arrow)
 	func.append(assignment)
@@ -249,6 +258,15 @@ class CudaAssemblerBackend(AssemblerBackend):
     def buildAndAppendQuadWeights(self, func):
 	return self.simpleBuildAndAppend(func, 'quadWeights', Pointer(Real()), 'getQuadWeights')
 
+    def buildAndAppendNDim(self, func):
+        return self.simpleBuildAndAppend(func, 'nDim', Integer(), 'getDimension', 'Coordinate')
+
+    def buildAndAppendNQuad(self, func):
+        return self.simpleBuildAndAppend(func, 'nQuad', Integer(), 'getNumQuadPoints', 'Coordinate')
+
+    def buildAndAppendNodesPerEle(self, func):
+        return self.simpleBuildAndAppend(func, 'nodesPerEle', Integer(), 'getNodesPerEle', 'Coordinate')
+
     def buildRunModel(self, ast, uflObjects):
         func = FunctionDefinition(Void(), 'run_model_')
 	func.setExternC(True)
@@ -261,4 +279,10 @@ class CudaAssemblerBackend(AssemblerBackend):
 	dn = self.buildAndAppendDn(func)
 	quadWeights = self.buildAndAppendQuadWeights(func)
 
+        # We get these from the coordinate field for now,
+	# assuming that everything's the same for all fields.
+	nDim = self.buildAndAppendNDim(func)
+	nQuad = self.buildAndAppendNQuad(func)
+        nodesPerEle = self.buildAndAppendNodesPerEle(func)
+ 
 	return func

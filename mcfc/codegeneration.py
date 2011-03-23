@@ -117,6 +117,12 @@ class ExpressionList(BackendASTNode):
 	else:
 	    self._expressions = expressions
 
+    def append(self, expression):
+         self._expressions.append(expression)
+
+    def prepend(self, expression):
+         self._expressions.insert(0, expression)
+
     def unparse(self):
         code = '('
 	if len(self._expressions) > 0:
