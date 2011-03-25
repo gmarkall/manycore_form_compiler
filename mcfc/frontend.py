@@ -60,6 +60,15 @@ def main():
 
     return 0
 
+def testHook(inputFile, outputFile):
+
+    ast, uflObjects = readSource(inputFile)
+    fd = open(outputFile, 'w')
+    driver.drive(ast, uflObjects, fd)
+    fd.close()
+    return 0
+
+
 def get_options():
     try: 
         opts, args = getopt.getopt(sys.argv[1:], "hvpo:", ["visualise", "print"])

@@ -1,0 +1,211 @@
+#include "cudastatic.hpp"
+#include "cudastate.hpp"
+double* localVector;
+double* localMatrix;
+double* globalVector;
+double* globalMatrix;
+double* solutionVector;
+int matrix_colm_size;
+int matrix_findrm_size;
+int* matrix_colm;
+int* matrix_findrm;
+
+
+__global__ void M(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
+{
+  for(int i_ele = THREAD_ID; i_ele < n_ele; (i_ele += THREAD_COUNT))
+  {
+    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    {
+      for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
+      {
+        (localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] = 0.0);
+        for(int i_g = 0; i_g < 6; i_g++)
+        {
+          (localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] += ((CG1[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_g)))] * CG1[((i_ele + (n_ele * i_r_1)) + (3 * (n_ele * i_g)))]) * detwei[(i_ele + (n_ele * i_g))]));
+        };
+      };
+    };
+  };
+}
+
+__global__ void d(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* d_CG1)
+{
+  for(int i_ele = THREAD_ID; i_ele < n_ele; (i_ele += THREAD_COUNT))
+  {
+    __shared__ double c_q0[24];
+    for(int i_g = 0; i_g < 6; i_g++)
+    {
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          (c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] = 0.0);
+          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+          {
+            (c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += c0[((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_r_0)))]);
+          };
+        };
+      };
+    };
+    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    {
+      for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
+      {
+        (localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] = 0.0);
+        for(int i_g = 0; i_g < 6; i_g++)
+        {
+          for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+          {
+            for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+            {
+              (localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] += (((c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] * (-1 * d_CG1[(((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_g))) + (6 * (3 * (n_ele * i_d_1))))])) * d_CG1[(((i_ele + (n_ele * i_r_1)) + (3 * (n_ele * i_g))) + (6 * (3 * (n_ele * i_d_0))))]) * detwei[(i_ele + (n_ele * i_g))]));
+            };
+          };
+        };
+      };
+    };
+  };
+}
+
+__global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1, double* d_CG1)
+{
+  for(int i_ele = THREAD_ID; i_ele < n_ele; (i_ele += THREAD_COUNT))
+  {
+    __shared__ double c_q0[24];
+    for(int i_g = 0; i_g < 6; i_g++)
+    {
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          (c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] = 0.0);
+          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+          {
+            (c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += c0[((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_r_0)))]);
+          };
+        };
+      };
+    };
+    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    {
+      for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
+      {
+        (localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] = 0.0);
+        for(int i_g = 0; i_g < 6; i_g++)
+        {
+          (localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] += ((CG1[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_g)))] * CG1[((i_ele + (n_ele * i_r_1)) + (3 * (n_ele * i_g)))]) * detwei[(i_ele + (n_ele * i_g))]));
+          for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+          {
+            for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+            {
+              (localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] += ((-1 * (0.5 * ((c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] * (-1 * d_CG1[(((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_g))) + (6 * (3 * (n_ele * i_d_1))))])) * d_CG1[(((i_ele + (n_ele * i_r_1)) + (3 * (n_ele * i_g))) + (6 * (3 * (n_ele * i_d_0))))]))) * detwei[(i_ele + (n_ele * i_g))]));
+            };
+          };
+        };
+      };
+    };
+  };
+}
+
+__global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* c1, double* CG1, double* d_CG1)
+{
+  for(int i_ele = THREAD_ID; i_ele < n_ele; (i_ele += THREAD_COUNT))
+  {
+    __shared__ double c_q1[24];
+    __shared__ double c_q0[6];
+    for(int i_g = 0; i_g < 6; i_g++)
+    {
+      (c_q0[i_g] = 0.0);
+      for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+      {
+        (c_q0[i_g] += c0[i_r_0]);
+      };
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          (c_q1[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] = 0.0);
+          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+          {
+            (c_q1[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += c1[((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_r_0)))]);
+          };
+        };
+      };
+    };
+    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    {
+      (localTensor[(i_ele + (n_ele * i_r_0))] = 0.0);
+      for(int i_g = 0; i_g < 6; i_g++)
+      {
+        (localTensor[(i_ele + (n_ele * i_r_0))] += ((CG1[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_g)))] * c_q0[i_g]) * detwei[(i_ele + (n_ele * i_g))]));
+        for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+        {
+          for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+          {
+            (localTensor[(i_ele + (n_ele * i_r_0))] += ((0.5 * ((c_q1[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] * (-1 * d_CG1[(((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_g))) + (6 * (3 * (n_ele * i_d_1))))])) * d_CG1[(((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_g))) + (6 * (3 * (n_ele * i_d_0))))])) * detwei[(i_ele + (n_ele * i_g))]));
+          };
+        };
+      };
+    };
+  };
+}
+
+StateHolder* state
+
+extern "C" void initialise_gpu_()
+{
+  (state = new StateHolder());
+  (state -> initialise());
+  (state -> extractField("Tracer"));
+  (state -> extractField("TracerDiffusivity"));
+  (state -> allocateAllGPUMemory());
+  (state -> transferAllFields());
+  (state -> insertTemporaryField("tnew", "Tracer"));
+  (int numEle = (state -> getNumEle()));
+  (int numNodes = (state -> getNumNodes()));
+  (CsrSparsity* sparsity = (state -> getSparsity("Tracer")));
+  (matrix_colm = (sparsity -> getCudaColm()));
+  (matrix_findrm = (sparsity -> getCudaFindrm()));
+  (matrix_colm_size = (sparsity -> getSizeColm()));
+  (matrix_findrm_size = (sparsity -> getSizeFindrm()));
+  (int numValsPerNode = (state -> getValsPerNode("Tracer")));
+  (int numVectorEntries = (state -> getNodesPerEle("Tracer")));
+  (numVectorEntries = (numVectorEntries * numValsPerNode));
+  (int numMatrixEntries = (numVectorEntries * numVectorEntries));
+  cudaMalloc((void**)(&localVector), (sizeof(double) * (numEle * numVectorEntries)));
+  cudaMalloc((void**)(&localMatrix), (sizeof(double) * (numEle * numMatrixEntries)));
+  cudaMalloc((void**)(&globalVector), (sizeof(double) * matrix_colm_size));
+  cudaMalloc((void**)(&globalMatrix), (sizeof(double) * (numNodes * numValsPerNode)));
+  cudaMalloc((void**)(&solutionVector), (sizeof(double) * (numNodes * numValsPerNode)));
+}
+
+extern "C" void finalise_gpu_()
+{
+  delete state;
+}
+
+extern "C" void run_model_(double dt)
+{
+  (int numEle = (state -> getNumEle()));
+  (int numNodes = (state -> getNumNodes()));
+  (double* detwei = (state -> getDetwei()));
+  (int* eleNodes = (state -> getEleNodes()));
+  (double* coordinates = (state -> getCoordinates()));
+  (double* dn = (state -> getReferenceDn()));
+  (double* quadWeights = (state -> getQuadWeights()));
+  (int nDim = (state -> getDimension("Coordinate")));
+  (int nQuad = (state -> getNumQuadPoints("Coordinate")));
+  (int nodesPerEle = (state -> getNodesPerEle("Coordinate")));
+  (double* shape = (state -> getBasisFunction("Coordinate")));
+  (double* dShape = (state -> getBasisFunctionDerivative("Coordinate")));
+  (int blockXDim = 1);
+  (int gridXDim = 1);
+  (int shMemSize = t2p_shmemsize(blockXDim, nDim, nodesPerEle));
+  transform_to_physical<<<gridXDim,blockXDim,shMemSize>>>(coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle);
+  (double* muCoeff = (state -> getElementValue("mu")));
+  A<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt, detwei, muCoeff, shape, dShape);
+  (double* TCoeff = (state -> getElementValue("T")));
+  rhs<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, TCoeff, TCoeff, shape, dShape);
+  cudaMemset(globalMatrix, 0, (sizeof(double) * matrix_colm_size));
+}
