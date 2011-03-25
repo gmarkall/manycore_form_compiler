@@ -277,7 +277,10 @@ class CudaAssemblerBackend(AssemblerBackend):
         return self.simpleBuildAndAppend(func, 'dShape', Pointer(Real()), 'getBasisFunctionDerivative', 'Coordinate')
 
     def buildRunModel(self, ast, uflObjects):
-        
+     
+        # List of field values that we've already extracted when building the function 
+        self._alreadyExtracted = []
+
 	dt = Variable('dt', Real())
 	params = ParameterList([dt])
 	func = FunctionDefinition(Void(), 'run_model_', params)
@@ -330,6 +333,14 @@ class CudaAssemblerBackend(AssemblerBackend):
 	globalMatrix = Variable('globalMatrix', Pointer(Real()))
 	solutionVector = Variable('solutionVector', Pointer(Real()))
 
+	# Some other variables to declare
+	# More awful copy-pasting. If you're reading this,
+	# poke me (Graham) with a stick and tell me to sort it out.
+	matrixColmSize = Variable('matrix_colm_size', Integer())
+	matrixFindrmSize = Variable('matrix_findrm_size', Integer())
+	matrixColm = Variable('matrix_colm', Pointer(Integer()))
+	matrixFindrm = Variable('matrix_findrm', Pointer(Integer()))
+
         # These parameters will be needed by every matrix/vector assembly
 	# see also the KernelParameterComputer in cudaform.py.
 	matrixParameters = [localMatrix, numEle, dt, detwei]
@@ -361,6 +372,19 @@ class CudaAssemblerBackend(AssemblerBackend):
 
 	    # call the addtos
 
+            # First we need to zero the global matrix
+	    sizeOfGlobalMatrix = MultiplyOp(SizeOf(Real()), matrixColmSize)
+	    params = ExpressionList([globalMatrix, Literal(0), sizeOfGlobalMatrix])
+	    zeroMatrix = FunctionCall('cudaMemset', params)
+	    func.append(zeroMatrix)
+
+	    # and zero the global vector
+	    # need to get numvalspernode
+	    #sizeOfGlobalVector = MultiplyOp(SizeOf(Real()), matrixColmSize)
+	    #params = ExpressionList([globalMatrix, Literal(0), sizeOfGlobalMatrix])
+	    #zeroMatrix = FunctionCall('cudaMemset', params)
+	    #func.append(zeroMatrix)
+
 	    # call the solve
 
 	    # expand the result
@@ -382,7 +406,10 @@ class CudaAssemblerBackend(AssemblerBackend):
 		# find which field this coefficient came from
 		field = findFieldFromCoefficient(ast, obj)
 		varName = field+'Coeff'
-		var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', field)
+		# Don't declare and get things twice
+		if varName not in self._alreadyExtracted:
+		    var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', field)
+		    self._alreadyExtracted.append(varName)
 		# Add to parameters
 		params.append(var)
 	    if isinstance(obj, ufl.argument.Argument):
