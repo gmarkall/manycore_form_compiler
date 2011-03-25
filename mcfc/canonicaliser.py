@@ -90,8 +90,8 @@ def main():
     
     # Run canonicaliser
     print "Canonicalising " + inputfile
-    canonical = canonicalise(inputfile);
-    print canonical.getvalue()
+    canonical, uflObjects = canonicalise(inputfile);
+    print canonical
 
     return 0
 
