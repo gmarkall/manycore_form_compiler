@@ -348,34 +348,16 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    # Call the matrix assembly
             form = uflObjects[str(matrix)]
 	    tree = form.integrals()[0].integrand()
-	    paramUFL = generateKernelParameters(tree, form)
-            
-	    # Figure out which parameters to pass
-	    params = ExpressionList(list(matrixParameters))
-	    needShape = False
-	    needDShape = False
-	    for obj in paramUFL:
-	        if isinstance(obj, ufl.coefficient.Coefficient):
-		    # find which field this coefficient came from
-		    field = findFieldFromCoefficient(ast, obj)
-		    varName = field+'Coeff'
-		    var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', field)
-		    # Add to parameters
-		    params.append(var)
-		if isinstance(obj, ufl.argument.Argument):
-		    needShape = True
-		if isinstance(obj, ufl.differentiation.SpatialDerivative):
-		    needDShape = True
-
-	    if needShape:
-	        params.append(shape)
-	    if needDShape:
-	        params.append(dShape)
-
-            matrixAssembly = CudaKernelCall(matrix, params, gridXDim, blockXDim)
+	    params = self.makeParameterListAndGetters(func, ast, tree, form, matrixParameters, shape, dShape)
+	    matrixAssembly = CudaKernelCall(str(matrix), params, gridXDim, blockXDim)
 	    func.append(matrixAssembly)
 
 	    # Then call the rhs assembly
+	    form = uflObjects[str(vector)]
+	    tree = form.integrals()[0].integrand()
+	    params = self.makeParameterListAndGetters(func, ast, tree, form, vectorParameters, shape, dShape)
+            vectorAssembly = CudaKernelCall(str(vector), params, gridXDim, blockXDim)
+	    func.append(vectorAssembly)
 
 	    # call the addtos
 
@@ -388,6 +370,32 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    # Found one? ok, call the method to return it.
 
 	return func
+
+    def makeParameterListAndGetters(self, func, ast, tree, form, staticParameters, shape, dShape):
+	paramUFL = generateKernelParameters(tree, form)
+	# Figure out which parameters to pass
+	params = ExpressionList(list(staticParameters))
+	needShape = False
+	needDShape = False
+	for obj in paramUFL:
+	    if isinstance(obj, ufl.coefficient.Coefficient):
+		# find which field this coefficient came from
+		field = findFieldFromCoefficient(ast, obj)
+		varName = field+'Coeff'
+		var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', field)
+		# Add to parameters
+		params.append(var)
+	    if isinstance(obj, ufl.argument.Argument):
+		needShape = True
+	    if isinstance(obj, ufl.differentiation.SpatialDerivative):
+		needDShape = True
+
+	if needShape:
+	    params.append(shape)
+	if needDShape:
+	    params.append(dShape)
+         
+	return params
 
 class KernelParameterGenerator(Transformer):
     """Mirrors the functionality of the kernelparametercomputer
@@ -419,11 +427,17 @@ class KernelParameterGenerator(Transformer):
 	    parameters.append(originalArgument)
 	
 	for derivative in self._spatialDerivatives:
-	    arg = derivative.operands()[0]
+	    subject = derivative.operands()[0]
 	    indices = derivative.operands()[1]
-	    i = formArguments.index(arg)
-	    originalArgument = originalArguments[i]
-	    parameters.append(ufl.differentiation.SpatialDerivative(originalArgument,indices))
+	    
+	    if isinstance(subject, ufl.argument.Argument):
+	        i = formArguments.index(subject)
+	        originalArgument = originalArguments[i]
+	        parameters.append(ufl.differentiation.SpatialDerivative(originalArgument,indices))
+	    elif isinstance(subject, ufl.coefficient.Coefficient):
+		i = formCoefficients.index(subject)
+		originalCoefficient = originalCoefficients[i]
+		parameters.append(originalCoefficient)
 
 	parameters = uniqify(parameters)
 
