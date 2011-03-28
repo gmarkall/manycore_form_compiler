@@ -1,5 +1,3 @@
-import cudaform
-import cudaassembler
 from visitor import *
 
 import ufl.form
@@ -26,35 +24,27 @@ class FormFinder(AntlrVisitor):
     def pop(self):
         pass
 
-def drive(ast, uflObjects, fd):
+class Driver:
 
-    formBackend = cudaform.CudaFormBackend()
-    assemblerBackend = cudaassembler.CudaAssemblerBackend()
-    formFinder = FormFinder()
+    def drive(self, ast, uflObjects, fd):
 
-    # Build headers
-    headers = assemblerBackend.buildHeadersAndGlobals(ast, uflObjects)
-    print >>fd, headers.unparse()
-    print >>fd
+        formFinder = FormFinder()
 
-    # Build forms
-    forms = formFinder.find(ast)
-    for form in forms:
-        o = uflObjects[form]
-	name = form
-	code = formBackend.compile(name, o)
-	print >>fd, code.unparse()
-	print >>fd
+        # Build assembler
+        definitions, declarations = self._assemblerBackend.compile(ast, uflObjects)
+        # Unparse assembler defintions (headers)
+        print >>fd, definitions.unparse()
+        print >>fd
 
-    # Build assembler
-    state = assemblerBackend.buildState()
-    initialiser = assemblerBackend.buildInitialiser(ast, uflObjects)
-    finaliser = assemblerBackend.buildFinaliser(ast, uflObjects)
-    runModel = assemblerBackend.buildRunModel(ast, uflObjects)
-    print >>fd, state.unparse()
-    print >>fd
-    print >>fd, initialiser.unparse()
-    print >>fd
-    print >>fd, finaliser.unparse()
-    print >>fd
-    print >>fd, runModel.unparse()
+        # Build forms
+        forms = formFinder.find(ast)
+        for form in forms:
+            o = uflObjects[form]
+            name = form
+            code = self._formBackend.compile(name, o)
+            print >>fd, code.unparse()
+            print >>fd
+
+        # Unparse assembler declarations (body)
+        print >>fd, declarations.unparse()
+        print >>fd

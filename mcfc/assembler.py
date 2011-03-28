@@ -3,7 +3,9 @@ from visitor import *
 # Placeholder; will probably fill with things later on.
 # Should be inherited by all assembler implementations.
 class AssemblerBackend:
-    pass
+
+    def compile(self, ast, uflObjects):
+        raise NotImplementedError("You're supposed to implement compile()!")
 
 class AccessedFieldFinder(AntlrVisitor):
 

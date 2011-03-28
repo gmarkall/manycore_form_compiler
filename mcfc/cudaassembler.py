@@ -15,6 +15,25 @@ from ufl.algorithms.transformations import Transformer
 
 class CudaAssemblerBackend(AssemblerBackend):
 
+    def compile(self, ast, uflObjects):
+        # Build definitions
+        definitions = self.buildHeadersAndGlobals(ast, uflObjects)
+
+        # Build declarations
+        # FIXME there are no newlines in between the blocks
+        # should there be a 'newline' AST node???
+        declarations = GlobalScope()
+        state = self.buildState()
+        declarations.append(state)
+        initialiser = self.buildInitialiser(ast, uflObjects)
+        declarations.append(initialiser)
+        finaliser = self.buildFinaliser(ast, uflObjects)
+        declarations.append(finaliser)
+        runModel = self.buildRunModel(ast, uflObjects)
+        declarations.append(runModel)
+
+        return definitions, declarations
+
     def buildStateType(self):
 	return Pointer(Class('StateHolder'))
 

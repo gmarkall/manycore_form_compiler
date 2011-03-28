@@ -6,7 +6,8 @@
     
       --visualise, -v to output a visualisation of the AST
       -o:<filename>   to specify the output filename
-      -p, --print     to print code to screen"""
+      -p, --print     to print code to screen
+      -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
 import sys, getopt, pprint
@@ -17,7 +18,7 @@ from uflParser import uflParser
 # MCFC libs
 import visualiser
 import canonicaliser
-import driver
+from driverfactory import drivers
 
 def main():
 
@@ -42,7 +43,7 @@ def main():
 	return 0
 
     if 'o' in keys:
-        outputFile = opts[o]
+        outputFile = opts['o']
     else:
         outputFile = inputFile[:-3] +'cu'
 
@@ -53,6 +54,12 @@ def main():
         screen = False
 	fd = open(outputFile, 'w')
 
+    if 'b' in keys:
+        backend = opts['b']
+    else:
+        backend = "cuda"
+
+    driver = drivers[backend]()
     driver.drive(ast, uflObjects, fd)
 
     if not screen:
@@ -60,10 +67,11 @@ def main():
 
     return 0
 
-def testHook(inputFile, outputFile):
+def testHook(inputFile, outputFile, backend = "cuda"):
 
     ast, uflObjects = readSource(inputFile)
     fd = open(outputFile, 'w')
+    driver = drivers[backend]()
     driver.drive(ast, uflObjects, fd)
     fd.close()
     return 0
@@ -71,7 +79,7 @@ def testHook(inputFile, outputFile):
 
 def get_options():
     try: 
-        opts, args = getopt.getopt(sys.argv[1:], "hvpo:", ["visualise", "print"])
+        opts, args = getopt.getopt(sys.argv[1:], "bhvpo:", ["visualise", "print"])
     except getopt.error, msg:
         print msg
 	print __doc__
