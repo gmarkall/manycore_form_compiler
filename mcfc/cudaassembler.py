@@ -48,12 +48,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         return definitions, declarations
 
- #   def buildStateType(self):
-#	return Pointer(Class('StateHolder'))
-
     def buildState(self):
-#	t = self.buildStateType()
-#	state = Variable('state', t)
 	decl = Declaration(state)
 	return decl
 
@@ -65,7 +60,6 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.setExternC(True)
 
 	# Call the state constructor
-	#state = Variable('state')
 	newState = New(Class('StateHolder'))
 	construct = AssignmentOp(state, newState)
 	func.append(construct)
@@ -172,7 +166,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.append(malloc)
 	malloc = self.buildCudaMalloc(localMatrix, MultiplyOp(numEle, numMatrixEntries))
 	func.append(malloc)
-	malloc = self.buildCudaMalloc(globalVector, matrixVars[2]) # matrix_colm_size
+	malloc = self.buildCudaMalloc(globalVector, matrixColmSize)
 	func.append(malloc)
 	malloc = self.buildCudaMalloc(globalMatrix, MultiplyOp(numNodes, numValsPerNode))
 	func.append(malloc)
@@ -213,7 +207,6 @@ class CudaAssemblerBackend(AssemblerBackend):
         func = FunctionDefinition(Void(), 'finalise_gpu_')
 	func.setExternC(True)
 
-        #state = Variable('state')
 	delete = Delete(state)
 	func.append(delete)
 
@@ -245,7 +238,6 @@ class CudaAssemblerBackend(AssemblerBackend):
 	     paramString = Literal('"'+param+'"')
 	     params.append(paramString)
 
-        #state = Variable('state')
 	varAst = Variable(var, t)
 	call = FunctionCall(provider, params)
 	arrow = ArrowOp(state, call)
@@ -376,7 +368,18 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    func.append(zeroMatrix)
 
 	    # and zero the global vector
-	    # need to get numvalspernode
+	    # first we need to get numvalspernode.
+	    # FIXME: Naughty copy-pasting. Refactor or die.
+	    similarField = self.findSimilarField(result)
+	    similarFieldString = '"%s"' % (similarField)
+	    numValsPerNode = Variable('numValsPerNode', Integer())
+	    params = ExpressionList([Literal(similarFieldString)])
+	    call = FunctionCall('getValsPerNode', params)
+	    lhs = Declaration(numValsPerNode)
+	    rhs = ArrowOp(state, call)
+	    assignment = AssignmentOp(lhs, rhs)
+	    func.append(assignment)
+	
 	    #sizeOfGlobalVector = MultiplyOp(SizeOf(Real()), matrixColmSize)
 	    #params = ExpressionList([globalMatrix, Literal(0), sizeOfGlobalMatrix])
 	    #zeroMatrix = FunctionCall('cudaMemset', params)
