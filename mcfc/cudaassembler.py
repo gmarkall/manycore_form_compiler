@@ -36,33 +36,33 @@ from ufl.differentiation import SpatialDerivative
 from ufl.algorithms.transformations import Transformer
 
 # Variables used throughout the code generation
-state = Variable('state', Pointer(Class('StateHolder')))
+state            = Variable('state',              Pointer(Class('StateHolder')))
 
-localVector = Variable('localVector', Pointer(Real()))
-localMatrix = Variable('localMatrix', Pointer(Real()))
-globalVector = Variable('globalVector', Pointer(Real()))
-globalMatrix = Variable('globalMatrix', Pointer(Real()))
-solutionVector = Variable('solutionVector', Pointer(Real()))
+localVector      = Variable('localVector',        Pointer(Real()))
+localMatrix      = Variable('localMatrix',        Pointer(Real()))
+globalVector     = Variable('globalVector',       Pointer(Real()))
+globalMatrix     = Variable('globalMatrix',       Pointer(Real()))
+solutionVector   = Variable('solutionVector',     Pointer(Real()))
 
-matrixColmSize = Variable('matrix_colm_size', Integer())
+matrixColmSize   = Variable('matrix_colm_size',   Integer())
 matrixFindrmSize = Variable('matrix_findrm_size', Integer())
-matrixColm = Variable('matrix_colm', Pointer(Integer()))
-matrixFindrm = Variable('matrix_findrm', Pointer(Integer()))
+matrixColm       = Variable('matrix_colm',        Pointer(Integer()))
+matrixFindrm     = Variable('matrix_findrm',      Pointer(Integer()))
 
 # Variables used in the run_model and initialiser functions
 
-numEle = Variable('numEle', Integer())
-numNodes = Variable('numNodes', Integer())
-detwei = Variable('detwei', Pointer(Real()))
-eleNodes = Variable('eleNodes', Pointer(Integer()))
+numEle      = Variable('numEle',      Integer())
+numNodes    = Variable('numNodes',    Integer())
+detwei      = Variable('detwei',      Pointer(Real()))
+eleNodes    = Variable('eleNodes',    Pointer(Integer()))
 coordinates = Variable('coordinates', Pointer(Real()))
-dn = Variable('dn', Pointer(Real()))
+dn          = Variable('dn',          Pointer(Real()))
 quadWeights = Variable('quadWeights', Pointer(Real()))
-nDim = Variable('nDim', Integer())
-nQuad = Variable('nQuad', Integer())
+nDim        = Variable('nDim',        Integer())
+nQuad       = Variable('nQuad',       Integer())
 nodesPerEle = Variable('nodesPerEle', Integer())
-shape = Variable('shape', Pointer(Real()))
-dShape = Variable('dShape', Pointer(Real()))
+shape       = Variable('shape',       Pointer(Real()))
+dShape      = Variable('dShape',      Pointer(Real()))
 
 # State methods that provide each of these variables, and the name of the field
 # that they're taken from, if they require a field. We get things from the
