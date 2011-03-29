@@ -18,6 +18,12 @@ from ufl.algorithms.transformations import Transformer
 # Variables used throughout the code generation
 state = Variable('state', Pointer(Class('StateHolder')))
 
+localVector = Variable('localVector', Pointer(Real()))
+localMatrix = Variable('localMatrix', Pointer(Real()))
+globalVector = Variable('globalVector', Pointer(Real()))
+globalMatrix = Variable('globalMatrix', Pointer(Real()))
+solutionVector = Variable('solutionVector', Pointer(Real()))
+
 class CudaAssemblerBackend(AssemblerBackend):
 
     def compile(self, ast, uflObjects):
@@ -158,12 +164,6 @@ class CudaAssemblerBackend(AssemblerBackend):
 
 	# Generate Mallocs for the local matrix and vector, and the solution
 	# vector.
-	localVector = Variable('localVector', Pointer(Real()))
-	localMatrix = Variable('localMatrix', Pointer(Real()))
-	globalVector = Variable('globalVector', Pointer(Real()))
-	globalMatrix = Variable('globalMatrix', Pointer(Real()))
-	solutionVector = Variable('solutionVector', Pointer(Real()))
-	
 	malloc = self.buildCudaMalloc(localVector, MultiplyOp(numEle, numVectorEntries))
 	func.append(malloc)
 	malloc = self.buildCudaMalloc(localMatrix, MultiplyOp(numEle, numMatrixEntries))
@@ -222,14 +222,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	include = Include('cudastate.hpp')
 	scope.append(include)
 
-        # Bad copy-pasting from above. needs organising
-	localVector = Variable('localVector', Pointer(Real()))
-	localMatrix = Variable('localMatrix', Pointer(Real()))
-	globalVector = Variable('globalVector', Pointer(Real()))
-	globalMatrix = Variable('globalMatrix', Pointer(Real()))
-	solutionVector = Variable('solutionVector', Pointer(Real()))
-        
-	# Some other variables to declare
+        # Some other variables to declare
 	matrixColmSize = Variable('matrix_colm_size', Integer())
 	matrixFindrmSize = Variable('matrix_findrm_size', Integer())
 	matrixColm = Variable('matrix_colm', Pointer(Integer()))
@@ -347,15 +340,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	t2pCall = CudaKernelCall('transform_to_physical', params, gridXDim, blockXDim, shMemSize)
 	func.append(t2pCall)
 
-        # Various parameters
-        # Bad copy-pasting from above. needs organising
-	localVector = Variable('localVector', Pointer(Real()))
-	localMatrix = Variable('localMatrix', Pointer(Real()))
-	globalVector = Variable('globalVector', Pointer(Real()))
-	globalMatrix = Variable('globalMatrix', Pointer(Real()))
-	solutionVector = Variable('solutionVector', Pointer(Real()))
-
-	# Some other variables to declare
+       	# Some other variables to declare
 	# More awful copy-pasting. If you're reading this,
 	# poke me (Graham) with a stick and tell me to sort it out.
 	matrixColmSize = Variable('matrix_colm_size', Integer())
