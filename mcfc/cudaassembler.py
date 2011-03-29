@@ -7,7 +7,7 @@ cudaform.py, and the necessary solves."""
 from assembler import *
 from codegeneration import *
 from utilities import uniqify
-# FIXME: This is referred to as mcfcstate because of the clash with the
+# This is referred to as mcfcstate because of the clash with the
 # variable called state.
 import state as mcfcstate
 # FEniCS UFL libs
