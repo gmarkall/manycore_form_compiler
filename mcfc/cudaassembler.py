@@ -20,8 +20,6 @@ class CudaAssemblerBackend(AssemblerBackend):
         definitions = self.buildHeadersAndGlobals(ast, uflObjects)
 
         # Build declarations
-        # FIXME there are no newlines in between the blocks
-        # should there be a 'newline' AST node???
         declarations = GlobalScope()
         state = self.buildState()
         declarations.append(state)

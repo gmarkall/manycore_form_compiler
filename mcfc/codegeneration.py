@@ -256,7 +256,9 @@ class GlobalScope(Scope):
         for s in self._statements:
 	    if isinstance(s, Include):
 	        code = code + s.unparse() + '\n'
-            else:
+            elif isinstance(s, FunctionDefinition):
+	        code = code + s.unparse() + '\n\n'
+	    else:
 	        code = code + s.unparse() + ';\n'
 	return code
 

@@ -151,8 +151,7 @@ __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, d
   };
 }
 
-StateHolder* state
-
+StateHolder* state;
 extern "C" void initialise_gpu_()
 {
   (state = new StateHolder());
@@ -209,3 +208,6 @@ extern "C" void run_model_(double dt)
   rhs<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, TCoeff, TCoeff, shape, dShape);
   cudaMemset(globalMatrix, 0, (sizeof(double) * matrix_colm_size));
 }
+
+
+
