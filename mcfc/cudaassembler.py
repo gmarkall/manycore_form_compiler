@@ -7,11 +7,16 @@ cudaform.py, and the necessary solves."""
 from assembler import *
 from codegeneration import *
 from utilities import uniqify
-import state
+# FIXME: This is referred to as mcfcstate because of the clash with the
+# variable called state.
+import state as mcfcstate
 # FEniCS UFL libs
 import ufl.finiteelement
 from ufl.differentiation import SpatialDerivative
 from ufl.algorithms.transformations import Transformer
+
+# Variables used throughout the code generation
+state = Variable('state', Pointer(Class('StateHolder')))
 
 class CudaAssemblerBackend(AssemblerBackend):
 
@@ -32,12 +37,12 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         return definitions, declarations
 
-    def buildStateType(self):
-	return Pointer(Class('StateHolder'))
+ #   def buildStateType(self):
+#	return Pointer(Class('StateHolder'))
 
     def buildState(self):
-	t = self.buildStateType()
-	state = Variable('state', t)
+#	t = self.buildStateType()
+#	state = Variable('state', t)
 	decl = Declaration(state)
 	return decl
 
@@ -49,7 +54,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.setExternC(True)
 
 	# Call the state constructor
-	state = Variable('state')
+	#state = Variable('state')
 	newState = New(Class('StateHolder'))
 	construct = AssignmentOp(state, newState)
 	func.append(construct)
@@ -186,11 +191,11 @@ class CudaAssemblerBackend(AssemblerBackend):
 	degree = element.degree()
 	
 	if isinstance(element, ufl.finiteelement.FiniteElement):
-	    sourceFields = state._finiteElements
+	    sourceFields = mcfcstate._finiteElements
 	elif isinstance(element, ufl.finiteelement.FiniteElement):
-	    sourceFields = state._vectorElements
+	    sourceFields = mcfcstate._vectorElements
 	elif isinstance(element, ufl.finiteelement.FiniteElement):
-	    sourceFields = state._tensorElements
+	    sourceFields = mcfcstate._tensorElements
 	else:
 	    print "Oops."
 
@@ -204,7 +209,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func = FunctionDefinition(Void(), 'finalise_gpu_')
 	func.setExternC(True)
 
-        state = Variable('state')
+        #state = Variable('state')
 	delete = Delete(state)
 	func.append(delete)
 
@@ -249,7 +254,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	     paramString = Literal('"'+param+'"')
 	     params.append(paramString)
 
-        state = Variable('state')
+        #state = Variable('state')
 	varAst = Variable(var, t)
 	call = FunctionCall(provider, params)
 	arrow = ArrowOp(state, call)
