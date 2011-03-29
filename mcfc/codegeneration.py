@@ -201,6 +201,8 @@ class FunctionCall(BackendASTNode):
         self._name = name
 	if params is None:
 	    self._params = ExpressionList()
+	elif isinstance(params, list):
+	    self._params = ExpressionList(params)
 	else:
 	    self._params = params
 

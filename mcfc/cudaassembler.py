@@ -93,7 +93,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	accessedFields = findAccessedFields(ast)
 	for field in accessedFields:
 	    fieldString = '"' + field + '"'
-	    params = ExpressionList([Literal(fieldString)])
+	    params = [ Literal(fieldString) ]
 	    call = FunctionCall('extractField',params)
 	    arrow = ArrowOp(state, call)
 	    func.append(arrow)
@@ -113,7 +113,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    similarField = self.findSimilarField(field)
 	    similarFieldString = '"' + similarField + '"'
 	    fieldString = '"' + field + '"'
-	    params = ExpressionList([Literal(fieldString), Literal(similarFieldString)])
+	    params = [ Literal(fieldString), Literal(similarFieldString) ]
 	    call = FunctionCall('insertTemporaryField',params)
 	    arrow = ArrowOp(state, call)
 	    func.append(arrow)
@@ -129,7 +129,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	# with solving multiple fields, this logic will need re-working.
 	# (For each solve field, we should use the similar field and
 	# generate a new sparsity from that)
-	params = ExpressionList([Literal(similarFieldString)])
+	params = [ Literal(similarFieldString) ]
 	call = FunctionCall('getSparsity', params)
 	arrow = ArrowOp(state, call)
 	assignment = AssignmentOp(Declaration(sparsity), arrow)
@@ -151,7 +151,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	# logic as before, that we're only solving on one field, so we can
 	# get these things from the last similar field that we found.
         numValsPerNode = Variable('numValsPerNode', Integer())
-	params = ExpressionList([Literal(similarFieldString)])
+	params = [ Literal(similarFieldString) ]
 	call = FunctionCall('getValsPerNode', params)
 	lhs = Declaration(numValsPerNode)
         rhs = ArrowOp(state, call)
@@ -159,7 +159,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.append(assignment)
 	
         numVectorEntries = Variable('numVectorEntries', Integer())
-	params = ExpressionList([Literal(similarFieldString)])
+	params = [ Literal(similarFieldString) ]
 	call = FunctionCall('getNodesPerEle', params)
 	lhs = Declaration(numVectorEntries)
         rhs = ArrowOp(state, call)
@@ -199,7 +199,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         cast = Cast(Pointer(Pointer(Void())), AddressOfOp(var))
 	sizeof = SizeOf(var.getType().getBaseType())
 	sizeArg = MultiplyOp(sizeof, size)
-        params = ExpressionList([cast, sizeArg])
+        params = [ cast, sizeArg ]
         malloc = FunctionCall('cudaMalloc', params)
 	return malloc
 
@@ -253,7 +253,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         itself by the return value from the provided state method. A string
 	parameter can also be passed to the state method (e.g. to choose a 
 	different field"""
-        params = ExpressionList()
+        params = []
         if param is not None:
 	     paramString = Literal('"'+param+'"')
 	     params.append(paramString)
@@ -339,14 +339,13 @@ class CudaAssemblerBackend(AssemblerBackend):
         # Call the function that computes the amount of shared memory we need for
 	# transform_to_physical. 
 	shMemSize = Variable('shMemSize', Integer())
-	params = ExpressionList([blockXDim, nDim, nodesPerEle])
+	params = [ blockXDim, nDim, nodesPerEle ]
 	t2pShMemSizeCall = FunctionCall('t2p_shmemsize', params)
 	assignment = AssignmentOp(Declaration(shMemSize), t2pShMemSizeCall)
 	func.append(assignment)
 
         # Create a call to transform_to_physical.
-        paramList = [coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle]
-	params = ExpressionList(paramList)
+        params = [ coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle ]
 	t2pCall = CudaKernelCall('transform_to_physical', params, gridXDim, blockXDim, shMemSize)
 	func.append(t2pCall)
 
@@ -383,7 +382,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
             # First we need to zero the global matrix
 	    sizeOfGlobalMatrix = MultiplyOp(SizeOf(Real()), matrixColmSize)
-	    params = ExpressionList([globalMatrix, Literal(0), sizeOfGlobalMatrix])
+	    params = [ globalMatrix, Literal(0), sizeOfGlobalMatrix ]
 	    zeroMatrix = FunctionCall('cudaMemset', params)
 	    func.append(zeroMatrix)
 
@@ -393,7 +392,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    similarField = self.findSimilarField(result)
 	    similarFieldString = '"%s"' % (similarField)
 	    numValsPerNode = Variable('numValsPerNode', Integer())
-	    params = ExpressionList([Literal(similarFieldString)])
+	    params = [ Literal(similarFieldString) ]
 	    call = FunctionCall('getValsPerNode', params)
 	    lhs = Declaration(numValsPerNode)
 	    rhs = ArrowOp(state, call)
@@ -402,28 +401,25 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    
 	    # Zero the global vector
 	    sizeOfGlobalVector = MultiplyOp(SizeOf(Real()), MultiplyOp(numValsPerNode, numNodes))
-	    params = ExpressionList([globalMatrix, Literal(0), sizeOfGlobalVector])
+	    params = [ globalMatrix, Literal(0), sizeOfGlobalVector ]
 	    zeroMatrix = FunctionCall('cudaMemset', params)
 	    func.append(zeroMatrix)
 
             # Build the addtos
 	    # For the matrix
-	    paramList = [matrixFindrm, matrixColm, globalMatrix, eleNodes, \
-	                 localMatrix, numEle, nodesPerEle]
-	    params = ExpressionList(paramList)
+	    params = [ matrixFindrm, matrixColm, globalMatrix, eleNodes, \
+	                 localMatrix, numEle, nodesPerEle ]
 	    matrixAddto = CudaKernelCall('matrix_addto', params, gridXDim, blockXDim)
             func.append(matrixAddto)
 
             # And the vector
-	    paramList = [ globalVector, eleNodes, localVector, numEle, nodesPerEle ]
-	    params = ExpressionList(paramList)
+	    params = [ globalVector, eleNodes, localVector, numEle, nodesPerEle ]
 	    vectorAddto = CudaKernelCall('vector_addto', params, gridXDim, blockXDim)
 	    func.append(vectorAddto)
 	    
 	    # call the solve
-	    paramList = [ matrixFindrm, matrixFindrmSize, matrixColm, matrixColmSize, \
+	    params = [ matrixFindrm, matrixFindrmSize, matrixColm, matrixColmSize, \
 	                  globalMatrix, globalVector, numNodes, solutionVector ]
-            params = ExpressionList(paramList)
 	    cgSolve = FunctionCall('cg_solve', params)
             func.append(cgSolve)
 
@@ -435,8 +431,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 		self._alreadyExtracted.append(varName)
 	    else:
 	        var = Variable(varName)
-	    paramList = [ var, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle ]
-	    params = ExpressionList(paramList)
+	    params = [ var, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle ]
 	    expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
 	    func.append(expand)
 
@@ -445,8 +440,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         
 	for hostField, GPUField in returnedFields:
 	    # Found one? ok, call the method to return it.
-	    paramList = [Literal('"'+hostField+'"'), Literal('"'+GPUField+'"')]
-	    params = ExpressionList(paramList)
+	    params = [ Literal('"'+hostField+'"'), Literal('"'+GPUField+'"') ]
 	    returnCall = FunctionCall('returnFieldToHost', params)
 	    arrow = ArrowOp(state, returnCall)
 	    func.append(arrow)
@@ -456,7 +450,7 @@ class CudaAssemblerBackend(AssemblerBackend):
     def makeParameterListAndGetters(self, func, ast, tree, form, staticParameters, shape, dShape):
 	paramUFL = generateKernelParameters(tree, form)
 	# Figure out which parameters to pass
-	params = ExpressionList(list(staticParameters))
+	params = list(staticParameters)
 	needShape = False
 	needDShape = False
 	for obj in paramUFL:
