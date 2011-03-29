@@ -1,4 +1,8 @@
-# Taken from the Demo folder in the python svn
+# Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+# Python Software Foundation; All Rights Reserved
+
+# This file is licensed under the Python Software Foundation License Version 2.
+# See doc/psf.txt for a copy of this license.
 
 "Usage: unparse.py <path to source file>"
 import sys
