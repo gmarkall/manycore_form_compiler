@@ -379,13 +379,29 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    rhs = ArrowOp(state, call)
 	    assignment = AssignmentOp(lhs, rhs)
 	    func.append(assignment)
-	
-	    #sizeOfGlobalVector = MultiplyOp(SizeOf(Real()), matrixColmSize)
-	    #params = ExpressionList([globalMatrix, Literal(0), sizeOfGlobalMatrix])
-	    #zeroMatrix = FunctionCall('cudaMemset', params)
-	    #func.append(zeroMatrix)
+	    
+	    # Zero the global vector
+	    sizeOfGlobalVector = MultiplyOp(SizeOf(Real()), MultiplyOp(numValsPerNode, numNodes))
+	    params = ExpressionList([globalMatrix, Literal(0), sizeOfGlobalVector])
+	    zeroMatrix = FunctionCall('cudaMemset', params)
+	    func.append(zeroMatrix)
 
+            # Build the addtos
+	    # For the matrix
+	    paramList = [matrixFindrm, matrixColm, globalMatrix, eleNodes, \
+	                 localMatrix, numEle, nodesPerEle]
+	    params = ExpressionList(paramList)
+	    matrixAddto = CudaKernelCall('matrix_addto', params, gridXDim, blockXDim)
+            func.append(matrixAddto)
+
+            # And the vector
+	    paramList = [ globalVector, eleNodes, localVector, numEle, nodesPerEle ]
+	    params = ExpressionList(paramList)
+	    vectorAddto = CudaKernelCall('vector_addto', params, gridXDim, blockXDim)
+	    func.append(vectorAddto)
+	    
 	    # call the solve
+
 
 	    # expand the result
 
