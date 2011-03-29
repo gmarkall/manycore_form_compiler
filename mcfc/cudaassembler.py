@@ -49,6 +49,39 @@ matrixFindrmSize = Variable('matrix_findrm_size', Integer())
 matrixColm = Variable('matrix_colm', Pointer(Integer()))
 matrixFindrm = Variable('matrix_findrm', Pointer(Integer()))
 
+# Variables used in the run_model and initialiser functions
+
+numEle = Variable('numEle', Integer())
+numNodes = Variable('numNodes', Integer())
+detwei = Variable('detwei', Pointer(Real()))
+eleNodes = Variable('eleNodes', Pointer(Integer()))
+coordinates = Variable('coordinates', Pointer(Real()))
+dn = Variable('dn', Pointer(Real()))
+quadWeights = Variable('quadWeights', Pointer(Real()))
+nDim = Variable('nDim', Integer())
+nQuad = Variable('nQuad', Integer())
+nodesPerEle = Variable('nodesPerEle', Integer())
+shape = Variable('shape', Pointer(Real()))
+dShape = Variable('dShape', Pointer(Real()))
+
+# State methods that provide each of these variables, and the name of the field
+# that they're taken from, if they require a field. We get things from the
+# coordinate field for now, assuming that they're the same for all fields. This
+# will change once we have the basic functionality working.
+
+getters = { numEle:      ('getNumEle',                  None,        ), \
+            numNodes:    ('getNumNodes',                None,        ), \
+	    detwei:      ('getDetwei',                  None,        ), \
+	    eleNodes:    ('getEleNodes',                None,        ), \
+	    coordinates: ('getCoordinates',             None,        ), \
+  	    dn:          ('getReferenceDn',             None,        ), \
+ 	    quadWeights: ('getQuadWeights',             None,        ), \
+	    nDim:        ('getDimension',               'Coordinate' ), \
+	    nQuad:       ('getNumQuadPoints',           'Coordinate' ), \
+	    nodesPerEle: ('getNodesPerEle',             'Coordinate' ), \
+	    shape:       ('getBasisFunction',           'Coordinate' ), \
+	    dShape:      ('getBasisFunctionDerivative', 'Coordinate' )  }
+
 class CudaAssemblerBackend(AssemblerBackend):
 
     def compile(self, ast, uflObjects):
@@ -119,8 +152,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    func.append(arrow)
 
 	# Get num_ele, num_nodes etc
-        numEle = self.buildAndAppendNumEle(func)
-	numNodes = self.buildAndAppendNumNodes(func)
+        self.simpleAppend(func, numEle)
+	self.simpleAppend(func, numNodes)
 
         # Get sparsity of the field we're solving for
 	sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
@@ -242,8 +275,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 	different field"""
         params = []
         if param is not None:
-	     paramString = Literal('"'+param+'"')
-	     params.append(paramString)
+	    paramString = Literal('"'+param+'"')
+	    params.append(paramString)
 
 	varAst = Variable(var, t)
 	call = FunctionCall(provider, params)
@@ -252,41 +285,25 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func.append(assignment)
 	return varAst
 
-    def buildAndAppendNumEle(self, func):
-	return self.simpleBuildAndAppend(func, 'numEle', Integer(), 'getNumEle')
-
-    def buildAndAppendNumNodes(self, func):
-	return self.simpleBuildAndAppend(func, 'numNodes', Integer(), 'getNumNodes')
-
-    def buildAndAppendDetwei(self, func):
-	return self.simpleBuildAndAppend(func, 'detwei', Pointer(Real()), 'getDetwei')
-
-    def buildAndAppendEleNodes(self, func):
-	return self.simpleBuildAndAppend(func, 'eleNodes', Pointer(Integer()), 'getEleNodes')
-
-    def buildAndAppendCoordinates(self, func):
-	return self.simpleBuildAndAppend(func, 'coordinates', Pointer(Real()), 'getCoordinates')
-
-    def buildAndAppendDn(self, func):
-	return self.simpleBuildAndAppend(func, 'dn', Pointer(Real()), 'getReferenceDn')
+    def simpleAppend(self, func, var, provider=None, param=None):
+        """Append a variable declaration to func, without building a new
+	Variable instance. The declaration is initialised by the provider
+	with the parameter param, unless these are not specified. If they
+	are not specified, then the getters dict is used to look one up."""
+	params = []
         
-    def buildAndAppendQuadWeights(self, func):
-	return self.simpleBuildAndAppend(func, 'quadWeights', Pointer(Real()), 'getQuadWeights')
+	if provider is None:
+	    provider, param = getters[var]
+	
+	if param is not None:
+	    paramString = Literal('"'+param+'"')
+	    params.append(paramString)
 
-    def buildAndAppendNDim(self, func):
-        return self.simpleBuildAndAppend(func, 'nDim', Integer(), 'getDimension', 'Coordinate')
 
-    def buildAndAppendNQuad(self, func):
-        return self.simpleBuildAndAppend(func, 'nQuad', Integer(), 'getNumQuadPoints', 'Coordinate')
-
-    def buildAndAppendNodesPerEle(self, func):
-        return self.simpleBuildAndAppend(func, 'nodesPerEle', Integer(), 'getNodesPerEle', 'Coordinate')
-
-    def buildAndAppendShape(self, func):
-        return self.simpleBuildAndAppend(func, 'shape', Pointer(Real()), 'getBasisFunction', 'Coordinate')
-
-    def buildAndAppendDShape(self, func):
-        return self.simpleBuildAndAppend(func, 'dShape', Pointer(Real()), 'getBasisFunctionDerivative', 'Coordinate')
+	call = FunctionCall(provider, params)
+	arrow = ArrowOp(state, call)
+	assignment = AssignmentOp(Declaration(var), arrow)
+	func.append(assignment)
 
     def buildRunModel(self, ast, uflObjects):
      
@@ -298,21 +315,11 @@ class CudaAssemblerBackend(AssemblerBackend):
 	func = FunctionDefinition(Void(), 'run_model_', params)
 	func.setExternC(True)
 
-        numEle = self.buildAndAppendNumEle(func)
-	numNodes = self.buildAndAppendNumNodes(func)
-        detwei = self.buildAndAppendDetwei(func)
-        eleNodes = self.buildAndAppendEleNodes(func)
-	coordinates = self.buildAndAppendCoordinates(func)
-	dn = self.buildAndAppendDn(func)
-	quadWeights = self.buildAndAppendQuadWeights(func)
-
-        # We get these from the coordinate field for now,
-	# assuming that everything's the same for all fields.
-	nDim = self.buildAndAppendNDim(func)
-	nQuad = self.buildAndAppendNQuad(func)
-        nodesPerEle = self.buildAndAppendNodesPerEle(func)
-	shape = self.buildAndAppendShape(func)
-        dShape = self.buildAndAppendDShape(func)
+        # Initialise some variables we need
+        toBeInitialised = [ numEle, numNodes, detwei, eleNodes, coordinates, dn, \
+	  quadWeights, nDim, nQuad, nodesPerEle, shape, dShape ]
+        for var in toBeInitialised:
+	    self.simpleAppend(func, var)
 
         # Build the block dimension declaration. Eventually this needs to be configurable
 	# (e.g. for autotuning, performance experiments.)

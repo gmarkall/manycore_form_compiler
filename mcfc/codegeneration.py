@@ -63,6 +63,9 @@ class Variable(BackendASTNode):
     def getType(self):
         return self._t
 
+    def getName(self):
+        return self._name
+
     def unparse(self):
         code = self._name
 	return code
