@@ -24,6 +24,11 @@ globalVector = Variable('globalVector', Pointer(Real()))
 globalMatrix = Variable('globalMatrix', Pointer(Real()))
 solutionVector = Variable('solutionVector', Pointer(Real()))
 
+matrixColmSize = Variable('matrix_colm_size', Integer())
+matrixFindrmSize = Variable('matrix_findrm_size', Integer())
+matrixColm = Variable('matrix_colm', Pointer(Integer()))
+matrixFindrm = Variable('matrix_findrm', Pointer(Integer()))
+
 class CudaAssemblerBackend(AssemblerBackend):
 
     def compile(self, ast, uflObjects):
@@ -222,12 +227,6 @@ class CudaAssemblerBackend(AssemblerBackend):
 	include = Include('cudastate.hpp')
 	scope.append(include)
 
-        # Some other variables to declare
-	matrixColmSize = Variable('matrix_colm_size', Integer())
-	matrixFindrmSize = Variable('matrix_findrm_size', Integer())
-	matrixColm = Variable('matrix_colm', Pointer(Integer()))
-	matrixFindrm = Variable('matrix_findrm', Pointer(Integer()))
-
         # Declare vars in global scope
         declVars = [localVector, localMatrix, globalVector, globalMatrix, solutionVector, \
 	            matrixColmSize, matrixFindrmSize, matrixColm, matrixFindrm ]
@@ -339,14 +338,6 @@ class CudaAssemblerBackend(AssemblerBackend):
 	params = ExpressionList(paramList)
 	t2pCall = CudaKernelCall('transform_to_physical', params, gridXDim, blockXDim, shMemSize)
 	func.append(t2pCall)
-
-       	# Some other variables to declare
-	# More awful copy-pasting. If you're reading this,
-	# poke me (Graham) with a stick and tell me to sort it out.
-	matrixColmSize = Variable('matrix_colm_size', Integer())
-	matrixFindrmSize = Variable('matrix_findrm_size', Integer())
-	matrixColm = Variable('matrix_colm', Pointer(Integer()))
-	matrixFindrm = Variable('matrix_findrm', Pointer(Integer()))
 
         # These parameters will be needed by every matrix/vector assembly
 	# see also the KernelParameterComputer in cudaform.py.
