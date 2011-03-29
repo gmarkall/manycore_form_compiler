@@ -123,9 +123,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         # Initialise matrix_colm, findrm, etc.
 	# When you tidy this up, put these in a dict???
-	matrixVars = [Variable('matrix_colm'), Variable('matrix_findrm'), \
-	              Variable('matrix_colm_size'), Variable('matrix_findrm_size')]
-	sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm', 'getSizeFindrm']
+	matrixVars = [ matrixColm,    matrixFindrm,    matrixColmSize, matrixFindrmSize ]
+	sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm',  'getSizeFindrm'   ]
 
 	for var, source in zip(matrixVars, sourceFns):
 	    call = FunctionCall(source)
