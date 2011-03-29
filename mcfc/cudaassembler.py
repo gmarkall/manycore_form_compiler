@@ -421,9 +421,24 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    func.append(vectorAddto)
 	    
 	    # call the solve
-
+	    paramList = [ matrixFindrm, matrixFindrmSize, matrixColm, matrixColmSize, \
+	                  globalMatrix, globalVector, numNodes, solutionVector ]
+            params = ExpressionList(paramList)
+	    cgSolve = FunctionCall('cg_solve', params)
+            func.append(cgSolve)
 
 	    # expand the result
+            # FIXME: Similar to code in makeParameterListAndGetters. Refactor.
+	    varName = result + 'Coeff'
+	    if varName not in self._alreadyExtracted:
+	        var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', result)
+		self._alreadyExtracted.append(varName)
+	    else:
+	        var = Variable(varName)
+	    paramList = [ var, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle ]
+	    params = ExpressionList(paramList)
+	    expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
+	    func.append(expand)
 
 	# Traverse the AST looking for fields that need to return to the host
 	

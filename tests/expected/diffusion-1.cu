@@ -211,6 +211,9 @@ extern "C" void run_model_(double dt)
   cudaMemset(globalMatrix, 0, (sizeof(double) * (numValsPerNode * numNodes)));
   matrix_addto<<<gridXDim,blockXDim>>>(matrix_findrm, matrix_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
+  cg_solve(matrix_findrm, matrix_findrm_size, matrix_colm, matrix_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
+  (double* tnewCoeff = (state -> getElementValue("tnew")));
+  expand_data<<<gridXDim,blockXDim>>>(tnewCoeff, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle);
 }
 
 
