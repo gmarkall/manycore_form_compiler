@@ -150,21 +150,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 	# size of all the local vector entries. For now we'll use the same
 	# logic as before, that we're only solving on one field, so we can
 	# get these things from the last similar field that we found.
-        numValsPerNode = Variable('numValsPerNode', Integer())
-	params = [ Literal(similarFieldString) ]
-	call = FunctionCall('getValsPerNode', params)
-	lhs = Declaration(numValsPerNode)
-        rhs = ArrowOp(state, call)
-	assignment = AssignmentOp(lhs, rhs)
-	func.append(assignment)
-	
-        numVectorEntries = Variable('numVectorEntries', Integer())
-	params = [ Literal(similarFieldString) ]
-	call = FunctionCall('getNodesPerEle', params)
-	lhs = Declaration(numVectorEntries)
-        rhs = ArrowOp(state, call)
-	assignment = AssignmentOp(lhs, rhs)
-	func.append(assignment)
+        numValsPerNode = self.simpleBuildAndAppend(func, 'numValsPerNode', Integer(), 'getValsPerNode', similarField)
+	numVectorEntries = self.simpleBuildAndAppend(func, 'numVectorEntries', Integer(), 'getNodesPerEle', similarField)
 	
         # Now multiply numVectorEntries by numValsPerNode to get the correct
 	# size of the storage required
