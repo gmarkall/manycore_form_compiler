@@ -1,1 +1,5 @@
 *.pyc
+tests/outputs/*
+mcfc/ufl.tokens
+mcfc/uflLexer.py
+mcfc/uflParser.py

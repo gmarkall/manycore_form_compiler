@@ -7,10 +7,8 @@ user may replace the testcase with the new output.
 """
 
 # Python modules
-import sys
-import os
+import sys, os, shutil
 from subprocess import Popen, PIPE
-from shutil import copy
 
 # A nicer traceback from IPython
 from IPython import ultraTB
@@ -31,7 +29,15 @@ def main():
 
     if(len(sys.argv) > 1):
       sources = [sys.argv[1]]
-    
+ 
+    # Delete the outputs folder if it exists, to avoid
+    # any stale files.
+    if os.path.exists('outputs'):
+        shutil.rmtree('outputs')
+
+    # Create the outputs folder
+    os.mkdir('outputs', 0755)
+
     for sourcefile in sources:
 	check(sourcefile)
 
@@ -71,7 +77,7 @@ def diffmenu(sourcefile, diffout):
     elif rchar=='R':
         src = outfile(sourcefile)
 	dest = expectfile(sourcefile)
-	copy(src, dest)
+	shutil.copy(src, dest)
     elif rchar=='S':
         frontend.showGraph()
 	diffmenu(sourcefile, diffout)
