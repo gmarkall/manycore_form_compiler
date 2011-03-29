@@ -25,7 +25,7 @@ def main():
 
     sys.excepthook = ultraTB.FormattedTB(mode='Context')
 
-    sources = ['diffusion-1', 'diffusion-2']
+    sources = ['diffusion-1', 'diffusion-2', 'identity', 'laplacian', 'helmholtz' ]
 
     if(len(sys.argv) > 1):
       sources = [sys.argv[1]]

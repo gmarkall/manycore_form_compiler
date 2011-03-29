@@ -1,0 +1,11 @@
+T = state.scalar_fields["Tracer",c]
+
+v=TestFunction(T)
+u=TrialFunction(T)
+f=Coefficient(T)
+
+A = v*u*dx
+RHS = v*f*dx
+
+p=solve(A, RHS)
+state.scalar_fields["Tracer",c]=p
