@@ -214,6 +214,7 @@ extern "C" void run_model_(double dt)
   cg_solve(matrix_findrm, matrix_findrm_size, matrix_colm, matrix_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
   (double* tnewCoeff = (state -> getElementValue("tnew")));
   expand_data<<<gridXDim,blockXDim>>>(tnewCoeff, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle);
+  (state -> returnFieldToHost("Tracer", "tnew"));
 }
 
 

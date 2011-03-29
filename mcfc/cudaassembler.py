@@ -441,8 +441,15 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    func.append(expand)
 
 	# Traverse the AST looking for fields that need to return to the host
-	
+	returnedFields = findReturnedFields(ast)
+        
+	for hostField, GPUField in returnedFields:
 	    # Found one? ok, call the method to return it.
+	    paramList = [Literal('"'+hostField+'"'), Literal('"'+GPUField+'"')]
+	    params = ExpressionList(paramList)
+	    returnCall = FunctionCall('returnFieldToHost', params)
+	    arrow = ArrowOp(state, returnCall)
+	    func.append(arrow)
 
 	return func
 

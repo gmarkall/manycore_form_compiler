@@ -141,3 +141,36 @@ class CoefficientFieldFinder(AntlrVisitor):
 def findFieldFromCoefficient(ast, coeff):
     CFF = CoefficientFieldFinder()
     return CFF.find(ast, coeff)
+
+class ReturnedFieldFinder(AntlrVisitor):
+    """Return a list of the fields that need to be returned to the host. These
+    are pairs (hostField, GPUField), where hostField is the name of the field
+    that will be overwritted with data currently stored in GPUField."""
+
+    def __init__(self):
+        AntlrVisitor.__init__(self, preOrder)
+
+    def find(self, ast):
+        self._returnFields = []
+	self.traverse(ast)
+	return self._returnFields
+
+    def visit(self, tree):
+        label = str(tree)
+
+	if label == '=':
+	    lhs = tree.getChild(0)
+	    rhs = tree.getChild(1)
+	    if str(lhs) in [ 'scalar_fields', 'vector_fields', 'tensor_fields' ]:
+	        hostField = str(lhs.getChild(0))
+		# Strip off the quotes
+		hostField = hostField[1:-1]
+		GPUField = str(rhs)
+		self._returnFields.append((hostField, GPUField))
+    
+    def pop(self):
+        pass
+
+def findReturnedFields(ast):
+    RFF = ReturnedFieldFinder()
+    return RFF.find(ast)
