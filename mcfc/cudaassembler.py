@@ -89,29 +89,31 @@ getters = { numEle:           ('getNumEle',                  None,        ), \
 class CudaAssemblerBackend(AssemblerBackend):
 
     def compile(self, ast, uflObjects):
+
+        self._ast = ast
+        self._uflObjects = uflObjects
+
         # Build definitions
-        definitions = self.buildHeadersAndGlobals(ast, uflObjects)
+        definitions = self._buildHeadersAndGlobals()
 
         # Build declarations
         declarations = GlobalScope()
-        state = self.buildState()
+        state = self._buildState()
         declarations.append(state)
-        initialiser = self.buildInitialiser(ast, uflObjects)
+        initialiser = self._buildInitialiser()
         declarations.append(initialiser)
-        finaliser = self.buildFinaliser(ast, uflObjects)
+        finaliser = self._buildFinaliser()
         declarations.append(finaliser)
-        runModel = self.buildRunModel(ast, uflObjects)
+        runModel = self._buildRunModel()
         declarations.append(runModel)
 
         return definitions, declarations
 
-    def buildState(self):
+    def _buildState(self):
         decl = Declaration(state)
         return decl
 
-    def buildInitialiser(self, ast, uflObjects):
-
-        self._uflObjects = uflObjects
+    def _buildInitialiser(self):
 
         func = FunctionDefinition(Void(), 'initialise_gpu_')
         func.setExternC(True)
@@ -127,7 +129,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.append(arrow)
 
         # Extract accessed fields
-        accessedFields = findAccessedFields(ast)
+        accessedFields = findAccessedFields(self._ast)
         for field in accessedFields:
             rank = mcfcstate.getRank(field)
             params = [ Literal(field), Literal(rank) ]
@@ -145,7 +147,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.append(arrow)
         
         # Insert temporary fields into state
-        solveResultFields = findSolveResults(ast)
+        solveResultFields = findSolveResults(self._ast)
         for field in solveResultFields:
             similarField = self.findSimilarField(field)
             params = [ Literal(field), Literal(similarField) ]
@@ -245,7 +247,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             if sourceFields[k] == degree:
                 return k
 
-    def buildFinaliser(self, ast, uflObjects):
+    def _buildFinaliser(self):
         func = FunctionDefinition(Void(), 'finalise_gpu_')
         func.setExternC(True)
 
@@ -254,7 +256,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         return func
 
-    def buildHeadersAndGlobals(self, ast, uflObjects):
+    def _buildHeadersAndGlobals(self):
         scope = GlobalScope()
         include = Include('cudastatic.hpp')
         scope.append(include)
@@ -291,7 +293,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         assignment = AssignmentOp(Declaration(var), arrow)
         func.append(assignment)
 
-    def buildRunModel(self, ast, uflObjects):
+    def _buildRunModel(self):
      
         # List of field values that we've already extracted when building the function 
         self._alreadyExtracted = []
@@ -334,7 +336,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         vectorParameters = [localVector, numEle, dt, detwei]
 
         # Traverse the AST looking for solves
-        solves = findSolves(ast)
+        solves = findSolves(self._ast)
         
         for solve in solves:
             # Unpack the bits of information we want
@@ -344,16 +346,16 @@ class CudaAssemblerBackend(AssemblerBackend):
             vector = solveNode.getChild(1)
             
             # Call the matrix assembly
-            form = uflObjects[str(matrix)]
+            form = self._uflObjects[str(matrix)]
             tree = form.integrals()[0].integrand()
-            params = self.makeParameterListAndGetters(func, ast, tree, form, matrixParameters)
+            params = self._makeParameterListAndGetters(func, tree, form, matrixParameters)
             matrixAssembly = CudaKernelCall(str(matrix), params, gridXDim, blockXDim)
             func.append(matrixAssembly)
 
             # Then call the rhs assembly
-            form = uflObjects[str(vector)]
+            form = self._uflObjects[str(vector)]
             tree = form.integrals()[0].integrand()
-            params = self.makeParameterListAndGetters(func, ast, tree, form, vectorParameters)
+            params = self._makeParameterListAndGetters(func, tree, form, vectorParameters)
             vectorAssembly = CudaKernelCall(str(vector), params, gridXDim, blockXDim)
             func.append(vectorAssembly)
 
@@ -390,7 +392,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             func.append(expand)
 
         # Traverse the AST looking for fields that need to return to the host
-        returnedFields = findReturnedFields(ast)
+        returnedFields = findReturnedFields(self._ast)
         
         for hostField, GPUField in returnedFields:
             # Found one? ok, call the method to return it.
@@ -412,7 +414,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         
         return var
 
-    def makeParameterListAndGetters(self, func, ast, tree, form, staticParameters):
+    def _makeParameterListAndGetters(self, func, tree, form, staticParameters):
         paramUFL = generateKernelParameters(tree, form)
         # Figure out which parameters to pass
         params = list(staticParameters)
@@ -424,7 +426,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             if isinstance(obj, ufl.coefficient.Coefficient):
                 # find which field this coefficient came from, then
                 # extract from that field.
-                field = findFieldFromCoefficient(ast, obj)
+                field = findFieldFromCoefficient(self._ast, obj)
                 var = self.extractCoefficient(func, field)
                 params.append(var)
             
