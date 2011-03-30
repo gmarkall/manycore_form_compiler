@@ -130,8 +130,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	accessedFields = findAccessedFields(ast)
 	for field in accessedFields:
 	    rank = mcfcstate.getRank(field)
-	    fieldString = '"' + field + '"'
-	    params = [ Literal(fieldString), Literal(rank) ]
+	    params = [ Literal(field), Literal(rank) ]
 	    call = FunctionCall('extractField',params)
 	    arrow = ArrowOp(state, call)
 	    func.append(arrow)
@@ -149,9 +148,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	solveResultFields = findSolveResults(ast)
 	for field in solveResultFields:
 	    similarField = self.findSimilarField(field)
-	    similarFieldString = '"' + similarField + '"'
-	    fieldString = '"' + field + '"'
-	    params = [ Literal(fieldString), Literal(similarFieldString) ]
+	    params = [ Literal(field), Literal(similarField) ]
 	    call = FunctionCall('insertTemporaryField',params)
 	    arrow = ArrowOp(state, call)
 	    func.append(arrow)
@@ -162,12 +159,12 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         # Get sparsity of the field we're solving for
 	sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
-	# We can use the similarFieldString from earlier, since its
+	# We can use the similarField from earlier, since its
 	# the only field we're solving on for now. When we start working
 	# with solving multiple fields, this logic will need re-working.
 	# (For each solve field, we should use the similar field and
 	# generate a new sparsity from that)
-	params = [ Literal(similarFieldString) ]
+	params = [ Literal(similarField) ]
 	call = FunctionCall('getSparsity', params)
 	arrow = ArrowOp(state, call)
 	assignment = AssignmentOp(Declaration(sparsity), arrow)
@@ -286,7 +283,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 	        param = defaultParam
 	
 	if param is not None:
-	    paramString = Literal('"'+param+'"')
+	    paramString = Literal(param)
 	    params.append(paramString)
 
 	call = FunctionCall(provider, params)
@@ -398,7 +395,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         
 	for hostField, GPUField in returnedFields:
 	    # Found one? ok, call the method to return it.
-	    params = [ Literal('"'+hostField+'"'), Literal('"'+GPUField+'"') ]
+	    params = [ Literal(hostField), Literal(GPUField) ]
 	    returnCall = FunctionCall('returnFieldToHost', params)
 	    arrow = ArrowOp(state, returnCall)
 	    func.append(arrow)

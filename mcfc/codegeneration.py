@@ -80,7 +80,10 @@ class Variable(BackendASTNode):
 class Literal(BackendASTNode):
 
     def __init__(self, value):
-        self._value = str(value)
+        if isinstance(value, str):
+            self._value = '"' + value + '"'
+        else:
+            self._value = str(value)
 
     def unparse(self):
         code = self._value
