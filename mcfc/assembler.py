@@ -108,18 +108,19 @@ def findSolves(tree):
     SF = SolveFinder()
     return SF.find(tree)
 
-class CoefficientFieldFinder(AntlrVisitor):
+class CoefficientNameFinder(AntlrVisitor):
     """Given a coefficient, this class traverses the
-    AST and finds the name of the field it came from"""
+    AST and finds the name of the variable holding the field
+    it came from."""
 
     def __init__(self):
         AntlrVisitor.__init__(self, preOrder)
 
     def find(self, ast, coeff):
         self._count = str(coeff.count())
-	self._field = None
+	self._var = None
 	self.traverse(ast)
-	return self._field
+	return self._var
 
     def visit(self, tree):
         label = str(tree)
@@ -133,14 +134,44 @@ class CoefficientFieldFinder(AntlrVisitor):
 		field = tree.getParent()
 		fieldParent = field.getParent()
 		if str(fieldParent) == '=':
-		    self._field = str(field)
+		    self._var = str(field)
+
+    def pop(self):
+        pass
+
+class FieldNameFinder(AntlrVisitor):
+    """Given the name of the variable holding a field,
+    return the name of that field."""
+
+    def __init__(self):
+        AntlrVisitor.__init__(self, preOrder)
+
+    def find(self, ast, name):
+        self._name = name
+	self._field = None
+	self.traverse(ast)
+	return self._field
+
+    def visit(self, tree):
+        label = str(tree)
+
+	if label == '=':
+	    lhs = tree.getChild(0)
+	    rhs = tree.getChild(1)
+
+	    if str(lhs) == self._name:
+	        field = rhs.getChild(0)
+		self._field = str(field)
+		# Strip the quotes
+		self._field = self._field[1:-1]
 
     def pop(self):
         pass
 
 def findFieldFromCoefficient(ast, coeff):
-    CFF = CoefficientFieldFinder()
-    return CFF.find(ast, coeff)
+    CNF = CoefficientNameFinder()
+    FNF = FieldNameFinder()
+    return FNF.find(ast, CNF.find(ast, coeff))
 
 class ReturnedFieldFinder(AntlrVisitor):
     """Return a list of the fields that need to be returned to the host. These

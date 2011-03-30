@@ -108,8 +108,8 @@ extern "C" void run_model_(double dt)
   int shMemSize = t2p_shmemsize(blockXDim, nDim, nodesPerEle);
   transform_to_physical<<<gridXDim,blockXDim,shMemSize>>>(coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle);
   A<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt, detwei, shape, dShape);
-  double* TCoeff = (state -> getElementValue("T"));
-  RHS<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, TCoeff, shape);
+  double* TracerCoeff = (state -> getElementValue("Tracer"));
+  RHS<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, TracerCoeff, shape);
   int numValsPerNode = (state -> getValsPerNode("Tracer"));
   cudaMemset(globalMatrix, 0, (sizeof(double) * matrix_colm_size));
   cudaMemset(globalVector, 0, (sizeof(double) * (numValsPerNode * numNodes)));

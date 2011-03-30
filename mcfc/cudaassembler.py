@@ -405,13 +405,13 @@ class CudaAssemblerBackend(AssemblerBackend):
 
 	return func
 
-    def extractCoefficient(self, func, fieldName):
-	varName = fieldName + 'Coeff'
+    def extractCoefficient(self, func, coefficientName):
+	varName = coefficientName + 'Coeff'
 	var = Variable(varName, Pointer(Real()))
 	
 	# Don't declare and extract coefficients twice
 	if varName not in self._alreadyExtracted:
-	    self.simpleAppend(func, var, 'getElementValue', fieldName)
+	    self.simpleAppend(func, var, 'getElementValue', coefficientName)
 	    self._alreadyExtracted.append(varName)
 	
 	return var
