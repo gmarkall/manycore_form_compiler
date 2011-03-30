@@ -129,8 +129,9 @@ class CudaAssemblerBackend(AssemblerBackend):
 	# Extract accessed fields
 	accessedFields = findAccessedFields(ast)
 	for field in accessedFields:
+	    rank = mcfcstate.getRank(field)
 	    fieldString = '"' + field + '"'
-	    params = [ Literal(fieldString) ]
+	    params = [ Literal(fieldString), Literal(rank) ]
 	    call = FunctionCall('extractField',params)
 	    arrow = ArrowOp(state, call)
 	    func.append(arrow)

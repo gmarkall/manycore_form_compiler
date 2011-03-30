@@ -101,3 +101,14 @@ tensor_fields = __fake_field_dict__(2)
 _finiteElements = { 'Tracer': 1 }
 _vectorElements = { 'Velocity': 1, 'NewVelocity': 1 }
 _tensorElements = { 'TracerDiffusivity': 1 }
+
+def getRank(field):
+    if field in _finiteElements.keys():
+        return 0
+    elif field in _vectorElements.keys():
+        return 1
+    elif field in _tensorElements.keys():
+        return 2
+    else:
+        return -1
+        
