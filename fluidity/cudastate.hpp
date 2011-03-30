@@ -245,12 +245,13 @@ class StateHolder
     double* getBasisFunction(string fieldName);
     double* getBasisFunctionDerivative(string fieldName);
     double* getElementValue(string fieldName);
+    CsrSparsity* getSparsity(string fieldName);
     int getNodesPerEle(string fieldName);
     int getDimension(string fieldName);
     int getValsPerNode(string fieldName);
     int getNumQuadPoints(string fieldName);
     // For returning fields
-    void returnFieldToHost(string fieldName);
+    void returnFieldToHost(string hostFieldName, string gpuFieldName);
     double* getNodeValue(string fieldName);
     Field *getField(string fieldName);
     ~StateHolder();

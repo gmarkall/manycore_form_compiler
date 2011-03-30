@@ -907,12 +907,23 @@ double* StateHolder::getElementValue(string fieldName)
   return fields[fieldName]->getVal();
 }
 
+CsrSparsity* StateHolder::getSparsity(string fieldName)
+{
+  return fields[fieldName]->getMesh()->getConnSparsity();
+}
+
 Field* StateHolder::getField(string fieldName)
 {
   return fields[fieldName];
 }
 
-void StateHolder::returnFieldToHost(string fieldName)
+void StateHolder::returnFieldToHost(string hostFieldName, string GPUFieldName)
 {
-  fields[fieldName]->transferDtoH();
+  Field* hostField = fields[hostFieldName];
+  Field* GPUField = fields[GPUFieldName];
+  double* hostFieldVal = hostField->getVal();
+  double* GPUFieldVal = GPUField->getVal();
+  int len = sizeof(double) * GPUField->getExpandedValSize();
+  cudaMemcpy(hostFieldVal, GPUFieldVal, len, cudaMemcpyDeviceToDevice);
+  GPUField->transferDtoH();
 }
