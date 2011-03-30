@@ -202,29 +202,27 @@ class CudaAssemblerBackend(AssemblerBackend):
 
 	# Generate Mallocs for the local matrix and vector, and the solution
 	# vector.
-	malloc = self.buildCudaMalloc(localVector, MultiplyOp(numEle, numVectorEntries))
-	func.append(malloc)
-	malloc = self.buildCudaMalloc(localMatrix, MultiplyOp(numEle, numMatrixEntries))
-	func.append(malloc)
-	malloc = self.buildCudaMalloc(globalVector, matrixColmSize)
-	func.append(malloc)
-	malloc = self.buildCudaMalloc(globalMatrix, MultiplyOp(numNodes, numValsPerNode))
-	func.append(malloc)
-	malloc = self.buildCudaMalloc(solutionVector,MultiplyOp(numNodes, numValsPerNode))
-	func.append(malloc)
+	self.buildAppendCudaMalloc(func, localVector, MultiplyOp(numEle, numVectorEntries))
+	self.buildAppendCudaMalloc(func, localMatrix, MultiplyOp(numEle, numMatrixEntries))
+	self.buildAppendCudaMalloc(func, globalVector, matrixColmSize)
+	self.buildAppendCudaMalloc(func, globalMatrix, MultiplyOp(numNodes, numValsPerNode))
+	self.buildAppendCudaMalloc(func, solutionVector,MultiplyOp(numNodes, numValsPerNode))
 
 	return func
 
-    def buildCudaMalloc(self, var, size):
+    def buildAppendCudaMalloc(self, scope, var, size):
         cast = Cast(Pointer(Pointer(Void())), AddressOfOp(var))
 	sizeof = SizeOf(var.getType().getBaseType())
 	sizeArg = MultiplyOp(sizeof, size)
         params = [ cast, sizeArg ]
         malloc = FunctionCall('cudaMalloc', params)
-	return malloc
+	scope.append(malloc)
 
     def findSimilarField(self, field):
-        obj = self._uflObjects[field]
+        """Find a field with the same basis as the named field. You should
+	always be able to find a similar field."""
+
+	obj = self._uflObjects[field]
 	element = obj.element()
 	degree = element.degree()
 	
@@ -234,14 +232,10 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    sourceFields = mcfcstate._vectorElements
 	elif isinstance(element, ufl.finiteelement.FiniteElement):
 	    sourceFields = mcfcstate._tensorElements
-	else:
-	    print "Oops."
 
 	for k in sourceFields:
 	    if sourceFields[k] == degree:
 	        return k
-	
-	print "Big oops."
 
     def buildFinaliser(self, ast, uflObjects):
         func = FunctionDefinition(Void(), 'finalise_gpu_')
