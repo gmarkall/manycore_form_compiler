@@ -266,7 +266,11 @@ class Scope(BackendASTNode):
 	code = '%s{' % (indent)
 	indent = incIndent()
 	for s in self._statements:
-	    code = code + '\n' + indent + s.unparse() + ';'
+	    if isinstance(s, BinaryOp):
+	        unparsed = s.unparse(False)
+	    else:
+	        unparsed = s.unparse()
+	    code = code + '\n' + indent + unparsed + ';'
 	indent = decIndent()
 	code = code + '\n' + indent + '}'
 	return code
