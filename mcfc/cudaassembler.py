@@ -297,8 +297,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         self._alreadyExtracted = []
 
         dt = Variable('dt', Real())
-        params = ParameterList([dt])
-        func = FunctionDefinition(Void(), 'run_model_', params)
+        func = FunctionDefinition(Void(), 'run_model_', [dt])
         func.setExternC(True)
 
         # Initialise some variables we need

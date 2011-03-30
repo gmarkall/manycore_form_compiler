@@ -164,11 +164,7 @@ class FunctionDefinition(BackendASTNode):
         self._t = t
         self._name = name
         self._modifier = ''
-
-        if params is None:
-            self._params = ParameterList()
-        else:
-            self._params = params
+        self._params = ParameterList(params)
 
         if body is None:
             self._body = Scope()

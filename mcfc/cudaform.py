@@ -308,8 +308,6 @@ class CudaFormBackend(FormBackend):
         return ast
 
     def buildParameterList(self,tree):
-        params = self._kernelParameterComputer.compute(tree)
-        paramList = ParameterList(params)
-        return paramList
+        return self._kernelParameterComputer.compute(tree)
 
 # vim:sw=4:ts=4:sts=4:et
