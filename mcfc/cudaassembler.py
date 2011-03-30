@@ -273,15 +273,6 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         return scope
 
-    def simpleBuildAndAppend(self, func, var, t, provider, param=None):
-        """Build and append a variable declaration to func. It initialises
-        itself by the return value from the provided state method. A string
-	parameter can also be passed to the state method (e.g. to choose a 
-	different field"""
-	varAst = Variable(var, t)
-	self.simpleAppend(func, varAst, provider, param)
-	return varAst
-
     def simpleAppend(self, func, var, provider=None, param=None):
         """Append a variable declaration to func, without building a new
 	Variable instance. The declaration is initialised by the provider
@@ -397,13 +388,13 @@ class CudaAssemblerBackend(AssemblerBackend):
             func.append(cgSolve)
 
 	    # expand the result
-            # FIXME: Similar to code in makeParameterListAndGetters. Refactor.
 	    varName = result + 'Coeff'
+	    var = Variable(varName, Pointer(Real()))
+	    
 	    if varName not in self._alreadyExtracted:
-	        var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', result)
+	        self.simpleAppend(func, var, 'getElementValue', result)
 		self._alreadyExtracted.append(varName)
-	    else:
-	        var = Variable(varName)
+	    
 	    params = [ var, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle ]
 	    expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
 	    func.append(expand)
