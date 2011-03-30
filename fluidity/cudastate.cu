@@ -689,9 +689,9 @@ void StateHolder::insertField(Field *field)
   fields[field->getName()] = field;
 }
 
-void StateHolder::insertNewField(string likeField, string newFieldName)
+void StateHolder::insertTemporaryField(string newFieldName, string likeFieldName)
 {
-  Field *f = fields[likeField];
+  Field *f = fields[likeFieldName];
   ScalarField *sf = dynamic_cast<ScalarField*>(f);
   VectorField *vf = dynamic_cast<VectorField*>(f);
   TensorField *tf = dynamic_cast<TensorField*>(f);
@@ -711,7 +711,7 @@ void StateHolder::insertNewField(string likeField, string newFieldName)
   }
   else
   {
-    cerr << "Copied field " << likeField << "not found when trying to make new field " << newFieldName << endl;
+    cerr << "Copied field " << likeFieldName << "not found when trying to make new field " << newFieldName << endl;
   }
 
   newField->setName(newFieldName);

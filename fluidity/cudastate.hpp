@@ -230,7 +230,7 @@ class StateHolder
     void transferFieldDtoH(string field);
     void insertEntity(StateEntity *entity);
     void insertField(Field *field);
-    void insertNewField(string likeField, string newFieldName);
+    void insertTemporaryField(string newFieldName, string likeFieldName);
     // We're assuming that there's only one mesh upon which all function spaces
     // are build for now, so we can get the number of elements and detwei for
     // any field and it will do.
