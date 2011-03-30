@@ -51,36 +51,40 @@ matrixFindrm     = Variable('matrix_findrm',      Pointer(Integer()))
 
 # Variables used in the run_model and initialiser functions
 
-numEle      = Variable('numEle',      Integer())
-numNodes    = Variable('numNodes',    Integer())
-detwei      = Variable('detwei',      Pointer(Real()))
-eleNodes    = Variable('eleNodes',    Pointer(Integer()))
-coordinates = Variable('coordinates', Pointer(Real()))
-dn          = Variable('dn',          Pointer(Real()))
-quadWeights = Variable('quadWeights', Pointer(Real()))
-nDim        = Variable('nDim',        Integer())
-nQuad       = Variable('nQuad',       Integer())
-nodesPerEle = Variable('nodesPerEle', Integer())
-shape       = Variable('shape',       Pointer(Real()))
-dShape      = Variable('dShape',      Pointer(Real()))
+numEle           = Variable('numEle',            Integer())
+numNodes         = Variable('numNodes',          Integer())
+detwei           = Variable('detwei',            Pointer(Real()))
+eleNodes         = Variable('eleNodes',          Pointer(Integer()))
+coordinates      = Variable('coordinates',       Pointer(Real()))
+dn               = Variable('dn',                Pointer(Real()))
+quadWeights      = Variable('quadWeights',       Pointer(Real()))
+nDim             = Variable('nDim',              Integer())
+nQuad            = Variable('nQuad',             Integer())
+nodesPerEle      = Variable('nodesPerEle',       Integer())
+shape            = Variable('shape',             Pointer(Real()))
+dShape           = Variable('dShape',            Pointer(Real()))
+numValsPerNode   = Variable('numValsPerNode',    Integer())
+numVectorEntries = Variable('numVectorEntries',  Integer())
 
 # State methods that provide each of these variables, and the name of the field
 # that they're taken from, if they require a field. We get things from the
 # coordinate field for now, assuming that they're the same for all fields. This
 # will change once we have the basic functionality working.
 
-getters = { numEle:      ('getNumEle',                  None,        ), \
-            numNodes:    ('getNumNodes',                None,        ), \
-	    detwei:      ('getDetwei',                  None,        ), \
-	    eleNodes:    ('getEleNodes',                None,        ), \
-	    coordinates: ('getCoordinates',             None,        ), \
-  	    dn:          ('getReferenceDn',             None,        ), \
- 	    quadWeights: ('getQuadWeights',             None,        ), \
-	    nDim:        ('getDimension',               'Coordinate' ), \
-	    nQuad:       ('getNumQuadPoints',           'Coordinate' ), \
-	    nodesPerEle: ('getNodesPerEle',             'Coordinate' ), \
-	    shape:       ('getBasisFunction',           'Coordinate' ), \
-	    dShape:      ('getBasisFunctionDerivative', 'Coordinate' )  }
+getters = { numEle:           ('getNumEle',                  None,        ), \
+            numNodes:         ('getNumNodes',                None,        ), \
+	    detwei:           ('getDetwei',                  None,        ), \
+	    eleNodes:         ('getEleNodes',                None,        ), \
+	    coordinates:      ('getCoordinates',             None,        ), \
+  	    dn:               ('getReferenceDn',             None,        ), \
+ 	    quadWeights:      ('getQuadWeights',             None,        ), \
+	    nDim:             ('getDimension',               'Coordinate' ), \
+	    nQuad:            ('getNumQuadPoints',           'Coordinate' ), \
+	    nodesPerEle:      ('getNodesPerEle',             'Coordinate' ), \
+	    shape:            ('getBasisFunction',           'Coordinate' ), \
+	    dShape:           ('getBasisFunctionDerivative', 'Coordinate' ), \
+            numValsPerNode:   ('getValsPerNode',             None         ), \
+	    numVectorEntries: ('getNodesPerEle',             None         )  }
 
 class CudaAssemblerBackend(AssemblerBackend):
 
@@ -183,8 +187,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 	# size of all the local vector entries. For now we'll use the same
 	# logic as before, that we're only solving on one field, so we can
 	# get these things from the last similar field that we found.
-        numValsPerNode = self.simpleBuildAndAppend(func, 'numValsPerNode', Integer(), 'getValsPerNode', similarField)
-	numVectorEntries = self.simpleBuildAndAppend(func, 'numVectorEntries', Integer(), 'getNodesPerEle', similarField)
+	self.simpleAppend(func, numValsPerNode, param=similarField)
+	self.simpleAppend(func, numVectorEntries, param=similarField)
 	
         # Now multiply numVectorEntries by numValsPerNode to get the correct
 	# size of the storage required
@@ -267,16 +271,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         itself by the return value from the provided state method. A string
 	parameter can also be passed to the state method (e.g. to choose a 
 	different field"""
-        params = []
-        if param is not None:
-	    paramString = Literal('"'+param+'"')
-	    params.append(paramString)
-
 	varAst = Variable(var, t)
-	call = FunctionCall(provider, params)
-	arrow = ArrowOp(state, call)
-	assignment = AssignmentOp(Declaration(varAst), arrow)
-	func.append(assignment)
+	self.simpleAppend(func, varAst, provider, param)
 	return varAst
 
     def simpleAppend(self, func, var, provider=None, param=None):
@@ -287,12 +283,13 @@ class CudaAssemblerBackend(AssemblerBackend):
 	params = []
         
 	if provider is None:
-	    provider, param = getters[var]
+	    provider, defaultParam = getters[var]
+	    if param is None:
+	        param = defaultParam
 	
 	if param is not None:
 	    paramString = Literal('"'+param+'"')
 	    params.append(paramString)
-
 
 	call = FunctionCall(provider, params)
 	arrow = ArrowOp(state, call)
