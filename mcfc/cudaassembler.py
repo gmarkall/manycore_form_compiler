@@ -425,18 +425,10 @@ class CudaAssemblerBackend(AssemblerBackend):
 	for obj in paramUFL:
 	    
 	    if isinstance(obj, ufl.coefficient.Coefficient):
-		# find which field this coefficient came from
+		# find which field this coefficient came from, then
+		# extract from that field.
 		field = findFieldFromCoefficient(ast, obj)
 		var = self.extractCoefficient(func, field)
-		#varName = field+'Coeff'
-		#var = Variable(varName, Pointer(Real()))
-
-		#Don't declare and get things twice
-		#if varName not in self._alreadyExtracted:
-		#    self.simpleAppend(func, var, 'getElementValue', field)
-		#    self._alreadyExtracted.append(varName)
-		
-		# Add to parameters
 		params.append(var)
 	    
 	    if isinstance(obj, ufl.argument.Argument):
