@@ -49,18 +49,18 @@ def main():
         inputFile = args[0]
     else:
         print "No input."
-	print __doc__
-	sys.exit(-1)
+        print __doc__
+        sys.exit(-1)
 
     ast, uflObjects = readSource(inputFile)
 
     if 'visualise' in keys or 'v' in keys:
         if 'o' in keys:
-	    outputFile = opts['o']
-	else:
-	    outputFile = inputFile[:-3] + "pdf"
+            outputFile = opts['o']
+        else:
+            outputFile = inputFile[:-3] + "pdf"
         visualise(ast, outputFile)
-	return 0
+        return 0
 
     if 'o' in keys:
         outputFile = opts['o']
@@ -69,10 +69,10 @@ def main():
 
     if 'print' in keys or 'p' in keys:
         screen = True
-	fd = sys.stdout
+        fd = sys.stdout
     else:
         screen = False
-	fd = open(outputFile, 'w')
+        fd = open(outputFile, 'w')
 
     if 'b' in keys:
         backend = opts['b']
@@ -102,14 +102,14 @@ def get_options():
         opts, args = getopt.getopt(sys.argv[1:], "bhvpo:", ["visualise", "print"])
     except getopt.error, msg:
         print msg
-	print __doc__
-	sys.exit(-1)
+        print __doc__
+        sys.exit(-1)
 
     opts_dict = {}
     for opt in opts:
         key = opt[0].lstrip('-')
-	value = opt[1]
-	opts_dict[key] = value
+        value = opt[1]
+        opts_dict[key] = value
     
     return opts_dict, args
 
@@ -133,3 +133,5 @@ def readSource(inputFile):
 
 if __name__ == "__main__":
     sys.exit(main())
+
+# vim:sw=4:ts=4:sts=4:et

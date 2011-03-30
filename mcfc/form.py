@@ -30,24 +30,24 @@ class ExpressionBuilder(Transformer):
 
     def build(self, tree):
         self._exprStack = []
-	# When we pass through the first IndexSum, this will get incremented
-	# to 0, which is the count of the first dim index
-	self._indexSumDepth = -1 
+        # When we pass through the first IndexSum, this will get incremented
+        # to 0, which is the count of the first dim index
+        self._indexSumDepth = -1 
         self.visit(tree)
 
-	expr = self._exprStack.pop()
+        expr = self._exprStack.pop()
 
-	if len(self._exprStack) is not 0:
-	    raise RuntimeError("Expression stack not empty.")
+        if len(self._exprStack) is not 0:
+            raise RuntimeError("Expression stack not empty.")
 
         # Everything needs to be multiplied by detwei
-	indices = self.subscript_detwei()
-	offset = buildOffset(indices)
-	detwei = Variable("detwei")
-	detweiExpr = Subscript(detwei, offset)
-	expr = MultiplyOp(expr, detweiExpr)
+        indices = self.subscript_detwei()
+        offset = buildOffset(indices)
+        detwei = Variable("detwei")
+        detweiExpr = Subscript(detwei, offset)
+        expr = MultiplyOp(expr, detweiExpr)
 
-	return expr
+        return expr
 
     def component_tensor(self, tree, *ops):
         pass
@@ -59,66 +59,66 @@ class ExpressionBuilder(Transformer):
     # so that we know which dim index we're dealing with.
     def index_sum(self, tree):
         summand, indices = tree.operands()
-	self._indexSumDepth = self._indexSumDepth + 1
+        self._indexSumDepth = self._indexSumDepth + 1
         self.visit(summand)
-	self._indexSumDepth = self._indexSumDepth - 1
+        self._indexSumDepth = self._indexSumDepth - 1
 
     def constant_value(self, tree):
         value = Literal(tree.value())
-	self._exprStack.append(value)
+        self._exprStack.append(value)
 
     def sum(self, tree, *ops):
-	rhs = self._exprStack.pop()
+        rhs = self._exprStack.pop()
         lhs = self._exprStack.pop()
-	add = AddOp(lhs, rhs)
-	self._exprStack.append(add)
+        add = AddOp(lhs, rhs)
+        self._exprStack.append(add)
 
     def product(self, tree, *ops):
-	rhs = self._exprStack.pop()
+        rhs = self._exprStack.pop()
         lhs = self._exprStack.pop()
-	multiply = MultiplyOp(lhs, rhs)
-	self._exprStack.append(multiply)
+        multiply = MultiplyOp(lhs, rhs)
+        self._exprStack.append(multiply)
 
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
-	base = Variable(name)
+        base = Variable(name)
 
-	depth = self._indexSumDepth
-	indices = self.subscript(tree, depth)
-	offset = buildOffset(indices)
-	spatialDerivExpr = Subscript(base, offset)
-	self._exprStack.append(spatialDerivExpr)
+        depth = self._indexSumDepth
+        indices = self.subscript(tree, depth)
+        offset = buildOffset(indices)
+        spatialDerivExpr = Subscript(base, offset)
+        self._exprStack.append(spatialDerivExpr)
  
     def argument(self, tree):
         name = buildArgumentName(tree)
         base = Variable(name)
 
         indices = self.subscript(tree)
-	offset = buildOffset(indices)
-	argExpr = Subscript(base, offset)
+        offset = buildOffset(indices)
+        argExpr = Subscript(base, offset)
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
-	coeffExpr = self.buildCoeffQuadratureAccessor(tree)
-	self._exprStack.append(coeffExpr)
+        coeffExpr = self.buildCoeffQuadratureAccessor(tree)
+        self._exprStack.append(coeffExpr)
 
     def buildCoeffQuadratureAccessor(self, coeff):
-	name = buildCoefficientQuadName(coeff)
-	base = Variable(name)
-	
-	indices = self.subscript_CoeffQuadrature(coeff)
-	offset = buildOffset(indices)
+        name = buildCoefficientQuadName(coeff)
+        base = Variable(name)
+        
+        indices = self.subscript_CoeffQuadrature(coeff)
+        offset = buildOffset(indices)
 
-	coeffExpr = Subscript(base, offset)
-	return coeffExpr
+        coeffExpr = Subscript(base, offset)
+        return coeffExpr
 
     def buildLocalTensorAccessor(self, form):
-	indices = self.subscript_LocalTensor(form)
-	offset = buildOffset(indices)
-	
-	# Subscript the local tensor variable
-	expr = Subscript(localTensor, offset)
-	return expr
+        indices = self.subscript_LocalTensor(form)
+        offset = buildOffset(indices)
+        
+        # Subscript the local tensor variable
+        expr = Subscript(localTensor, offset)
+        return expr
 
     def subscript_LocalTensor(self, form):
         raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
@@ -136,10 +136,10 @@ class QuadratureExpressionBuilder:
 
     def build(self, tree):
         indices = self.subscript(tree)
-	offset = buildOffset(indices)
-	coeffAtBasis = Variable(buildCoefficientName(tree))
-	expr = Subscript(coeffAtBasis, offset)
-	return expr
+        offset = buildOffset(indices)
+        coeffAtBasis = Variable(buildCoefficientName(tree))
+        expr = Subscript(coeffAtBasis, offset)
+        return expr
 
     def subscript(self, tree):
         raise NotImplementedError("You're supposed to implement subscript()!")
@@ -148,53 +148,53 @@ class FormBackend:
 
     def __init__(self):
         self._expressionBuilder = None
-	self._quadratureExpressionBuilder = None
+        self._quadratureExpressionBuilder = None
 
     def buildExpression(self, form, tree):
-	"Build the expression represented by the subtree tree of form."
-	# Build the rhs expression
-	rhs = self._expressionBuilder.build(tree)
+        "Build the expression represented by the subtree tree of form."
+        # Build the rhs expression
+        rhs = self._expressionBuilder.build(tree)
 
-	# Assign expression to the local tensor value
-	lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
-	expr = PlusAssignmentOp(lhs, rhs)
+        # Assign expression to the local tensor value
+        lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
+        expr = PlusAssignmentOp(lhs, rhs)
 
-	return expr
+        return expr
         
     def buildQuadratureExpression(self, coeff):
-	rhs = self._quadratureExpressionBuilder.build(coeff)
+        rhs = self._quadratureExpressionBuilder.build(coeff)
 
-	lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
-	expr = PlusAssignmentOp(lhs, rhs)
-	
-	return expr
+        lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
+        expr = PlusAssignmentOp(lhs, rhs)
+        
+        return expr
     
     def buildLocalTensorInitialiser(self, form):
-	lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
-	rhs = Literal(0.0)
-	initialiser = AssignmentOp(lhs, rhs)
-	return initialiser
+        lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
+        rhs = Literal(0.0)
+        initialiser = AssignmentOp(lhs, rhs)
+        return initialiser
 
     def buildCoeffQuadratureInitialiser(self, coeff):
-	accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
-	initialiser = AssignmentOp(accessor, Literal(0.0))
-	return initialiser
+        accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
+        initialiser = AssignmentOp(accessor, Literal(0.0))
+        return initialiser
 
     def buildCoeffQuadDeclarations(self, form):
-	form_data = form.form_data()
-	coefficients = form_data.coefficients
-	declarations = []
+        form_data = form.form_data()
+        coefficients = form_data.coefficients
+        declarations = []
 
-	for coeff in coefficients:
-	    name = buildCoefficientQuadName(coeff)
-	    rank = coeff.rank()
-	    length = numGaussPoints * pow(numDimensions, rank)
-	    t = Array(Real(), Literal(length))
-	    var = Variable(name, t)
-	    decl = Declaration(var)
-	    declarations.append(decl)
+        for coeff in coefficients:
+            name = buildCoefficientQuadName(coeff)
+            rank = coeff.rank()
+            length = numGaussPoints * pow(numDimensions, rank)
+            t = Array(Real(), Literal(length))
+            var = Variable(name, t)
+            decl = Declaration(var)
+            declarations.append(decl)
 
-	return declarations
+        return declarations
 
     def compile(self, form):
         raise NotImplementedError("You're supposed to implement compile()!")
@@ -206,19 +206,19 @@ class IndexSumCounter(Transformer):
         self._indexSumDepth = 0
         self._maxIndexSumDepth = 0
         self.visit(tree)
-	return self._maxIndexSumDepth
+        return self._maxIndexSumDepth
 
     def index_sum(self, tree):
-	
-	summand, indices = tree.operands()
+        
+        summand, indices = tree.operands()
 
         self._indexSumDepth = self._indexSumDepth + 1
-	if self._indexSumDepth > self._maxIndexSumDepth:
-	    self._maxIndexSumDepth = self._indexSumDepth
+        if self._indexSumDepth > self._maxIndexSumDepth:
+            self._maxIndexSumDepth = self._indexSumDepth
 
-	self.visit(summand)
+        self.visit(summand)
 
-	self._indexSumDepth = self._indexSumDepth - 1
+        self._indexSumDepth = self._indexSumDepth - 1
 
     # We don't care about any other node.
     def expr(self, tree, *ops):
@@ -235,21 +235,21 @@ class Partitioner(Transformer):
 
     def partition(self, tree):
         self._partitions = []
-	self._ISC = IndexSumCounter()
-	self.visit(tree)
-	return self._partitions
+        self._ISC = IndexSumCounter()
+        self.visit(tree)
+        return self._partitions
 
     def sum(self, tree):
         ops = tree.operands()
-	lDepth = self._ISC.count(ops[0])
-	rDepth = self._ISC.count(ops[1])
-	# If both sides have the same nesting level:
-	if lDepth == rDepth:
-	    self._partitions.append((tree,lDepth))
-	    return
-	else:
-	    self.visit(ops[0])
-	    self.visit(ops[1])
+        lDepth = self._ISC.count(ops[0])
+        rDepth = self._ISC.count(ops[1])
+        # If both sides have the same nesting level:
+        if lDepth == rDepth:
+            self._partitions.append((tree,lDepth))
+            return
+        else:
+            self.visit(ops[0])
+            self.visit(ops[1])
     
     # If it's not a sum, then there shouldn't be any partitioning
     # of the tree anyway.
@@ -306,14 +306,14 @@ def buildOffset(indices):
     # Compute the expression for all indices
     for v in range(1,len(indices)):
         subindices = indices[:v]
-	name = indices[v].name()
-	expr = Variable(name)
-	
-	# Find the correct offset for this index
-	for u in range(len(subindices)):
-	    multiplier = subindices[u].extent()
-	    expr = MultiplyOp(multiplier, expr)
-	offset = AddOp(offset, expr)
+        name = indices[v].name()
+        expr = Variable(name)
+        
+        # Find the correct offset for this index
+        for u in range(len(subindices)):
+            multiplier = subindices[u].extent()
+            expr = MultiplyOp(multiplier, expr)
+        offset = AddOp(offset, expr)
     
     return offset
 
@@ -364,3 +364,5 @@ numGaussPoints = 6
 detwei = Variable("detwei", Pointer(Real()) )
 timestep = Variable("dt", Real() )
 localTensor = Variable("localTensor", Pointer(Real()) )
+
+# vim:sw=4:ts=4:sts=4:et

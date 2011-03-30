@@ -10,3 +10,5 @@ def uniqify(seq, idfun=None):
         seen[marker] = 1
         result.append(item)
     return result
+
+# vim:sw=4:ts=4:sts=4:et

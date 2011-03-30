@@ -28,13 +28,13 @@ class Subscript(BackendASTNode):
     
     def __init__(self, base, offset):
         self._base = base
-	self._offset = offset
+        self._offset = offset
 
     def unparse(self):
         base = self._base.unparse()
         offset = self._offset.unparse()
         code = '%s[%s]' % (base, offset)
-	return code
+        return code
 
 class NullExpression(BackendASTNode):
     
@@ -45,11 +45,11 @@ class Variable(BackendASTNode):
     
     def __init__(self, name, t=None):
         self._name = name
-	
-	if t is None:
-	    self._t = Type()
-	else:
-	    self._t = t
+        
+        if t is None:
+            self._t = Type()
+        else:
+            self._t = t
 
     def __hash__(self):
         return self._name.__hash__()
@@ -68,14 +68,14 @@ class Variable(BackendASTNode):
 
     def unparse(self):
         code = self._name
-	return code
+        return code
 
     def unparse_declaration(self):
         name = self._name
-	t = self._t.unparse()
-	t_post = self._t.unparse_post()
-	code = '%s %s%s' % (t, name, t_post)
-	return code
+        t = self._t.unparse()
+        t_post = self._t.unparse_post()
+        code = '%s %s%s' % (t, name, t_post)
+        return code
 
 class Literal(BackendASTNode):
 
@@ -87,18 +87,18 @@ class Literal(BackendASTNode):
 
     def unparse(self):
         code = self._value
-	return code
+        return code
 
 class ForLoop(BackendASTNode):
     
     def __init__(self, init, test, inc, body=None):
         self._init = init
-	self._test = test
-	self._inc = inc
-	if body is None:
-	    self._body = Scope()
-	else:
-	    self._body = body
+        self._test = test
+        self._inc = inc
+        if body is None:
+            self._body = Scope()
+        else:
+            self._body = body
 
     def append(self, statement):
         self._body.append(statement)
@@ -111,37 +111,37 @@ class ForLoop(BackendASTNode):
 
     def unparse(self):
         init = self._init.unparse()
-	test = self._test.unparse(False)
-	inc = self._inc.unparse()
-	body = self._body.unparse()
+        test = self._test.unparse(False)
+        inc = self._inc.unparse()
+        body = self._body.unparse()
         code = 'for(%s; %s; %s)\n' % (init, test, inc)
-	code = code + body
-	return code
+        code = code + body
+        return code
 
 class ParameterList(BackendASTNode):
 
     def __init__(self, params=None):
         if params is None:
-	    self._params = []
-	else:
-	    self._params = params
+            self._params = []
+        else:
+            self._params = params
 
     def unparse(self):
         code = "("
-	if len(self._params) > 0:
-	    code = code + self._params[0].unparse_declaration()
-	    for p in self._params[1:]:
-	        code = code + ", " + p.unparse_declaration()
-	code = code + ")"
-	return code
+        if len(self._params) > 0:
+            code = code + self._params[0].unparse_declaration()
+            for p in self._params[1:]:
+                code = code + ", " + p.unparse_declaration()
+        code = code + ")"
+        return code
 
 class ExpressionList(BackendASTNode):
 
     def __init__(self, expressions=None):
         if expressions is None:
-	    self._expressions = []
-	else:
-	    self._expressions = expressions
+            self._expressions = []
+        else:
+            self._expressions = expressions
 
     def append(self, expression):
          self._expressions.append(expression)
@@ -151,41 +151,41 @@ class ExpressionList(BackendASTNode):
 
     def unparse(self):
         code = '('
-	if len(self._expressions) > 0:
-	    code = code + self._expressions[0].unparse()
-	    for e in self._expressions[1:]:
-	        code = code + ', ' + e.unparse()
-	code = code + ')'
-	return code
+        if len(self._expressions) > 0:
+            code = code + self._expressions[0].unparse()
+            for e in self._expressions[1:]:
+                code = code + ', ' + e.unparse()
+        code = code + ')'
+        return code
 
 class FunctionDefinition(BackendASTNode):
 
     def __init__(self, t, name, params=None, body=None):
         self._t = t
-	self._name = name
-	self._modifier = ''
+        self._name = name
+        self._modifier = ''
 
-	if params is None:
-	    self._params = ParameterList()
-	else:
-	    self._params = params
+        if params is None:
+            self._params = ParameterList()
+        else:
+            self._params = params
 
-	if body is None:
-	    self._body = Scope()
-	else:
-	    self._body = body
+        if body is None:
+            self._body = Scope()
+        else:
+            self._body = body
 
     def setCudaKernel(self, isCudaKernel):
         if isCudaKernel:
-	    self._modifier = "__global__ "
-	else:
-	    self._modifier = ""
+            self._modifier = "__global__ "
+        else:
+            self._modifier = ""
 
     def setExternC(self, isExternC):
         if isExternC:
-	    self._modifier = 'extern "C" '
-	else:
-	    self._modifier = ''
+            self._modifier = 'extern "C" '
+        else:
+            self._modifier = ''
 
     def append(self, statement):
         self._body.append(statement)
@@ -197,51 +197,51 @@ class FunctionDefinition(BackendASTNode):
         mod = self._modifier
         t = self._t.unparse()
         params = self._params.unparse()
-	body = self._body.unparse()
+        body = self._body.unparse()
         code = '%s%s %s%s\n%s' % (mod, t, self._name, params, body)
-	return code
+        return code
 
 class FunctionCall(BackendASTNode):
 
     def __init__(self, name, params=None):
         self._name = name
-	if params is None:
-	    self._params = ExpressionList()
-	elif isinstance(params, list):
-	    self._params = ExpressionList(params)
-	else:
-	    self._params = params
+        if params is None:
+            self._params = ExpressionList()
+        elif isinstance(params, list):
+            self._params = ExpressionList(params)
+        else:
+            self._params = params
 
     def unparse(self):
         name = self._name
-	params = self._params.unparse()
+        params = self._params.unparse()
         code = '%s%s' % (name, params)
-	return code
+        return code
 
 class CudaKernelCall(FunctionCall):
 
     def __init__(self, name, params, gridDim, blockDim, shMemSize=None, stream=None):
         FunctionCall.__init__(self, name, params)
-	self._gridDim = gridDim
-	self._blockDim = blockDim
-	self._shMemSize = shMemSize
-	self._stream = stream
+        self._gridDim = gridDim
+        self._blockDim = blockDim
+        self._shMemSize = shMemSize
+        self._stream = stream
 
     def unparse(self):
         name = self._name
-	params = self._params.unparse()
-	
-	gridDim = self._gridDim.unparse()
-	blockDim = self._blockDim.unparse()
-	config = '%s,%s' % (gridDim, blockDim)
-	
-	if self._shMemSize is not None:
-	    shMemSize = self._shMemSize.unparse()
-	    config = config + ',' + shMemSize
-	    if self._stream is not None:
-	        stream = self._stream.unparse()
-		config = config + ',' + stream
-	
+        params = self._params.unparse()
+        
+        gridDim = self._gridDim.unparse()
+        blockDim = self._blockDim.unparse()
+        config = '%s,%s' % (gridDim, blockDim)
+        
+        if self._shMemSize is not None:
+            shMemSize = self._shMemSize.unparse()
+            config = config + ',' + shMemSize
+            if self._stream is not None:
+                stream = self._stream.unparse()
+                config = config + ',' + stream
+        
         code = '%s<<<%s>>>%s' % (name, config, params)
         return code
 
@@ -249,9 +249,9 @@ class Scope(BackendASTNode):
 
     def __init__(self, statements=None):
         if statements is None:
-	    self._statements = []
-	else:
-	    self._statements = statements
+            self._statements = []
+        else:
+            self._statements = statements
 
     def append(self, statement):
         self._statements.append(statement)
@@ -261,22 +261,22 @@ class Scope(BackendASTNode):
 
     def find(self, matches):
         for s in self._statements:
-	    if matches(s):
-	        return s
+            if matches(s):
+                return s
 
     def unparse(self):
         indent = getIndent()
-	code = '%s{' % (indent)
-	indent = incIndent()
-	for s in self._statements:
-	    if isinstance(s, BinaryOp):
-	        unparsed = s.unparse(False)
-	    else:
-	        unparsed = s.unparse()
-	    code = code + '\n' + indent + unparsed + ';'
-	indent = decIndent()
-	code = code + '\n' + indent + '}'
-	return code
+        code = '%s{' % (indent)
+        indent = incIndent()
+        for s in self._statements:
+            if isinstance(s, BinaryOp):
+                unparsed = s.unparse(False)
+            else:
+                unparsed = s.unparse()
+            code = code + '\n' + indent + unparsed + ';'
+        indent = decIndent()
+        code = code + '\n' + indent + '}'
+        return code
 
 class GlobalScope(Scope):
 
@@ -286,28 +286,28 @@ class GlobalScope(Scope):
     def unparse(self):
         code = ''
         for s in self._statements:
-	    if isinstance(s, Include):
-	        code = code + s.unparse() + '\n'
+            if isinstance(s, Include):
+                code = code + s.unparse() + '\n'
             elif isinstance(s, FunctionDefinition):
-	        code = code + s.unparse() + '\n\n'
-	    else:
-	        code = code + s.unparse() + ';\n'
-	return code
+                code = code + s.unparse() + '\n\n'
+            else:
+                code = code + s.unparse() + ';\n'
+        return code
 
 class New(BackendASTNode):
 
     def __init__(self, t, params=None):
         self._t = t
-	if params is None:
-	    self._params = ExpressionList()
-	else:
-	    self._params = params
+        if params is None:
+            self._params = ExpressionList()
+        else:
+            self._params = params
 
     def unparse(self):
         t = self._t.unparse_internal()
-	params = self._params.unparse()
+        params = self._params.unparse()
         code = 'new %s%s' % (t, params)
-	return code
+        return code
 
 class Delete(BackendASTNode):
 
@@ -316,23 +316,23 @@ class Delete(BackendASTNode):
 
     def unparse(self):
         var = self._var.unparse()
-	code = 'delete %s' % (var)
-	return code
+        code = 'delete %s' % (var)
+        return code
 
 class BinaryOp(BackendASTNode):
 
     def __init__(self, lhs, rhs, op):
         self._lhs = lhs
-	self._rhs = rhs
-	self._op = op
+        self._rhs = rhs
+        self._op = op
 
     def unparse(self, bracketed=True):
         lhs = self._lhs.unparse()
-	rhs = self._rhs.unparse()
+        rhs = self._rhs.unparse()
         code = '%s %s %s' % (lhs, self._op, rhs)
-	if bracketed:
-	    code = '(' + code + ')'
-	return code
+        if bracketed:
+            code = '(' + code + ')'
+        return code
 
 class MultiplyOp(BinaryOp):
 
@@ -362,8 +362,8 @@ class InitialisationOp(AssignmentOp):
     def unparse(self):
         t = self._lhs._t.unparse()
         assignment = AssignmentOp.unparse(self, False)
-	code = '%s %s' % (t, assignment)
-	return code
+        code = '%s %s' % (t, assignment)
+        return code
 
 class LessThanOp(BinaryOp):
 
@@ -383,7 +383,7 @@ class PlusPlusOp(BackendASTNode):
     def unparse(self):
         expr = self._expr.unparse()
         code = '%s++' % (expr)
-	return code
+        return code
 
 class Declaration(BackendASTNode):
     
@@ -400,13 +400,13 @@ class Cast(BackendASTNode):
 
     def __init__(self, t, var):
         self._t = t
-	self._var = var
+        self._var = var
 
     def unparse(self):
         t = '(%s)' % (self._t.unparse())
-	var = '(%s)' % (self._var.unparse())
-	code = '%s%s' % (t, var)
-	return code
+        var = '(%s)' % (self._var.unparse())
+        code = '%s%s' % (t, var)
+        return code
 
 class AddressOfOp(BackendASTNode):
 
@@ -415,8 +415,8 @@ class AddressOfOp(BackendASTNode):
 
     def unparse(self):
         var = self._var.unparse()
-	code = '&%s' % (var)
-	return code
+        code = '&%s' % (var)
+        return code
 
 class SizeOf(BackendASTNode):
 
@@ -425,23 +425,23 @@ class SizeOf(BackendASTNode):
 
     def unparse(self):
         t = self._t.unparse()
-	code = 'sizeof(%s)' % (t)
-	return code
+        code = 'sizeof(%s)' % (t)
+        return code
 
 class Include(BackendASTNode):
 
     def __init__(self, header, isSystem=False):
         self._header = header
-	self._isSystem = isSystem
+        self._isSystem = isSystem
 
     def unparse(self):
         if self._isSystem:
-	    marks = ['<', '>']
-	else:
-	    marks = ['"', '"']
+            marks = ['<', '>']
+        else:
+            marks = ['"', '"']
 
         code = '#include %s%s%s' % (marks[0], self._header, marks[1])
-	return code
+        return code
 
 # Types
 
@@ -452,18 +452,18 @@ class Type:
 
     def unparse(self):
         modifier = self.unparse_modifier()
-	internal = self.unparse_internal()
+        internal = self.unparse_internal()
         code = '%s%s' % (modifier, internal)
-	return code
+        return code
 
     def setCudaShared(self, isCudaShared):
         if isCudaShared:
-	    self._modifier = '__shared__ '
-	else:
-	    self._modifier = ''
+            self._modifier = '__shared__ '
+        else:
+            self._modifier = ''
 
     def unparse_modifier(self):
-	return self._modifier
+        return self._modifier
 
     def unparse_post(self):
         return ''
@@ -487,30 +487,30 @@ class Pointer(Type):
 
     def __init__(self, base):
         Type.__init__(self)
-	self._base = base
+        self._base = base
 
     def getBaseType(self):
         return self._base
 
     def unparse_internal(self):
         base = self._base.unparse()
-	code = '%s*' % (base)
-	return code
+        code = '%s*' % (base)
+        return code
 
 class Array(Type):
 
     def __init__(self, base, length):
         Type.__init__(self)
         self._base = base
-	self._length = length
+        self._length = length
 
     def unparse_internal(self):
         return self._base.unparse_internal()
 
     def unparse_post(self):
         length = self._length.unparse()
-	code = '[%s]' % (length)
-	return code
+        code = '[%s]' % (length)
+        return code
 
 class Class(Type):
 
@@ -536,7 +536,7 @@ def getScopeFromNest(nest, depth):
     # Descend through the bodies until we reach the correct one
     for i in range(1,depth):
         loop = body.find(lambda x: isinstance(x, ForLoop))
-	body = loop.body()
+        body = loop.body()
     return body
 
 # Unparser-specific functions
@@ -557,3 +557,4 @@ def decIndent():
     indentLevel = indentLevel - indentSize
     return getIndent()
     
+# vim:sw=4:ts=4:sts=4:et

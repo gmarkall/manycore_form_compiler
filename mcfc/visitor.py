@@ -28,22 +28,22 @@ class AntlrVisitor:
 
     def traverse(self, tree):
         if self._order == preOrder:
-	    self.visit(tree)
+            self.visit(tree)
 
-	for i in range(tree.getChildCount()):
-	    child = tree.getChild(i)
-	    self.traverse(child)
-	
-	if self._order == postOrder:
-	    self.visit(tree)
+        for i in range(tree.getChildCount()):
+            child = tree.getChild(i)
+            self.traverse(child)
+        
+        if self._order == postOrder:
+            self.visit(tree)
 
-	self.pop()
+        self.pop()
 
 class TraversalOrder:
 
     def __init__(self, name):
         self._name = name
-	self._repr = "TraversalOrder('" + name + "')"
+        self._repr = "TraversalOrder('" + name + "')"
 
     def __repr__(self):
         return self._repr
@@ -53,3 +53,5 @@ class TraversalOrder:
 
 preOrder = TraversalOrder("preOrder")
 postOrder = TraversalOrder("postOrder")
+
+# vim:sw=4:ts=4:sts=4:et

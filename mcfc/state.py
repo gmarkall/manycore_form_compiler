@@ -73,17 +73,17 @@ class __fake_field_dict__():
         
         field_name, timestep = key
 
-	if (self.rank==0):
-	    degree = _finiteElements[field_name]
+        if (self.rank==0):
+            degree = _finiteElements[field_name]
             field = ufl.finiteelement.FiniteElement("Lagrange", "triangle", degree)
         elif(self.rank==1):
-	    degree = _vectorElements[field_name]
-	    field = ufl.finiteelement.VectorElement("Lagrange", "triangle", degree)
+            degree = _vectorElements[field_name]
+            field = ufl.finiteelement.VectorElement("Lagrange", "triangle", degree)
         elif(self.rank==2):
-	    degree = _tensorElements[field_name]
-	    field = ufl.finiteelement.TensorElement("Lagrange", "triangle", degree)
+            degree = _tensorElements[field_name]
+            field = ufl.finiteelement.TensorElement("Lagrange", "triangle", degree)
 
-	return field
+        return field
 
     def __setitem__(self,key,data):
 
@@ -112,3 +112,4 @@ def getRank(field):
     else:
         return -1
         
+# vim:sw=4:ts=4:sts=4:et

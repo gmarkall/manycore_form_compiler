@@ -37,3 +37,5 @@ import frontend
 source = frontend.readSource('diffusion-1.cufl')
 
 CFB = cudaform.CudaFormBackend()
+
+# vim:sw=4:ts=4:sts=4:et

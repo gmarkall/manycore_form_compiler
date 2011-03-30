@@ -69,7 +69,7 @@ def canonicalise(filename):
 
     # Interpret the UFL file line by line
     for line in lines:
-	UFLInterpreter(line, canonical)
+        UFLInterpreter(line, canonical)
 
     return canonical.getvalue(), _uflObjects
 
@@ -91,11 +91,11 @@ def main():
     
     # Get options
     try:
-	opts, args = getopt.getopt(sys.argv[1:], "ho:", ["help"])
+        opts, args = getopt.getopt(sys.argv[1:], "ho:", ["help"])
     except getopt.error, msg:
-	print msg
-	print "for help use --help"
-	sys.exit(2)
+        print msg
+        print "for help use --help"
+        sys.exit(2)
     
     # process options
     if len(args)>0:
@@ -103,9 +103,9 @@ def main():
     outputfile = None
 
     for o, a in opts:
-	if o in ("-h", "--help"):
-	    print __doc__
-	    sys.exit(0)
+        if o in ("-h", "--help"):
+            print __doc__
+            sys.exit(0)
     
     # Run canonicaliser
     print "Canonicalising " + inputfile
@@ -140,10 +140,10 @@ def charstolines(chars):
 
     for char in chars:
         if not char == '\n':
-	    line = line + char
-	else:
-	    lines.append(line)
-	    line = ''
+            line = line + char
+        else:
+            lines.append(line)
+            line = ''
     
     return lines
 
@@ -151,72 +151,72 @@ class UFLInterpreter:
 
     def __init__(self, line, f=sys.stdout):
         self._file = f
-	st = ast.parse(line)
-	print >>self._file, '# ' + line
-	self.dispatch(st)
-	self._file.flush
+        st = ast.parse(line)
+        print >>self._file, '# ' + line
+        self.dispatch(st)
+        self._file.flush
 
     def dispatch(self, tree):
         if isinstance(tree, list):
-	    for s in tree:
-	        self.dispatch(s)
+            for s in tree:
+                self.dispatch(s)
         name = "_"+tree.__class__.__name__
-	
-	try:
-	    meth = getattr(self, name)
-	except AttributeError:
+        
+        try:
+            meth = getattr(self, name)
+        except AttributeError:
             return
-	meth(tree)
+        meth(tree)
 
     def _Module(self, tree):
         for stmt in tree.body:
-	    self.dispatch(stmt)
-	    
+            self.dispatch(stmt)
+            
     def _Assign(self, tree):
 
-	global _uflObjects
+        global _uflObjects
         
-	# Since we execute code from the source file in this function,
-	# all locals are prefixed with _ to prevent name collision.
+        # Since we execute code from the source file in this function,
+        # all locals are prefixed with _ to prevent name collision.
  
         # Get the left-hand side of the assignment
         _lhs = tree.targets[0]
-	_target = unparse(_lhs)
+        _target = unparse(_lhs)
 
-	# Get the AST of the right-hand side of the expression
-	_rhs = tree.value
+        # Get the AST of the right-hand side of the expression
+        _rhs = tree.value
         # Evaluate the RHS of the expression
-	_statement =  _target + ' = ' + unparse(_rhs)
-	exec(_statement,globals())
-	
-	# Get hold of the result of the execution
-	_result = eval(_target)
+        _statement =  _target + ' = ' + unparse(_rhs)
+        exec(_statement,globals())
+        
+        # Get hold of the result of the execution
+        _result = eval(_target)
         # If the result of executing the RHS is a form, we need to
-	# preprocess it
+        # preprocess it
         if isinstance(_result, ufl.form.Form):
-	    _result = ufl.algorithms.preprocess(_result)
+            _result = ufl.algorithms.preprocess(_result)
 
         # Stash the resulting object
-	_uflObjects[_target] = _result
-	    
-	if isToBeExecuted(_lhs,_rhs):
-	    # Create an assignment statement that assigns the result of 
-	    # executing the statement to the LHS.
-	   
-	    # Construct the representation that we are going to print
-	    _newstatement = _target + ' = ' + repr(_result)
+        _uflObjects[_target] = _result
             
-	    # If the RHS uses values from a field, we need to remember
-	    # which field it is from.
-	    if usesValuesFromField(_rhs):
-	        _source = getSourceField(_rhs)
-		_newstatement = _newstatement + ' & source(' + _source + ')'
+        if isToBeExecuted(_lhs,_rhs):
+            # Create an assignment statement that assigns the result of 
+            # executing the statement to the LHS.
+           
+            # Construct the representation that we are going to print
+            _newstatement = _target + ' = ' + repr(_result)
+            
+            # If the RHS uses values from a field, we need to remember
+            # which field it is from.
+            if usesValuesFromField(_rhs):
+                _source = getSourceField(_rhs)
+                _newstatement = _newstatement + ' & source(' + _source + ')'
 
-	    print >>self._file, _newstatement
-	# This is the case where we print the original statement, not the
-	# result of executing it
-	else:
-	    print >>self._file, _statement
+            print >>self._file, _newstatement
+        # This is the case where we print the original statement, not the
+        # result of executing it
+        else:
+            print >>self._file, _statement
 
 def isToBeExecuted(lhs,rhs):
     # We don't want to put the result of executing certain functions
@@ -234,16 +234,16 @@ def isToBeExecuted(lhs,rhs):
     # (Because subscripts provide access to the syntax for state)
     if not isinstance(rhs, ast.Call):
         if isinstance(rhs, ast.Subscript):
-	    return False
-	else:
-	    return True
+            return False
+        else:
+            return True
     
     # Check if the function is one to avoid executing
     name = rhs.func.id
     if name in ['solve']:
-	return False
+        return False
     else:
-	return True
+        return True
 
 def usesValuesFromField(st):
     # TestFunctions, TrialFunctions and Coefficients use values that
@@ -274,3 +274,4 @@ def unparse(st):
 if __name__ == "__main__":
     sys.exit(main())
 
+# vim:sw=4:ts=4:sts=4:et

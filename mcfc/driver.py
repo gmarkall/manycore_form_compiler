@@ -29,17 +29,17 @@ class FormFinder(AntlrVisitor):
 
     def find(self, tree):
         self._forms = []
-	self.traverse(tree)
-	return self._forms
+        self.traverse(tree)
+        return self._forms
 
     def visit(self, tree):
         label = str(tree)
 
-	if label == '=':
-	    lhs = tree.getChild(0)
-	    rhs = tree.getChild(1)
-	    if str(rhs) == 'Form':
-	        self._forms.append(str(lhs))
+        if label == '=':
+            lhs = tree.getChild(0)
+            rhs = tree.getChild(1)
+            if str(rhs) == 'Form':
+                self._forms.append(str(lhs))
     
     def pop(self):
         pass
@@ -68,3 +68,5 @@ class Driver:
         # Unparse assembler declarations (body)
         print >>fd, declarations.unparse()
         print >>fd
+
+# vim:sw=4:ts=4:sts=4:et

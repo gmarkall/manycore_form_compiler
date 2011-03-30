@@ -28,7 +28,7 @@ def main():
     sources = ['diffusion-1', 'diffusion-2', 'identity', 'laplacian', 'helmholtz' ]
 
     if(len(sys.argv) > 1):
-      sources = [sys.argv[1]]
+        sources = [sys.argv[1]]
  
     # Delete the outputs folder if it exists, to avoid
     # any stale files.
@@ -39,7 +39,7 @@ def main():
     os.mkdir('outputs', 0755)
 
     for sourcefile in sources:
-	check(sourcefile)
+        check(sourcefile)
 
     sys.exit(0)
 
@@ -73,17 +73,17 @@ def diffmenu(sourcefile, diffout):
         sys.exit(-1)
     elif rchar=='V':
         print highlight(diffout, DiffLexer(), TerminalFormatter(bg="dark"))
-	diffmenu(sourcefile, diffout)
+        diffmenu(sourcefile, diffout)
     elif rchar=='R':
         src = outfile(sourcefile)
-	dest = expectfile(sourcefile)
-	shutil.copy(src, dest)
+        dest = expectfile(sourcefile)
+        shutil.copy(src, dest)
     elif rchar=='S':
         frontend.showGraph()
-	diffmenu(sourcefile, diffout)
+        diffmenu(sourcefile, diffout)
     else:
         print "Please enter a valid option: ", 
-	diffmenu(sourcefile, diffout)
+        diffmenu(sourcefile, diffout)
 
 def infile(name):
     return "inputs/" + name + '.ufl'
@@ -99,3 +99,4 @@ def expectfile(name):
 if __name__ == "__main__":
     main()
 
+# vim:sw=4:ts=4:sts=4:et

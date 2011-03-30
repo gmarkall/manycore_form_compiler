@@ -522,3 +522,5 @@ def main(args):
 
 if __name__=='__main__':
     main(sys.argv[1:])
+
+# vim:sw=4:ts=4:sts=4:et

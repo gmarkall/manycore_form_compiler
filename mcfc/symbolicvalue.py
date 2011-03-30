@@ -50,3 +50,5 @@ class SymbolicValue(ufl.constantvalue.ConstantValue, ufl.constantvalue.IndexAnno
 
     def __str__(self):
         return self._repr
+
+# vim:sw=4:ts=4:sts=4:et

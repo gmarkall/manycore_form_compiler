@@ -27,3 +27,5 @@ class CudaDriver(Driver):
     def __init__(self):
         self._formBackend = cudaform.CudaFormBackend()
         self._assemblerBackend = cudaassembler.CudaAssemblerBackend()
+
+# vim:sw=4:ts=4:sts=4:et

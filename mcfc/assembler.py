@@ -33,19 +33,19 @@ class AccessedFieldFinder(AntlrVisitor):
 
     def find(self, tree):
         self._fields = []
-	self.traverse(tree)
-	return self._fields
+        self.traverse(tree)
+        return self._fields
 
     def visit(self, tree):
         label = str(tree)
 
-	if label == '=':
-	    rhs = tree.getChild(1)
-	    if str(rhs) in ['scalar_fields', 'vector_fields', 'tensor_fields']:
-		field = str(rhs.getChild(0))
-		# Strip off the quotes
-		field = field[1:-1]
-		self._fields.append(field)
+        if label == '=':
+            rhs = tree.getChild(1)
+            if str(rhs) in ['scalar_fields', 'vector_fields', 'tensor_fields']:
+                field = str(rhs.getChild(0))
+                # Strip off the quotes
+                field = field[1:-1]
+                self._fields.append(field)
 
     def pop(self):
         pass
@@ -61,17 +61,17 @@ class SolveResultFinder(AntlrVisitor):
 
     def find(self, tree):
         self._results = []
-	self.traverse(tree)
-	return self._results
+        self.traverse(tree)
+        return self._results
 
     def visit(self, tree):
         label = str(tree)
 
-	if label == '=':
-	    rhs = tree.getChild(1)
-	    if str(rhs) == 'solve':
-	        result = str(tree.getChild(0))
-		self._results.append(result)
+        if label == '=':
+            rhs = tree.getChild(1)
+            if str(rhs) == 'solve':
+                result = str(tree.getChild(0))
+                self._results.append(result)
 
     def pop(self):
         pass
@@ -90,16 +90,16 @@ class SolveFinder(AntlrVisitor):
 
     def find(self, tree):
         self._solves = []
-	self.traverse(tree)
-	return self._solves
+        self.traverse(tree)
+        return self._solves
 
     def visit(self, tree):
         label = str(tree)
 
-	if label == '=':
-	    rhs = tree.getChild(1)
-	    if str(rhs) == 'solve':
-	        self._solves.append(tree)
+        if label == '=':
+            rhs = tree.getChild(1)
+            if str(rhs) == 'solve':
+                self._solves.append(tree)
     
     def pop(self):
         pass
@@ -118,23 +118,23 @@ class CoefficientNameFinder(AntlrVisitor):
 
     def find(self, ast, coeff):
         self._count = str(coeff.count())
-	self._var = None
-	self.traverse(ast)
-	return self._var
+        self._var = None
+        self.traverse(ast)
+        return self._var
 
     def visit(self, tree):
         label = str(tree)
 
-	if label == 'Coefficient':
-	    count = str(tree.getChild(1))
-	    if count == self._count:
-	        # Found the correct Field. However, we need to make sure this
-		# was a version of the field alone on the right-hand side of 
-		# an assignment.
-		field = tree.getParent()
-		fieldParent = field.getParent()
-		if str(fieldParent) == '=':
-		    self._var = str(field)
+        if label == 'Coefficient':
+            count = str(tree.getChild(1))
+            if count == self._count:
+                # Found the correct Field. However, we need to make sure this
+                # was a version of the field alone on the right-hand side of 
+                # an assignment.
+                field = tree.getParent()
+                fieldParent = field.getParent()
+                if str(fieldParent) == '=':
+                    self._var = str(field)
 
     def pop(self):
         pass
@@ -148,22 +148,22 @@ class FieldNameFinder(AntlrVisitor):
 
     def find(self, ast, name):
         self._name = name
-	self._field = None
-	self.traverse(ast)
-	return self._field
+        self._field = None
+        self.traverse(ast)
+        return self._field
 
     def visit(self, tree):
         label = str(tree)
 
-	if label == '=':
-	    lhs = tree.getChild(0)
-	    rhs = tree.getChild(1)
+        if label == '=':
+            lhs = tree.getChild(0)
+            rhs = tree.getChild(1)
 
-	    if str(lhs) == self._name:
-	        field = rhs.getChild(0)
-		self._field = str(field)
-		# Strip the quotes
-		self._field = self._field[1:-1]
+            if str(lhs) == self._name:
+                field = rhs.getChild(0)
+                self._field = str(field)
+                # Strip the quotes
+                self._field = self._field[1:-1]
 
     def pop(self):
         pass
@@ -183,21 +183,21 @@ class ReturnedFieldFinder(AntlrVisitor):
 
     def find(self, ast):
         self._returnFields = []
-	self.traverse(ast)
-	return self._returnFields
+        self.traverse(ast)
+        return self._returnFields
 
     def visit(self, tree):
         label = str(tree)
 
-	if label == '=':
-	    lhs = tree.getChild(0)
-	    rhs = tree.getChild(1)
-	    if str(lhs) in [ 'scalar_fields', 'vector_fields', 'tensor_fields' ]:
-	        hostField = str(lhs.getChild(0))
-		# Strip off the quotes
-		hostField = hostField[1:-1]
-		GPUField = str(rhs)
-		self._returnFields.append((hostField, GPUField))
+        if label == '=':
+            lhs = tree.getChild(0)
+            rhs = tree.getChild(1)
+            if str(lhs) in [ 'scalar_fields', 'vector_fields', 'tensor_fields' ]:
+                hostField = str(lhs.getChild(0))
+                # Strip off the quotes
+                hostField = hostField[1:-1]
+                GPUField = str(rhs)
+                self._returnFields.append((hostField, GPUField))
     
     def pop(self):
         pass
@@ -205,3 +205,5 @@ class ReturnedFieldFinder(AntlrVisitor):
 def findReturnedFields(ast):
     RFF = ReturnedFieldFinder()
     return RFF.find(ast)
+
+# vim:sw=4:ts=4:sts=4:et
