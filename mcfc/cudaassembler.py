@@ -196,9 +196,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 	assignment = AssignmentOp(numVectorEntries, mult)
 	func.append(assignment)
 
-	# The space for the local matrix storage is simply the local vector
-	# storage size squared. (I'm tired, some of these comments are a bit
-	# nonsensey. note to self, tidy them up.)
+	# The space for the local matrix storage is equal to the local vector
+	# storage size squared.
 	numMatrixEntries = Variable('numMatrixEntries', Integer())
 	rhs = MultiplyOp(numVectorEntries, numVectorEntries)
 	assignment = AssignmentOp(Declaration(numMatrixEntries), rhs)
@@ -388,13 +387,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             func.append(cgSolve)
 
 	    # expand the result
-	    varName = result + 'Coeff'
-	    var = Variable(varName, Pointer(Real()))
-	    
-	    if varName not in self._alreadyExtracted:
-	        self.simpleAppend(func, var, 'getElementValue', result)
-		self._alreadyExtracted.append(varName)
-	    
+	    var = self.extractCoefficient(func, result)
 	    params = [ var, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle ]
 	    expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
 	    func.append(expand)
@@ -411,6 +404,17 @@ class CudaAssemblerBackend(AssemblerBackend):
 
 	return func
 
+    def extractCoefficient(self, func, fieldName):
+	varName = fieldName + 'Coeff'
+	var = Variable(varName, Pointer(Real()))
+	
+	# Don't declare and extract coefficients twice
+	if varName not in self._alreadyExtracted:
+	    self.simpleAppend(func, var, 'getElementValue', fieldName)
+	    self._alreadyExtracted.append(varName)
+	
+	return var
+
     def makeParameterListAndGetters(self, func, ast, tree, form, staticParameters):
 	paramUFL = generateKernelParameters(tree, form)
 	# Figure out which parameters to pass
@@ -423,13 +427,14 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    if isinstance(obj, ufl.coefficient.Coefficient):
 		# find which field this coefficient came from
 		field = findFieldFromCoefficient(ast, obj)
-		varName = field+'Coeff'
-		var = Variable(varName, Pointer(Real()))
+		var = self.extractCoefficient(func, field)
+		#varName = field+'Coeff'
+		#var = Variable(varName, Pointer(Real()))
 
 		#Don't declare and get things twice
-		if varName not in self._alreadyExtracted:
-		    self.simpleAppend(func, var, 'getElementValue', field)
-		    self._alreadyExtracted.append(varName)
+		#if varName not in self._alreadyExtracted:
+		#    self.simpleAppend(func, var, 'getElementValue', field)
+		#    self._alreadyExtracted.append(varName)
 		
 		# Add to parameters
 		params.append(var)
