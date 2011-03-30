@@ -222,6 +222,13 @@ class CudaAssemblerBackend(AssemblerBackend):
         malloc = FunctionCall('cudaMalloc', params)
 	scope.append(malloc)
 
+    def buildAppendCudaMemsetZero(self, func, base, length):
+	t = base.getType().getBaseType()
+	size = MultiplyOp(SizeOf(t), length)
+	params = [ base, Literal(0), size ]
+	memset = FunctionCall('cudaMemset', params)
+	func.append(memset)
+
     def findSimilarField(self, field):
         """Find a field with the same basis as the named field. You should
 	always be able to find a similar field."""
@@ -352,45 +359,26 @@ class CudaAssemblerBackend(AssemblerBackend):
 	    # Call the matrix assembly
             form = uflObjects[str(matrix)]
 	    tree = form.integrals()[0].integrand()
-	    params = self.makeParameterListAndGetters(func, ast, tree, form, matrixParameters, shape, dShape)
+	    params = self.makeParameterListAndGetters(func, ast, tree, form, matrixParameters)
 	    matrixAssembly = CudaKernelCall(str(matrix), params, gridXDim, blockXDim)
 	    func.append(matrixAssembly)
 
 	    # Then call the rhs assembly
 	    form = uflObjects[str(vector)]
 	    tree = form.integrals()[0].integrand()
-	    params = self.makeParameterListAndGetters(func, ast, tree, form, vectorParameters, shape, dShape)
+	    params = self.makeParameterListAndGetters(func, ast, tree, form, vectorParameters)
             vectorAssembly = CudaKernelCall(str(vector), params, gridXDim, blockXDim)
 	    func.append(vectorAssembly)
 
-	    # call the addtos
-
-            # First we need to zero the global matrix
-	    sizeOfGlobalMatrix = MultiplyOp(SizeOf(Real()), matrixColmSize)
-	    params = [ globalMatrix, Literal(0), sizeOfGlobalMatrix ]
-	    zeroMatrix = FunctionCall('cudaMemset', params)
-	    func.append(zeroMatrix)
-
-	    # and zero the global vector
-	    # first we need to get numvalspernode.
-	    # FIXME: Naughty copy-pasting. Refactor or die.
+	    # Zero the global matrix and vector
+	    # First we need to get numvalspernode, for the length of the global vector
 	    similarField = self.findSimilarField(result)
-	    similarFieldString = '"%s"' % (similarField)
-	    numValsPerNode = Variable('numValsPerNode', Integer())
-	    params = [ Literal(similarFieldString) ]
-	    call = FunctionCall('getValsPerNode', params)
-	    lhs = Declaration(numValsPerNode)
-	    rhs = ArrowOp(state, call)
-	    assignment = AssignmentOp(lhs, rhs)
-	    func.append(assignment)
-	    
-	    # Zero the global vector
-	    sizeOfGlobalVector = MultiplyOp(SizeOf(Real()), MultiplyOp(numValsPerNode, numNodes))
-	    params = [ globalMatrix, Literal(0), sizeOfGlobalVector ]
-	    zeroMatrix = FunctionCall('cudaMemset', params)
-	    func.append(zeroMatrix)
+	    self.simpleAppend(func, numValsPerNode, param=similarField)
+            self.buildAppendCudaMemsetZero(func, globalMatrix, matrixColmSize)
+	    size = MultiplyOp(numValsPerNode, numNodes)
+	    self.buildAppendCudaMemsetZero(func, globalVector, size)
 
-            # Build the addtos
+	    # Build calls to addto kernels. 
 	    # For the matrix
 	    params = [ matrixFindrm, matrixColm, globalMatrix, eleNodes, \
 	                 localMatrix, numEle, nodesPerEle ]
@@ -432,25 +420,31 @@ class CudaAssemblerBackend(AssemblerBackend):
 
 	return func
 
-    def makeParameterListAndGetters(self, func, ast, tree, form, staticParameters, shape, dShape):
+    def makeParameterListAndGetters(self, func, ast, tree, form, staticParameters):
 	paramUFL = generateKernelParameters(tree, form)
 	# Figure out which parameters to pass
 	params = list(staticParameters)
 	needShape = False
 	needDShape = False
+	
 	for obj in paramUFL:
+	    
 	    if isinstance(obj, ufl.coefficient.Coefficient):
 		# find which field this coefficient came from
 		field = findFieldFromCoefficient(ast, obj)
 		varName = field+'Coeff'
-		# Don't declare and get things twice
+		
+		#Don't declare and get things twice
 		if varName not in self._alreadyExtracted:
 		    var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', field)
 		    self._alreadyExtracted.append(varName)
+		
 		# Add to parameters
 		params.append(var)
+	    
 	    if isinstance(obj, ufl.argument.Argument):
 		needShape = True
+	    
 	    if isinstance(obj, ufl.differentiation.SpatialDerivative):
 		needDShape = True
 
