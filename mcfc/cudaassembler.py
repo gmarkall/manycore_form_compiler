@@ -433,10 +433,11 @@ class CudaAssemblerBackend(AssemblerBackend):
 		# find which field this coefficient came from
 		field = findFieldFromCoefficient(ast, obj)
 		varName = field+'Coeff'
-		
+		var = Variable(varName, Pointer(Real()))
+
 		#Don't declare and get things twice
 		if varName not in self._alreadyExtracted:
-		    var = self.simpleBuildAndAppend(func, varName, Pointer(Real()), 'getElementValue', field)
+		    self.simpleAppend(func, var, 'getElementValue', field)
 		    self._alreadyExtracted.append(varName)
 		
 		# Add to parameters

@@ -205,7 +205,7 @@ extern "C" void run_model_(double dt)
   (double* muCoeff = (state -> getElementValue("mu")));
   A<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt, detwei, muCoeff, shape, dShape);
   (double* TCoeff = (state -> getElementValue("T")));
-  rhs<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, TCoeff, TCoeff, shape, dShape);
+  rhs<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, TCoeff, muCoeff, shape, dShape);
   (int numValsPerNode = (state -> getValsPerNode("Tracer")));
   cudaMemset(globalMatrix, 0, (sizeof(double) * matrix_colm_size));
   cudaMemset(globalVector, 0, (sizeof(double) * (numValsPerNode * numNodes)));
