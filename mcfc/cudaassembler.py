@@ -207,8 +207,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         # vector.
         self.buildAppendCudaMalloc(func, localVector, MultiplyOp(numEle, numVectorEntries))
         self.buildAppendCudaMalloc(func, localMatrix, MultiplyOp(numEle, numMatrixEntries))
-        self.buildAppendCudaMalloc(func, globalVector, matrixColmSize)
-        self.buildAppendCudaMalloc(func, globalMatrix, MultiplyOp(numNodes, numValsPerNode))
+        self.buildAppendCudaMalloc(func, globalVector, MultiplyOp(numNodes, numValsPerNode))
+        self.buildAppendCudaMalloc(func, globalMatrix, matrixColmSize)
         self.buildAppendCudaMalloc(func, solutionVector,MultiplyOp(numNodes, numValsPerNode))
 
         return func

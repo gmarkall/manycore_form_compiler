@@ -78,8 +78,8 @@ extern "C" void initialise_gpu_()
   int numMatrixEntries = (numVectorEntries * numVectorEntries);
   cudaMalloc((void**)(&localVector), (sizeof(double) * (numEle * numVectorEntries)));
   cudaMalloc((void**)(&localMatrix), (sizeof(double) * (numEle * numMatrixEntries)));
-  cudaMalloc((void**)(&globalVector), (sizeof(double) * matrix_colm_size));
-  cudaMalloc((void**)(&globalMatrix), (sizeof(double) * (numNodes * numValsPerNode)));
+  cudaMalloc((void**)(&globalVector), (sizeof(double) * (numNodes * numValsPerNode)));
+  cudaMalloc((void**)(&globalMatrix), (sizeof(double) * matrix_colm_size));
   cudaMalloc((void**)(&solutionVector), (sizeof(double) * (numNodes * numValsPerNode)));
 }
 
