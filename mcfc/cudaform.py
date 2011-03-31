@@ -70,7 +70,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
         # nesting depth of IndexSums of the expression.
         argument = tree.operands()[0]
         count = argument.count()
-        indices = [ElementIndex(), BasisIndex(count), GaussIndex(), DimIndex(depth)]
+        indices = [ElementIndex(), DimIndex(depth), GaussIndex(), BasisIndex(count)]
         return indices
 
     def subscript_detwei(self):
