@@ -135,14 +135,28 @@ class ExpressionBuilder(Transformer):
 class QuadratureExpressionBuilder:
 
     def build(self, tree):
+        # Build Accessor for values at nodes
         indices = self.subscript(tree)
         offset = buildOffset(indices)
         coeffAtBasis = Variable(buildCoefficientName(tree))
-        expr = Subscript(coeffAtBasis, offset)
+        coeffExpr = Subscript(coeffAtBasis, offset)
+        
+        # Build accessor for argument
+        name = buildArgumentName(tree)
+        arg = Variable(name)
+        indices = self.subscript_argument(tree)
+        offset = buildOffset(indices)
+        argExpr = Subscript(arg, offset)
+
+        # Combine to form the expression
+        expr = MultiplyOp(coeffExpr, argExpr)
         return expr
 
     def subscript(self, tree):
         raise NotImplementedError("You're supposed to implement subscript()!")
+
+    def subscript_argument(self, tree):
+        raise NotImplementedError("You're supposed to implement subscript_argument()!")
 
 class FormBackend:
 
@@ -321,6 +335,14 @@ def buildOffset(indices):
 
 def buildArgumentName(tree):
     element = tree.element()
+    if element.num_sub_elements() is not 0:
+        if element.family() == 'Mixed':
+            raise NotImplementedError("I can't digest mixed elements. They make me feel funny.")
+        else:
+            # Sub elements are all the same
+            sub_elements = element.sub_elements()
+            element = sub_elements[0]
+        
     name = element.shortstr()
     return name
 

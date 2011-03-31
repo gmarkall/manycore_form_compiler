@@ -109,6 +109,12 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
             indices.insert(0, index)
         return indices
 
+    def subscript_argument(self, tree):
+        # The count of the basis function induction variable is always
+        # 0 in the quadrature loops (i.e. i_r_0)
+        indices = [BasisIndex(0), GaussIndex()]
+        return indices
+
 # For generating the kernel parameter list
 
 class KernelParameterComputer(Transformer):

@@ -43,7 +43,7 @@ __global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, d
       c_q0[i_g] = 0.0;
       for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
       {
-        c_q0[i_g] += c0[i_r_0];
+        c_q0[i_g] += (c0[i_r_0] * CG1[(i_r_0 + (3 * i_g))]);
       };
     };
     for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
