@@ -62,7 +62,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         count = tree.count()
-        indices = [ElementIndex(), BasisIndex(count), GaussIndex()]
+        indices = [BasisIndex(count), GaussIndex()]
         return indices
 
     def subscript_SpatialDerivative(self,tree,depth):

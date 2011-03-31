@@ -50,7 +50,7 @@ __global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, d
       localTensor[(i_ele + (n_ele * i_r_0))] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
-        localTensor[(i_ele + (n_ele * i_r_0))] += ((CG1[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_g)))] * c_q0[i_g]) * detwei[(i_ele + (n_ele * i_g))]);
+        localTensor[(i_ele + (n_ele * i_r_0))] += ((CG1[(i_r_0 + (3 * i_g))] * c_q0[i_g]) * detwei[(i_ele + (n_ele * i_g))]);
       };
     };
   };
