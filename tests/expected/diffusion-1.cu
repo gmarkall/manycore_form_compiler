@@ -43,7 +43,7 @@ __global__ void d(double* localTensor, int n_ele, double dt, double* detwei, dou
           c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] = 0.0;
           for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
           {
-            c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += (c0[((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_r_0)))] * CG1[(i_r_0 + (3 * i_g))]);
+            c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += (c0[(((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_ele))) + (n_ele * (2 * (2 * i_r_0))))] * CG1[(i_r_0 + (3 * i_g))]);
           };
         };
       };
@@ -82,7 +82,7 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
           c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] = 0.0;
           for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
           {
-            c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += (c0[((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_r_0)))] * CG1[(i_r_0 + (3 * i_g))]);
+            c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += (c0[(((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_ele))) + (n_ele * (2 * (2 * i_r_0))))] * CG1[(i_r_0 + (3 * i_g))]);
           };
         };
       };
@@ -119,7 +119,7 @@ __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, d
       c_q0[i_g] = 0.0;
       for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
       {
-        c_q0[i_g] += (c0[i_r_0] * CG1[(i_r_0 + (3 * i_g))]);
+        c_q0[i_g] += (c0[(i_ele + (n_ele * i_r_0))] * CG1[(i_r_0 + (3 * i_g))]);
       };
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
@@ -128,7 +128,7 @@ __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, d
           c_q1[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] = 0.0;
           for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
           {
-            c_q1[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += (c1[((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_r_0)))] * CG1[(i_r_0 + (3 * i_g))]);
+            c_q1[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += (c1[(((i_d_1 + (2 * i_d_0)) + (2 * (2 * i_ele))) + (n_ele * (2 * (2 * i_r_0))))] * CG1[(i_r_0 + (3 * i_g))]);
           };
         };
       };
