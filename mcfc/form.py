@@ -23,6 +23,7 @@ cudaform.py, op2form.py, etc."""
 
 # MCFC libs
 from codegeneration import *
+from symbolicvalue import SymbolicValue
 # UFL libs
 from ufl.algorithms.transformations import Transformer
 
@@ -64,7 +65,10 @@ class ExpressionBuilder(Transformer):
         self._indexSumDepth = self._indexSumDepth - 1
 
     def constant_value(self, tree):
-        value = Literal(tree.value())
+        if isinstance(tree, SymbolicValue):
+            value = Variable(tree.value())
+        else:
+            value = Literal(tree.value())
         self._exprStack.append(value)
 
     def sum(self, tree, *ops):
