@@ -25,6 +25,7 @@ cudaform.py, op2form.py, etc."""
 from codegeneration import *
 from symbolicvalue import SymbolicValue
 # UFL libs
+import ufl.argument
 from ufl.algorithms.transformations import Transformer
 
 class ExpressionBuilder(Transformer):
@@ -351,9 +352,15 @@ def buildArgumentName(tree):
     return name
 
 def buildSpatialDerivativeName(tree):
-    argument = tree.operands()[0]
-    argName = buildArgumentName(argument)
-    spatialDerivName = 'd_%s' % (argName)
+    operand = tree.operands()[0]
+    if isinstance(operand, ufl.argument.Argument):
+        name = buildArgumentName(operand)
+    elif isinstance(operand, ufl.coefficient.Coefficient):
+        name = buildCoefficientQuadName(operand)
+    else:
+        cls = operand.__class__.__name__
+        raise NotImplementedError("Unsupported SpatialDerivative of " + cls)
+    spatialDerivName = 'd_%s' % (name)
     return spatialDerivName
 
 def buildCoefficientName(tree):
