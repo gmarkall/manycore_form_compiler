@@ -18,7 +18,7 @@
 # holders.
 
 
-from cudadriver import CudaDriver
+from cuda import CudaDriver
 
 drivers = { "cuda": CudaDriver }
 
