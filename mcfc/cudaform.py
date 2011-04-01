@@ -20,16 +20,13 @@
 
 # MCFC libs
 from form import *
-from utilities import uniqify
+from cudaparameters import KernelParameterComputer, numElements, statutoryParameters
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
 from ufl.algorithms.preprocess import preprocess
 
 # Variables
 
-numElements = Variable("n_ele", Integer() )
-
-statutoryParameters = [ localTensor, numElements, timestep, detwei ]
 
 threadCount = Variable("THREAD_COUNT")
 threadId = Variable("THREAD_ID")
@@ -114,47 +111,6 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # 0 in the quadrature loops (i.e. i_r_0)
         indices = [BasisIndex(0), GaussIndex()]
         return indices
-
-# For generating the kernel parameter list
-
-class KernelParameterComputer(Transformer):
-
-    def compute(self, tree):
-        parameters = list(statutoryParameters)
-        
-        self._coefficients = []
-        self._arguments = []
-        self._spatialDerivatives = []
-        
-        self.visit(tree)
-        
-        self._coefficients = uniqify(self._coefficients)
-        self._arguments = uniqify(self._arguments)
-        self._spatialDerivatives = uniqify(self._spatialDerivatives)
-        
-        parameters.extend(self._coefficients)
-        parameters.extend(self._arguments)
-        parameters.extend(self._spatialDerivatives)
-        return parameters
-
-    # The expression structure does not affect the parameters.
-    def expr(self, tree, *ops):
-        pass
-
-    def spatial_derivative(self, tree):
-        name = buildSpatialDerivativeName(tree)
-        parameter = Variable(name, Pointer(Real()))
-        self._spatialDerivatives.append(parameter)
-
-    def argument(self, tree):
-        name = buildArgumentName(tree)
-        parameter = Variable(name, Pointer(Real()))
-        self._arguments.append(parameter)
-
-    def coefficient(self, tree):
-        name = buildCoefficientName(tree)
-        parameter = Variable(name, Pointer(Real()))
-        self._coefficients.append(parameter)
 
 class CudaFormBackend(FormBackend):
 
