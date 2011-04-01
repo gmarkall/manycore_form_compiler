@@ -28,47 +28,6 @@ from ufl.algorithms.transformations import Transformer
 numElements = Variable("n_ele", Integer() )
 statutoryParameters = [ form.localTensor, numElements, form.timestep, form.detwei ]
 
-# For generating the kernel parameter list
-
-class KernelParameterComputer(Transformer):
-
-    def compute(self, tree):
-        parameters = list(statutoryParameters)
-        
-        self._coefficients = []
-        self._arguments = []
-        self._spatialDerivatives = []
-        
-        self.visit(tree)
-        
-        self._coefficients = uniqify(self._coefficients)
-        self._arguments = uniqify(self._arguments)
-        self._spatialDerivatives = uniqify(self._spatialDerivatives)
-        
-        parameters.extend(self._coefficients)
-        parameters.extend(self._arguments)
-        parameters.extend(self._spatialDerivatives)
-        return parameters
-
-    # The expression structure does not affect the parameters.
-    def expr(self, tree, *ops):
-        pass
-
-    def spatial_derivative(self, tree):
-        name = form.buildSpatialDerivativeName(tree)
-        parameter = Variable(name, Pointer(Real()))
-        self._spatialDerivatives.append(parameter)
-
-    def argument(self, tree):
-        name = form.buildArgumentName(tree)
-        parameter = Variable(name, Pointer(Real()))
-        self._arguments.append(parameter)
-
-    def coefficient(self, tree):
-        name = form.buildCoefficientName(tree)
-        parameter = Variable(name, Pointer(Real()))
-        self._coefficients.append(parameter)
-
 class KernelParameterGenerator(Transformer):
     """Mirrors the functionality of the kernelparametercomputer
     in cudaform.py - maybe merge at some point?"""
@@ -101,18 +60,6 @@ class KernelParameterGenerator(Transformer):
         arguments = self._arguments
         argumentDerivatives = []
 
-        # Map coefficients back to the original coefficients
-        #for coeff in self._coefficients:
-        #    i = formCoefficients.index(coeff)
-        #    originalCoefficient = originalCoefficients[i]
-        #    coefficients.append(originalCoefficient)
-
-        # Map arguments back to the original arguments
-        #for arg in self._arguments:
-        #    i = formArguments.index(arg)
-        #    originalArgument = originalArguments[i]
-        #    arguments.append(originalArgument)
-
         # SpatialDerivatives are tricky: if its a derivative of a basis function,
         # then we just need to pass the derivative of the basis function. If its a
         # derivative of a coefficient, we need the values of the coefficients and
@@ -126,6 +73,11 @@ class KernelParameterGenerator(Transformer):
             elif isinstance(subject, ufl.coefficient.Coefficient):
                 coefficients.append(subject)
                 element = subject.element()
+                # The reasoning behind giving the argument a count of 0 is that
+                # there will always be at least one basis function, which will
+                # be numbered 0. Need to check if this is correct for the case
+                # where there is no basis function with the same basis as the 
+                # coefficient though.
                 argument = ufl.argument.Argument(element, 0)
                 argumentDeriv = ufl.differentiation.SpatialDerivative(argument, indices)
                 argumentDerivatives.append(argumentDeriv)
@@ -143,7 +95,6 @@ class KernelParameterGenerator(Transformer):
             i = formCoefficients.index(coeff)
             originalCoefficient = originalCoefficients[i]
             actualParameters.append(originalCoefficient)
-            #actualParameters.append(coeff)
 
             # Formal parameter
             name = form.buildCoefficientName(coeff)
@@ -155,7 +106,6 @@ class KernelParameterGenerator(Transformer):
             i = formArguments.index(arg)
             originalArgument = originalArguments[i]
             actualParameters.append(originalArgument)
-            #actualParameters.append(arg)
         
             # Formal parameter
             name = form.buildArgumentName(arg)
@@ -170,7 +120,6 @@ class KernelParameterGenerator(Transformer):
             i = formArguments.index(subject)
             originalArgument = originalArguments[i]
             actualParameters.append(ufl.differentiation.SpatialDerivative(originalArgument,indices))
-            #actualParameters.append(argDeriv)
 
             # Formal parameter
             name = form.buildSpatialDerivativeName(argDeriv)
@@ -178,35 +127,6 @@ class KernelParameterGenerator(Transformer):
             formalParameters.append(parameter)
 
         return formalParameters, actualParameters
-
-#        ## this loop is  amess-up
-#        for derivative in self._spatialDerivatives:
-#            subject = derivative.operands()[0]
-#            indices = derivative.operands()[1]
-#            
-#            # SpatialDerivatives of Arguments require the derivatives of the
-#            # basis functions to be passed.
-#            if isinstance(subject, ufl.argument.Argument):
-#                # Actual parameter
-#                i = formArguments.index(subject)
-#                originalArgument = originalArguments[i]
-#                parameters.append(ufl.differentiation.SpatialDerivative(originalArgument,indices))
-#
-#                # Formal parameter
-#                name = form.buildSpatialDerivativeName(tree)
-#                parameter = Variable(name, Pointer(Real()))
-#                self._spatialDerivatives.append(parameter)
-#            # SpatialDerivatives of Coefficients require the values of the coefficients
-#            # and the derivatives of the basis functions. 
-#            elif isinstance(subject, ufl.coefficient.Coefficient):
-#                i = formCoefficients.index(subject)
-#                originalCoefficient = originalCoefficients[i]
-#                parameters.append(originalCoefficient)
-#
-#                # Formal parameter
-#
-#        
-#        #parameters = uniqify(parameters)
 
     def expr(self, tree, *ops):
         pass
