@@ -132,8 +132,9 @@ extern "C" void finalise_gpu_()
   delete state;
 }
 
-extern "C" void run_model_(double dt)
+extern "C" void run_model_(double* dt_pointer)
 {
+  double dt = *dt_pointer;
   int numEle = (state -> getNumEle());
   int numNodes = (state -> getNumNodes());
   double* detwei = (state -> getDetwei());

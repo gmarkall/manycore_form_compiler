@@ -298,9 +298,15 @@ class CudaAssemblerBackend(AssemblerBackend):
         # List of field values that we've already extracted when building the function 
         self._alreadyExtracted = []
 
-        dt = Variable('dt', Real())
-        func = FunctionDefinition(Void(), 'run_model_', [dt])
+        dtp = Variable('dt_pointer', Pointer(Real()))
+        func = FunctionDefinition(Void(), 'run_model_', [dtp])
         func.setExternC(True)
+        
+        # Fortran always passes by reference, so we need to dereference to get the
+        # timestep.
+        dt = Variable('dt', Real())
+        setDt = AssignmentOp(Declaration(dt), Dereference(dtp))
+        func.append(setDt)
 
         # Initialise some variables we need
         toBeInitialised = [ numEle, numNodes, detwei, eleNodes, coordinates, dn, \

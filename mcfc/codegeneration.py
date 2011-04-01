@@ -36,6 +36,16 @@ class Subscript(BackendASTNode):
         code = '%s[%s]' % (base, offset)
         return code
 
+class Dereference(BackendASTNode):
+
+    def __init__(self, expr):
+        self._expr = expr
+
+    def unparse(self):
+        expr = self._expr.unparse()
+        code = '*%s' % (expr)
+        return code
+
 class NullExpression(BackendASTNode):
     
     def unparse(self):
