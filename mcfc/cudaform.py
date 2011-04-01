@@ -115,6 +115,7 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 class CudaFormBackend(FormBackend):
 
     def __init__(self):
+        FormBackend.__init__(self)
         self._expressionBuilder = CudaExpressionBuilder()
         self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
         self._indexSumCounter = IndexSumCounter()

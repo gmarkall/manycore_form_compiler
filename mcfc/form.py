@@ -24,6 +24,7 @@ cudaform.py, op2form.py, etc."""
 # MCFC libs
 from codegeneration import *
 from symbolicvalue import SymbolicValue
+from utilities import uniqify
 # UFL libs
 import ufl.argument
 from ufl.algorithms.transformations import Transformer
@@ -168,6 +169,7 @@ class FormBackend:
     def __init__(self):
         self._expressionBuilder = None
         self._quadratureExpressionBuilder = None
+        self._coefficientUseFinder = CoefficientUseFinder()
 
     def buildExpression(self, form, tree):
         "Build the expression represented by the subtree tree of form."
@@ -200,23 +202,69 @@ class FormBackend:
         return initialiser
 
     def buildCoeffQuadDeclarations(self, form):
-        form_data = form.form_data()
-        coefficients = form_data.coefficients
+        integrand = form.integrals()[0].integrand()
+        coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
+        
         declarations = []
 
         for coeff in coefficients:
             name = buildCoefficientQuadName(coeff)
             rank = coeff.rank()
-            length = numGaussPoints * pow(numDimensions, rank)
-            t = Array(Real(), Literal(length))
-            var = Variable(name, t)
-            decl = Declaration(var)
+            decl = self._buildCoeffQuadDeclaration(name, rank)
+            declarations.append(decl)
+
+        for d in spatialDerivatives:
+            name = buildSpatialDerivativeName(d)
+            operand = d.operands()[0]
+            rank = operand.rank() + 1 # The extra dimension due to the differentiation
+            decl = self._buildCoeffQuadDeclaration(name, rank)
             declarations.append(decl)
 
         return declarations
 
+    def _buildCoeffQuadDeclaration(self, name, rank):
+        length = numGaussPoints * pow(numDimensions, rank)
+        t = Array(Real(), Literal(length))
+        var = Variable(name, t)
+        decl = Declaration(var)
+        return decl
+
     def compile(self, form):
         raise NotImplementedError("You're supposed to implement compile()!")
+
+class CoefficientUseFinder(Transformer):
+    """Finds the nodes that 'use' a coefficient. This is either a Coefficient
+    itself, or a SpatialDerivative that has a Coefficient as its operand"""
+
+    def find(self, tree):
+        # We keep coefficients and spatial derivatives in separate lists
+        # because we need separate criteria to uniqify the lists.
+        self._coefficients = []
+        self._spatialDerivatives = []
+        
+        self.visit(tree)
+
+        # Coefficients define __eq__ and __hash__ so the straight uniqify works.
+        # For spatial derivatives, we need to compare the coefficients.
+        coefficients = uniqify(self._coefficients)
+        spatialDerivatives = uniqify(self._spatialDerivatives, lambda x: x.operands()[0])
+
+        return coefficients, spatialDerivatives
+
+    # Most expressions are uninteresting.
+    def expr(self, tree, *ops):
+        pass
+
+    def argument(self, tree):
+        pass
+
+    def spatial_derivative(self, tree):
+        subject = tree.operands()[0]
+        if isinstance(subject, ufl.coefficient.Coefficient):
+            self._spatialDerivatives.append(tree)
+
+    def coefficient(self, tree):
+        self._coefficients.append(tree)
 
 class IndexSumCounter(Transformer):
     "Count how many IndexSums are nested inside a tree."
