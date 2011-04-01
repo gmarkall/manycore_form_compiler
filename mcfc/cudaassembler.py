@@ -25,6 +25,7 @@ cudaform.py, and the necessary solves."""
 
 # MCFC libs
 from assembler import *
+from cudaparameters import generateKernelParameters
 from codegeneration import *
 from utilities import uniqify
 # This is referred to as mcfcstate because of the clash with the
@@ -448,67 +449,5 @@ class CudaAssemblerBackend(AssemblerBackend):
             params.append(dShape)
          
         return params
-
-class KernelParameterGenerator(Transformer):
-    """Mirrors the functionality of the kernelparametercomputer
-    in cudaform.py - maybe merge at some point?"""
-
-    def generate(self, tree, form):
-        self._coefficients = []
-        self._arguments = []
-        self._spatialDerivatives = []
-
-        self.visit(tree)
-
-        form_data = form.form_data()
-        formCoefficients = form_data.coefficients
-        originalCoefficients = form_data.original_coefficients
-        formArguments = form_data.arguments
-        originalArguments = form_data.original_arguments
-
-        parameters = []
- 
-        for coeff in self._coefficients:
-            i = formCoefficients.index(coeff)
-            originalCoefficient = originalCoefficients[i]
-            parameters.append(originalCoefficient)
-
-        for arg in self._arguments:
-            i = formArguments.index(arg)
-            originalArgument = originalArguments[i]
-            parameters.append(originalArgument)
-        
-        for derivative in self._spatialDerivatives:
-            subject = derivative.operands()[0]
-            indices = derivative.operands()[1]
-            
-            if isinstance(subject, ufl.argument.Argument):
-                i = formArguments.index(subject)
-                originalArgument = originalArguments[i]
-                parameters.append(ufl.differentiation.SpatialDerivative(originalArgument,indices))
-            elif isinstance(subject, ufl.coefficient.Coefficient):
-                i = formCoefficients.index(subject)
-                originalCoefficient = originalCoefficients[i]
-                parameters.append(originalCoefficient)
-
-        parameters = uniqify(parameters)
-
-        return parameters
-
-    def expr(self, tree, *ops):
-        pass
-
-    def spatial_derivative(self, tree):
-        self._spatialDerivatives.append(tree)
-
-    def argument(self, tree):
-        self._arguments.append(tree)
-
-    def coefficient(self, tree):
-        self._coefficients.append(tree)
-
-def generateKernelParameters(tree, form):
-    KPG = KernelParameterGenerator()
-    return KPG.generate(tree, form)
 
 # vim:sw=4:ts=4:sts=4:et
