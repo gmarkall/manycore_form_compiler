@@ -4,8 +4,10 @@ t=Coefficient(T)
 p=TrialFunction(T)
 q=TestFunction(T)
 
+diffusivity = 0.001
+
 M=p*q*dx
-d=-dt*dot(grad(q),grad(p))*dx
+d=-dt*diffusivity*dot(grad(q),grad(p))*dx
 
 A=M-0.5*d
 rhs=action(M+0.5*d,t)
