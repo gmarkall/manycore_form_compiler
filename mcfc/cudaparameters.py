@@ -126,21 +126,19 @@ class KernelParameterGenerator(Transformer):
             elif isinstance(subject, ufl.coefficient.Coefficient):
                 coefficients.append(subject)
                 element = subject.element()
-                argument = ufl.argument.TrialFunction(element)
+                argument = ufl.argument.Argument(element, 0)
                 argumentDeriv = ufl.differentiation.SpatialDerivative(argument, indices)
                 argumentDerivatives.append(argumentDeriv)
 
         # We don't want the same argument to appear twice, so we need to
-        # uniqify the lists.
+        # uniqify the lists. 
         coefficients = uniqify(coefficients)
-        arguments = uniqify(coefficients)
-        argumentDerivatives = uniqify(argumentDerivatives)
+        arguments = uniqify(arguments, lambda x: x.element())
+        argumentDerivatives = uniqify(argumentDerivatives, lambda x: x.operands()[0].element())
         
         # Build the lists of parameters based on what we have observed
         # in the form.
-        print "Coeffs:"
         for coeff in coefficients:
-            print repr(coeff)
             # Actual parameter
             i = formCoefficients.index(coeff)
             originalCoefficient = originalCoefficients[i]
