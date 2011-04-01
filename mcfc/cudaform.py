@@ -27,7 +27,6 @@ from ufl.algorithms.preprocess import preprocess
 
 # Variables
 
-
 threadCount = Variable("THREAD_COUNT")
 threadId = Variable("THREAD_ID")
 
@@ -178,8 +177,8 @@ class CudaFormBackend(FormBackend):
 
     def buildQuadratureLoopNest(self, form):
         
-        form_data = form.form_data()
-        coefficients = form_data.coefficients
+        integrand = form.integrals()[0].integrand()
+        coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         # Outer loop over gauss points
         indVar = gaussInductionVariable()
