@@ -20,7 +20,7 @@
 
 # MCFC libs
 from form import *
-from cudaparameters import KernelParameterComputer, numElements, statutoryParameters
+from cudaparameters import generateKernelParameters, numElements, statutoryParameters
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
 from ufl.algorithms.preprocess import preprocess
@@ -117,7 +117,6 @@ class CudaFormBackend(FormBackend):
     def __init__(self):
         self._expressionBuilder = CudaExpressionBuilder()
         self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
-        self._kernelParameterComputer = KernelParameterComputer()
         self._indexSumCounter = IndexSumCounter()
 
     def compile(self, name, form):
@@ -131,7 +130,7 @@ class CudaFormBackend(FormBackend):
         
         # Things for kernel declaration.
         t = Void()
-        params = self.buildParameterList(integrand)
+        params = self.buildParameterList(integrand, form)
         
         # Build the loop nest
         loopNest = self.buildLoopNest(form)
@@ -269,7 +268,8 @@ class CudaFormBackend(FormBackend):
         ast = ForLoop(init, test, inc)
         return ast
 
-    def buildParameterList(self,tree):
-        return self._kernelParameterComputer.compute(tree)
+    def buildParameterList(self, tree, form):
+        formalParameters, _ = generateKernelParameters(tree, form)
+        return formalParameters
 
 # vim:sw=4:ts=4:sts=4:et

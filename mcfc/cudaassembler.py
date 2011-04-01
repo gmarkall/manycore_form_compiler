@@ -422,7 +422,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         return var
 
     def _makeParameterListAndGetters(self, func, tree, form, staticParameters):
-        paramUFL = generateKernelParameters(tree, form)
+        _, paramUFL = generateKernelParameters(tree, form)
         # Figure out which parameters to pass
         params = list(staticParameters)
         needShape = False
