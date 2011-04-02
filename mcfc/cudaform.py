@@ -64,9 +64,18 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def subscript_SpatialDerivative(self,tree,depth):
         # Build the subscript based on the argument count and the
         # nesting depth of IndexSums of the expression.
-        argument = tree.operands()[0]
-        count = argument.count()
-        indices = [ElementIndex(), DimIndex(depth), GaussIndex(), BasisIndex(count)]
+        operand, _ = tree.operands()
+        count = operand.count()
+
+        if isinstance(operand, ufl.argument.Argument):
+            indices = [ElementIndex(), DimIndex(depth), GaussIndex(), BasisIndex(count)]
+        elif isinstance(operand, ufl.coefficient.Coefficient):
+            indices = [ GaussIndex() ]
+            depth = operand.rank() + 1
+
+            for r in range(depth):
+                indices.append(DimIndex(r))
+
         return indices
 
     def subscript_detwei(self):
@@ -90,7 +99,11 @@ class CudaExpressionBuilder(ExpressionBuilder):
         # Build the subscript based on the rank
         indices = [GaussIndex()]
         depth = coeff.rank()
-        for r in range(depth): # Need to add one, since depth started at -1
+        if isinstance(coeff, ufl.differentiation.SpatialDerivative):
+            # We need to add one, since the differentiation added a 
+            # dim index
+            depth = depth + 1
+        for r in range(depth):
             indices.append(DimIndex(r))
         
         return indices
@@ -109,6 +122,15 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
         indices = [BasisIndex(0), GaussIndex()]
+        return indices
+
+    def subscript_spatial_derivative(self, tree):
+        # The count of the basis function induction variable is always
+        # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
+        # index should be used to subscript the derivative (I think).
+        argument = tree.operands()[0]
+        count = argument.count()
+        indices = [ElementIndex(), DimIndex(0), GaussIndex(), BasisIndex(0)]
         return indices
 
 class CudaFormBackend(FormBackend):
@@ -188,31 +210,61 @@ class CudaFormBackend(FormBackend):
         # to compute its value
         for coeff in coefficients:
             rank = coeff.rank()
-            loop = gaussLoop
+            #loop = gaussLoop
+            self.buildCoefficientLoopNest(coeff, rank, gaussLoop)
 
-            # Build loop over the correct number of dimensions
-            for r in range(rank):
-                indVar = dimInductionVariable(r)
-                dimLoop = buildSimpleForLoop(indVar, numDimensions)
-                loop.append(dimLoop)
-                loop = dimLoop
+        for spatialDerivative in spatialDerivatives:
+            operand = spatialDerivative.operands()[0]
+            rank = operand.rank() + 1
+            self.buildCoefficientLoopNest(spatialDerivative, rank, gaussLoop)
 
-            # Add initialiser here
-            initialiser = self.buildCoeffQuadratureInitialiser(coeff)
-            loop.append(initialiser)
 
-            # One loop over the basis functions
-            indVar = basisInductionVariable(0)
-            basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
-            loop.append(basisLoop)
-        
-            # Add the expression to compute the value inside the basis loop
-            computation = self.buildQuadratureExpression(coeff)
-            basisLoop.append(computation)
-
-            depth = rank + 1 # Plus the loop over basis functions
-
+#            # Build loop over the correct number of dimensions
+#            for r in range(rank):
+#                indVar = dimInductionVariable(r)
+#                dimLoop = buildSimpleForLoop(indVar, numDimensions)
+#                loop.append(dimLoop)
+#                loop = dimLoop
+#
+#            # Add initialiser here
+#            initialiser = self.buildCoeffQuadratureInitialiser(coeff)
+#            loop.append(initialiser)
+#
+#            # One loop over the basis functions
+#            indVar = basisInductionVariable(0)
+#            basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
+#            loop.append(basisLoop)
+#        
+#            # Add the expression to compute the value inside the basis loop
+#            computation = self.buildQuadratureExpression(coeff)
+#            basisLoop.append(computation)
+#
         return gaussLoop
+
+    def buildCoefficientLoopNest(self, coeff, rank, scope):
+
+        loop = scope
+
+        # Build loop over the correct number of dimensions
+        for r in range(rank):
+            indVar = dimInductionVariable(r)
+            dimLoop = buildSimpleForLoop(indVar, numDimensions)
+            loop.append(dimLoop)
+            loop = dimLoop
+
+        # Add initialiser here
+        initialiser = self.buildCoeffQuadratureInitialiser(coeff)
+        loop.append(initialiser)
+
+        # One loop over the basis functions
+        indVar = basisInductionVariable(0)
+        basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
+        loop.append(basisLoop)
+    
+        # Add the expression to compute the value inside the basis loop
+        computation = self.buildQuadratureExpression(coeff)
+        basisLoop.append(computation)
+
 
     def buildLoopNest(self, form):
         form_data = form.form_data()

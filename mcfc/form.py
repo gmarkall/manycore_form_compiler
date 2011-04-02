@@ -27,6 +27,7 @@ from symbolicvalue import SymbolicValue
 from utilities import uniqify
 # UFL libs
 import ufl.argument
+import ufl.coefficient
 from ufl.algorithms.transformations import Transformer
 
 class ExpressionBuilder(Transformer):
@@ -109,7 +110,10 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(coeffExpr)
 
     def buildCoeffQuadratureAccessor(self, coeff):
-        name = buildCoefficientQuadName(coeff)
+        if isinstance(coeff, ufl.coefficient.Coefficient):
+            name = buildCoefficientQuadName(coeff)
+        else:
+            name = buildSpatialDerivativeName(coeff)
         base = Variable(name)
         
         indices = self.subscript_CoeffQuadrature(coeff)
@@ -144,13 +148,29 @@ class QuadratureExpressionBuilder:
         # Build Accessor for values at nodes
         indices = self.subscript(tree)
         offset = buildOffset(indices)
-        coeffAtBasis = Variable(buildCoefficientName(tree))
+        
+        if isinstance(tree, ufl.coefficient.Coefficient):
+            name = buildCoefficientName(tree)
+        elif isinstance (tree, ufl.differentiation.SpatialDerivative):
+            operand, _ = tree.operands()
+            name = buildCoefficientName(operand)
+
+        coeffAtBasis = Variable(name)
         coeffExpr = Subscript(coeffAtBasis, offset)
         
         # Build accessor for argument
-        name = buildArgumentName(tree)
+        if isinstance(tree, ufl.coefficient.Coefficient):
+            name = buildArgumentName(tree)
+            indices = self.subscript_argument(tree)
+        elif isinstance (tree, ufl.differentiation.SpatialDerivative):
+            operand, indices = tree.operands()
+            element = operand.element()
+            basis = ufl.argument.TrialFunction(element)
+            basisDerivative = ufl.differentiation.SpatialDerivative(basis, indices)
+            name = buildSpatialDerivativeName(basisDerivative)
+            indices = self.subscript_spatial_derivative(basisDerivative)
+
         arg = Variable(name)
-        indices = self.subscript_argument(tree)
         offset = buildOffset(indices)
         argExpr = Subscript(arg, offset)
 
@@ -163,6 +183,11 @@ class QuadratureExpressionBuilder:
 
     def subscript_argument(self, tree):
         raise NotImplementedError("You're supposed to implement subscript_argument()!")
+
+    def subscript_spatial_derivative(self, tree):
+        raise NotImplementedError("You're supposed to implement subscript_spatial_derivative()!")
+
+    
 
 class FormBackend:
 
