@@ -571,7 +571,7 @@ void VectorField::transferHtoD()
 
 void VectorField::transferDtoH()
 {
-  cerr << "Oh no, I haven't implemented this yet." << endl;
+  cerr << "Oh no, I haven't implemented this yet. " << __FUNCTION__ << endl;
   exit(-1);
 }
 
@@ -591,13 +591,21 @@ TensorField::TensorField(int dim, string name="Anon_tensor_field") : Field(2, di
 
 void TensorField::transferHtoD()
 {
-  cerr << "Oh no, I haven't implemented this yet." << endl;
+  cerr << "Oh no, I haven't implemented this yet." << __FUNCTION__ << endl;
   exit(-1);
+  
+  cout << "Copying tensor field " << getName() << " to GPU." << endl;
+  mesh->transferHtoD();
+  copyHtoD(host_val, cuda_compact_val, sizeof(double)*getCompactValSize());
+  int n_vals_per_ele = mesh->getShape()->getDim();
+  n_vals_per_ele = n_vals_per_ele*n_vals_per_ele;
+  expand_data<<<grid,block>>>(cuda_expanded_val, cuda_compact_val, mesh->getCudaNdglno(), mesh->getNumEle(), n_vals_per_ele, mesh->getNumNodesPerEle());
+  check(cudaGetLastError());
 }
 
 void TensorField::transferDtoH()
 {
-  cerr << "Oh no, I haven't implemented this yet." << endl;
+  cerr << "Oh no, I haven't implemented this yet." << __FUNCTION__ << endl;
   exit(-1);
 }
 
