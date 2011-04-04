@@ -20,7 +20,7 @@
 
 # MCFC libs
 from form import *
-from cudaparameters import generateKernelParameters
+from op2parameters import generateKernelParameters
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
 from ufl.algorithms.preprocess import preprocess

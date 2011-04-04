@@ -20,12 +20,11 @@
 # MCFC libs
 from parameters import KernelParameterGenerator
 import form
-from codegeneration import Variable, Integer, Pointer, Real
+from codegeneration import Variable, Pointer, Real
 
-numElements = Variable("n_ele", Integer() )
-statutoryParameters = [ form.localTensor, numElements, form.timestep, form.detwei ]
+statutoryParameters = [ form.localTensor, form.timestep, form.detwei ]
 
-class CudaKernelParameterGenerator(KernelParameterGenerator):
+class Op2KernelParameterGenerator(KernelParameterGenerator):
 
     def _buildCoefficientParameter(self,coeff):
         name = form.buildCoefficientName(coeff)
@@ -40,7 +39,7 @@ class CudaKernelParameterGenerator(KernelParameterGenerator):
         return Variable(name, Pointer(Real()))
 
 def generateKernelParameters(tree, form):
-    KPG = CudaKernelParameterGenerator()
+    KPG = Op2KernelParameterGenerator()
     return KPG.generate(tree, form, statutoryParameters)
 
 # vim:sw=4:ts=4:sts=4:et
