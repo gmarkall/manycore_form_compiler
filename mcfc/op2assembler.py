@@ -17,10 +17,23 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
+# MCFC libs
+from assembler import *
+from codegeneration import *
 
-from cudadriver import CudaDriver
-from op2driver import Op2Driver
+class Op2AssemblerBackend(AssemblerBackend):
 
-drivers = { "cuda": CudaDriver, "op2": Op2Driver }
+    def compile(self, ast, uflObjects):
+
+        self._ast = ast
+        self._uflObjects = uflObjects
+
+        # Build definitions
+        definitions = NullExpression()
+
+        # Build declarations
+        declarations = NullExpression()
+
+        return definitions, declarations
 
 # vim:sw=4:ts=4:sts=4:et

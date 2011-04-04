@@ -18,9 +18,14 @@
 # holders.
 
 
-from cudadriver import CudaDriver
-from op2driver import Op2Driver
+from driver import Driver
+import op2form
+import op2assembler
 
-drivers = { "cuda": CudaDriver, "op2": Op2Driver }
+class Op2Driver(Driver):
+
+    def __init__(self):
+        self._formBackend = op2form.Op2FormBackend()
+        self._assemblerBackend = op2assembler.Op2AssemblerBackend()
 
 # vim:sw=4:ts=4:sts=4:et

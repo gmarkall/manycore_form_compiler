@@ -99,7 +99,7 @@ def testHook(inputFile, outputFile, backend = "cuda"):
 
 def get_options():
     try: 
-        opts, args = getopt.getopt(sys.argv[1:], "bhvpo:", ["visualise", "print"])
+        opts, args = getopt.getopt(sys.argv[1:], "b:hvpo:", ["visualise", "print"])
     except getopt.error, msg:
         print msg
         print __doc__
