@@ -505,17 +505,18 @@ class Pointer(Type):
 
 class Array(Type):
 
-    def __init__(self, base, length):
+    def __init__(self, base, extents):
         Type.__init__(self)
         self._base = base
-        self._length = length
+        self._extents = extents if isinstance(extents,list) else [extents]
 
     def unparse_internal(self):
         return self._base.unparse_internal()
 
     def unparse_post(self):
-        length = self._length.unparse()
-        code = '[%s]' % (length)
+        code = ''
+        for extent in self._extents:
+            code = '%s[%s]' % (code, extent.unparse())
         return code
 
 class Class(Type):
