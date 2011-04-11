@@ -20,23 +20,34 @@
 # MCFC libs
 from parameters import KernelParameterGenerator
 import form
-from codegeneration import Variable, Pointer, Real
+from codegeneration import Variable, Pointer, Real, Array
+from op2expression import Op2QuadratureExpressionBuilder
 
 statutoryParameters = [ form.localTensor, form.timestep, form.detwei ]
+quadExpBuilder = Op2QuadratureExpressionBuilder()
 
 class Op2KernelParameterGenerator(KernelParameterGenerator):
 
+    def _buildArrayParameter(self, name, indices):
+        array = Real()
+        for i in indices:
+            array = Array(array, i.extent())
+        return Variable(name, array)
+
     def _buildCoefficientParameter(self,coeff):
+        indices = quadExpBuilder.subscript(coeff)
         name = form.buildCoefficientName(coeff)
-        return Variable(name, Pointer(Real()))
+        return self._buildArrayParameter(name, indices)
 
     def _buildArgumentParameter(self,arg):
+        indices = quadExpBuilder.subscript_argument(arg)
         name = form.buildArgumentName(arg)
-        return Variable(name, Pointer(Real()))
+        return self._buildArrayParameter(name, indices)
         
     def _buildSpatialDerivativeParameter(self,argDeriv):
+        indices = quadExpBuilder.subscript_spatial_derivative(argDeriv)
         name = form.buildSpatialDerivativeName(argDeriv)
-        return Variable(name, Pointer(Real()))
+        return self._buildArrayParameter(name, indices)
 
 def generateKernelParameters(tree, form):
     KPG = Op2KernelParameterGenerator()
