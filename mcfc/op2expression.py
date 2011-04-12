@@ -19,9 +19,23 @@
 
 from form import *
 
+def buildSubscript(variable, indices):
+    """Given a list of indices, return an AST that subscripts
+    the given array using those indices. The order is
+    important."""
+    
+    # Add subscripts for all indices
+    for i in indices:
+        variable = Subscript(variable, Variable(i.name()))
+    
+    return variable
+
 # Expression builders
 
 class Op2ExpressionBuilder(ExpressionBuilder):
+
+    def buildSubscript(self, variable, indices):
+        return buildSubscript(variable, indices)
 
     def subscript(self, tree, depth=None):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
@@ -85,6 +99,9 @@ class Op2ExpressionBuilder(ExpressionBuilder):
 
 class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
+    def buildSubscript(self, variable, indices):
+        return buildSubscript(variable, indices)
+
     def subscript(self, tree):
         rank = tree.rank()
         indices = [BasisIndex(0)]
@@ -106,3 +123,5 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         argument = tree.operands()[0]
         indices = [DimIndex(0), GaussIndex(), BasisIndex(0)]
         return indices
+
+# vim:sw=4:ts=4:sts=4:et

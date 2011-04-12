@@ -46,9 +46,8 @@ class ExpressionBuilder(Transformer):
 
         # Everything needs to be multiplied by detwei
         indices = self.subscript_detwei()
-        offset = buildOffset(indices)
         detwei = Variable("detwei")
-        detweiExpr = Subscript(detwei, offset)
+        detweiExpr = self.buildSubscript(detwei, indices)
         expr = MultiplyOp(expr, detweiExpr)
 
         return expr
@@ -92,8 +91,7 @@ class ExpressionBuilder(Transformer):
 
         depth = self._indexSumDepth
         indices = self.subscript(tree, depth)
-        offset = buildOffset(indices)
-        spatialDerivExpr = Subscript(base, offset)
+        spatialDerivExpr = self.buildSubscript(base, indices)
         self._exprStack.append(spatialDerivExpr)
  
     def argument(self, tree):
@@ -101,8 +99,7 @@ class ExpressionBuilder(Transformer):
         base = Variable(name)
 
         indices = self.subscript(tree)
-        offset = buildOffset(indices)
-        argExpr = Subscript(base, offset)
+        argExpr = self.buildSubscript(base, indices)
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
@@ -117,18 +114,19 @@ class ExpressionBuilder(Transformer):
         base = Variable(name)
         
         indices = self.subscript_CoeffQuadrature(coeff)
-        offset = buildOffset(indices)
 
-        coeffExpr = Subscript(base, offset)
+        coeffExpr = self.buildSubscript(base, indices)
         return coeffExpr
 
     def buildLocalTensorAccessor(self, form):
         indices = self.subscript_LocalTensor(form)
-        offset = buildOffset(indices)
         
         # Subscript the local tensor variable
-        expr = Subscript(localTensor, offset)
+        expr = self.buildSubscript(localTensor, indices)
         return expr
+
+    def buildSubscript(self, variable, indices):
+        raise NotImplementedError("You're supposed to implement buildSubscript()!")
 
     def subscript_LocalTensor(self, form):
         raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
@@ -147,7 +145,6 @@ class QuadratureExpressionBuilder:
     def build(self, tree):
         # Build Accessor for values at nodes
         indices = self.subscript(tree)
-        offset = buildOffset(indices)
         
         if isinstance(tree, ufl.coefficient.Coefficient):
             name = buildCoefficientName(tree)
@@ -156,7 +153,7 @@ class QuadratureExpressionBuilder:
             name = buildCoefficientName(operand)
 
         coeffAtBasis = Variable(name)
-        coeffExpr = Subscript(coeffAtBasis, offset)
+        coeffExpr = self.buildSubscript(coeffAtBasis, indices)
         
         # Build accessor for argument
         if isinstance(tree, ufl.coefficient.Coefficient):
@@ -171,12 +168,14 @@ class QuadratureExpressionBuilder:
             indices = self.subscript_spatial_derivative(basisDerivative)
 
         arg = Variable(name)
-        offset = buildOffset(indices)
-        argExpr = Subscript(arg, offset)
+        argExpr = self.buildSubscript(arg, indices)
 
         # Combine to form the expression
         expr = MultiplyOp(coeffExpr, argExpr)
         return expr
+
+    def buildSubscript(self, variable, indices):
+        raise NotImplementedError("You're supposed to implement buildSubscript()!")
 
     def subscript(self, tree):
         raise NotImplementedError("You're supposed to implement subscript()!")
@@ -354,7 +353,7 @@ def findPartitions(tree):
     return part.partition(tree)
 
 # Code indices represent induction variables in a loop. A list of CodeIndexes is
-# supplied to buildOffset, in order for it to build the computation of a
+# supplied to buildSubscript, in order for it to build the computation of a
 # subscript.
 
 class CodeIndex:
@@ -385,29 +384,6 @@ class DimIndex(CodeIndex):
 
     def name(self):
         return dimInductionVariable(self._count)
-
-def buildOffset(indices):
-    """Given a list of indices, return an AST that computes
-    the offset into an array using those indices. The order is
-    important."""
-
-    # Start our expression with the first index
-    name = indices[0].name()
-    offset = Variable(name)
-    
-    # Compute the expression for all indices
-    for v in range(1,len(indices)):
-        subindices = indices[:v]
-        name = indices[v].name()
-        expr = Variable(name)
-        
-        # Find the correct offset for this index
-        for u in range(len(subindices)):
-            multiplier = subindices[u].extent()
-            expr = MultiplyOp(multiplier, expr)
-        offset = AddOp(offset, expr)
-    
-    return offset
 
 # Name builders
 

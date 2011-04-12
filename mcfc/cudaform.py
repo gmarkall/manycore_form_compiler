@@ -44,9 +44,35 @@ class ElementIndex(CodeIndex):
 def eleInductionVariable():
     return "i_ele"
 
+def buildSubscript(variable, indices):
+    """Given a list of indices, return an AST that computes
+    the offset into the given array using those indices. The order is
+    important."""
+
+    # Start our expression with the first index
+    name = indices[0].name()
+    offset = Variable(name)
+    
+    # Compute the expression for all indices
+    for v in range(1,len(indices)):
+        subindices = indices[:v]
+        name = indices[v].name()
+        expr = Variable(name)
+        
+        # Find the correct offset for this index
+        for u in range(len(subindices)):
+            multiplier = subindices[u].extent()
+            expr = MultiplyOp(multiplier, expr)
+        offset = AddOp(offset, expr)
+    
+    return Subscript(variable, offset)
+
 # Expression builders
 
 class CudaExpressionBuilder(ExpressionBuilder):
+
+    def buildSubscript(self, variable, indices):
+        return buildSubscript(variable, indices)
 
     def subscript(self, tree, depth=None):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
@@ -109,6 +135,9 @@ class CudaExpressionBuilder(ExpressionBuilder):
         return indices
 
 class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
+
+    def buildSubscript(self, variable, indices):
+        return buildSubscript(variable, indices)
 
     def subscript(self, tree):
         rank = tree.rank()
