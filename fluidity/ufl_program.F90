@@ -27,30 +27,31 @@
 
 #include "fdebug.h"
 program ufl_program
-  use spud
+  use diagnostic_fields_wrapper
+  use diagnostic_variables
   use fields
-  use state_module
   use FLDebug
+  use global_parameters, only : current_time, dt, OPTION_PATH_LEN, &
+    & simulation_start_cpu_time, simulation_start_wall_time, timestep
+  use iso_c_binding
+  use linked_lists
   use populate_state_module
-  use write_state_module
-  use populate_state_module
-  use timeloop_utilities
+  use solvers
   use sparsity_patterns
   use sparsity_patterns_meshes
-  use linked_lists
-  use solvers
-  use diagnostic_fields_wrapper
-  use iso_c_binding
+  use spud
+  use state_module
+  use timeloop_utilities
   use ufl_utilities
+  use write_state_module
   implicit none
 #ifdef HAVE_PETSC
 #include "finclude/petsc.h"
 #endif
 
-  real :: dt
-  integer :: timestep
   real*4, dimension(2) :: tarray
   real*4 :: start, finish
+  character(len = OPTION_PATH_LEN) :: simulation_name
 
 #ifdef HAVE_PETSC
   integer :: ierr
@@ -67,34 +68,38 @@ program ufl_program
      FLAbort("Multiple material_phases are not supported")
   end if
 
-  ! Always output the initial conditions.
-  call output_state
-
+  call get_option("/simulation_name", simulation_name)
   call get_option("/timestepping/current_time", current_time)
   call get_option("/timestepping/timestep", dt)
+  timestep=0
+
+  call initialise_diagnostics(simulation_name, state)
+  call initialise_write_state()
+
+  ! Always output the initial conditions.
+  call output_state(state, current_time, dt, timestep)
 
   call ETIME(tarray, start)
 
   call initialise_gpu
 
-  timestep=0
-  !timestep_loop: do 
-     timestep=timestep+1
-  !   ewrite (1,'(a,i0)') "Start of timestep ",timestep
+  timestep_loop: do 
+    timestep=timestep+1
+    ewrite (1,'(a,i0)') "Start of timestep ",timestep
      
-     call run_model
+    call run_model
 
-     call calculate_diagnostic_variables(state)
+    call calculate_diagnostic_variables(state)
 
-  !   if (simulation_completed(current_time, timestep)) exit timestep_loop     
+    if (simulation_completed(current_time, timestep)) exit timestep_loop     
 
-  !   call advance_current_time(current_time, dt)
+    call advance_current_time(current_time, dt)
 
-  !   if (do_write_state(current_time, timestep)) then
-  !      call output_state
-  !   end if
+    if (do_write_state(current_time, timestep)) then
+      call output_state(state, current_time, dt, timestep)
+    end if
 
-  !end do timestep_loop
+  end do timestep_loop
   
   call finalise_gpu
 
@@ -102,7 +107,7 @@ program ufl_program
   print *,"Simulation time: ",(finish-start)
 
   ! One last dump
-  call output_state
+  call output_state(state, current_time, dt, timestep)
 
 contains
 
@@ -169,10 +174,15 @@ contains
 
   end subroutine advance_current_time
 
-  subroutine output_state
+  subroutine output_state(state, current_time, dt, timestep)
+    type(state_type), dimension(:), intent(inout) :: state
+    real, intent(in) :: current_time, dt
+    integer, intent(in) :: timestep
 
     integer, save :: dump_no=0
 
+    call calculate_diagnostic_variables(state, exclude_nonrecalculated = .false.)
+    call write_diagnostics(state, current_time, dt, timestep)
     call write_state(dump_no, state)
     
   end subroutine output_state
