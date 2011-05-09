@@ -1,0 +1,15 @@
+T=state.scalar_fields["Tracer",n]
+V=state.vector_fields["Velocity",c]
+
+u=Coefficient(V)
+t=Coefficient(T)
+p=TrialFunction(T)
+q=TestFunction(T)
+
+Mass=q*p*dx
+
+rhs = (q*t-dt*dot(grad(q),u)*t)*dx
+
+tnew=solve(Mass,rhs)
+
+state.scalar_fields["Tracer",n+1]=tnew
