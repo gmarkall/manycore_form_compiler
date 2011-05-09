@@ -87,7 +87,7 @@ program ufl_program
     timestep=timestep+1
     ewrite (1,'(a,i0)') "Start of timestep ",timestep
      
-    call run_model
+    call run_model(dt)
 
     call calculate_diagnostic_variables(state)
 
