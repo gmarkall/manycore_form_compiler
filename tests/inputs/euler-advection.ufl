@@ -8,7 +8,7 @@ q=TestFunction(T)
 
 Mass=q*p*dx
 
-rhs = (q*t-dt*dot(grad(q),u)*t)*dx
+rhs = (q*t+dt*dot(grad(q),u)*t)*dx
 
 tnew=solve(Mass,rhs)
 
