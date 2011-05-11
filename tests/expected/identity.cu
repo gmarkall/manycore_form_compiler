@@ -1,5 +1,3 @@
-BREAK BUILDBOT
-
 #include "cudastatic.hpp"
 #include "cudastate.hpp"
 double* localVector;
