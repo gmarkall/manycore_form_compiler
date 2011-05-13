@@ -98,7 +98,7 @@ tensor_fields = __fake_field_dict__(2)
 # read from an flml file - however, for now for testing, just a list of the
 # usual names I use and their order will do.
 
-_finiteElements = { 'Tracer': 1 }
+_finiteElements = { 'Tracer': 1, 'Height': 1 }
 _vectorElements = { 'Velocity': 1, 'NewVelocity': 1 }
 _tensorElements = { 'TracerDiffusivity': 1 }
 
