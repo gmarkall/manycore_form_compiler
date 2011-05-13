@@ -7,7 +7,7 @@ user may replace the testcase with the new output.
 """
 
 # Python modules
-import sys, os, shutil
+import sys, os, shutil, getopt
 from subprocess import Popen, PIPE
 
 # A nicer traceback from IPython
@@ -21,16 +21,32 @@ from pygments.formatters import TerminalFormatter
 # MCFC modules
 from mcfc import frontend
 
+# Global status
+failed = 0
+interactive = True
+
 def main():
 
     sys.excepthook = ultraTB.FormattedTB(mode='Context')
 
+    opts, args = get_options()
+    keys = opts.keys()
+
     sources = ['diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
                'laplacian', 'helmholtz', 'euler-advection' ]
 
-    if(len(sys.argv) > 1):
-        sources = [sys.argv[1]]
+    # Check a single file if specified. Otherwise check
+    # all those specified above.
+    if (len(args) > 0):
+        sources = [ args[0] ]
  
+    # Check for non-interactive execution (e.g. on the
+    # buildbot.
+    if 'noninteractive' in keys or 'n' in keys:
+	print "Running in non-interactive mode."
+	global interactive
+	interactive = False
+
     # Delete the outputs folder if it exists, to avoid
     # any stale files.
     if os.path.exists('outputs'):
@@ -42,7 +58,24 @@ def main():
     for sourcefile in sources:
         check(sourcefile)
 
-    sys.exit(0)
+    # Exit code is 0 if no tests failed.
+    sys.exit(failed)
+
+def get_options():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "n", ["noninteractive"])
+    except getopt.error, msg:
+        print msg
+        print __doc__
+        sys.exit(-1)
+
+    opts_dict = {}
+    for opt in opts:
+        key = opt[0].lstrip('-')
+        value = opt[1]
+        opts_dict[key] = value
+
+    return opts_dict, args
 
 def check(sourcefile):
 
@@ -58,9 +91,17 @@ def check(sourcefile):
     diff = Popen(cmd, shell=True, stdout=PIPE)
     diffout, differr = diff.communicate()
     
-    if diffout:
-        print "Difference detected in ", sourcefile, ", ",
-        diffmenu(sourcefile, diffout)
+    check_diff(sourcefile, diffout)
+
+def check_diff(sourcefile, diff):
+
+    if diff:
+        print "Difference detected in %s." % sourcefile
+	global failed
+	failed = 1
+        
+	if interactive:
+            diffmenu(sourcefile, diff)
 
 def diffmenu(sourcefile, diffout):
     
