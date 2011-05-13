@@ -1,3 +1,4 @@
+MOOOOOSE
 #include "cudastatic.hpp"
 #include "cudastate.hpp"
 double* localVector;
