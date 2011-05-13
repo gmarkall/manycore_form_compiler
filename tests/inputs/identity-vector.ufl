@@ -1,0 +1,11 @@
+T = state.vector_fields["Velocity",c]
+
+v=TestFunction(T)
+u=TrialFunction(T)
+f=Coefficient(T)
+
+A = inner(v,u)*dx
+RHS = inner(v,f)*dx
+
+p=solve(A, RHS)
+state.vector_fields["Velocity",c]=p

@@ -33,7 +33,7 @@ def main():
     keys = opts.keys()
 
     sources = ['diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
-               'laplacian', 'helmholtz', 'euler-advection' ]
+               'laplacian', 'helmholtz', 'euler-advection', 'identity-vector' ]
 
     # Check a single file if specified. Otherwise check
     # all those specified above.

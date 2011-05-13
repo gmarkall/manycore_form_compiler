@@ -127,6 +127,9 @@ def TrialFunction(arg):
 def dot(arg1, arg2):
     return ufl.operators.dot(arg1,arg2)
 
+def inner(arg1, arg2):
+    return ufl.operators.inner(arg1, arg2)
+
 def grad(arg):
     return ufl.operators.grad(arg)
 

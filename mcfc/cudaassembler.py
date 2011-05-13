@@ -239,9 +239,9 @@ class CudaAssemblerBackend(AssemblerBackend):
         
         if isinstance(element, ufl.finiteelement.FiniteElement):
             sourceFields = mcfcstate._finiteElements
-        elif isinstance(element, ufl.finiteelement.FiniteElement):
+        elif isinstance(element, ufl.finiteelement.VectorElement):
             sourceFields = mcfcstate._vectorElements
-        elif isinstance(element, ufl.finiteelement.FiniteElement):
+        elif isinstance(element, ufl.finiteelement.TensorElement):
             sourceFields = mcfcstate._tensorElements
 
         for k in sourceFields:
