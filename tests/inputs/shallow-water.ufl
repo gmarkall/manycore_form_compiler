@@ -10,6 +10,12 @@ M_u=inner(v,u)*dx                            # Velocity mass matrix
 M_h=q*h*dx                                   # Height mass matrix
 
 Ct=-inner(grad(q),u)*dx                      # Velocity divergence operator
+
+depth = 5.0  
+g = 10.0
+c2 = g*depth
+f = 1.0313e-04 
+
 C=-c2*adjoint(Ct)                            # Pressure gradient operator
 
 F=f*inner(v,as_vector([-u[1],u[0]]))*dx      # Coriolis term

@@ -121,6 +121,14 @@ def Coefficient(arg):
 def TestFunction(arg):
     return ufl.argument.TestFunction(arg)
 
+def TestFunctions(*args):
+    uflArgs = args[0]
+    return ufl.argument.TestFunctions(uflArgs)
+
+def TrialFunctions(*args):
+    uflArgs = args[0]
+    return ufl.argument.TrialFunctions(uflArgs)
+
 def TrialFunction(arg):
     return ufl.argument.TrialFunction(arg)
 
@@ -135,6 +143,13 @@ def grad(arg):
 
 def div(arg):
     return ufl.operators.div(arg)
+
+def adjoint(arg):
+    return ufl.formoperators.adjoint(arg)
+
+def as_vector(*args):
+    uflArgs = args[0]
+    return ufl.tensors.as_vector(uflArgs)
 
 def charstolines(chars):
 
@@ -155,6 +170,7 @@ class UFLInterpreter:
     def __init__(self, line, f=sys.stdout):
         self._file = f
         st = ast.parse(line)
+	print line
         print >>self._file, '# ' + line
         self.dispatch(st)
         self._file.flush
