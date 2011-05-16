@@ -79,6 +79,7 @@ ufl_expr	: binary_ufl_expr
 		| multiindex_expr
 		| coeff_expr
 		| arg_expr
+		| mix_ele_expr
 		| ele_expr
 		| value_expr
 		| state_expr
@@ -117,6 +118,14 @@ ele_expr	: (type=element_op LPAREN family=string COMMA cell=cell_expr COMMA degr
                       -> ^($type $family $cell $degree $shape1? $shape2? $symmetry?);
 
 element_op      : (FINELE | VECELE | TENELE)^ ;
+
+// For two elements only now. 
+// Long term, needs a rethink.
+mix_ele_expr	: (MIXELE LPAREN STAR LBRACK ele1=ele_expr COMMA ele2=ele_expr RBRACK COMMA attrs=mix_ele_dict RPAREN  )
+                      -> ^(MIXELE $ele1 $ele2 $attrs) ;
+
+mix_ele_dict	: (DOUBLESTAR LCURLY key=string COLON LPAREN shape=number COMMA RPAREN RCURLY)
+		      -> ^($key $shape);
 
 cell_expr	: (CELL LPAREN domain=string COMMA degree=number COMMA 
                    space=space_expr RPAREN) 
@@ -180,6 +189,7 @@ ARGUMENT	: 'Argument';
 FINELE		: 'FiniteElement';
 VECELE          : 'VectorElement';
 TENELE          : 'TensorElement';
+MIXELE		: 'MixedElement';
 CELL		: 'Cell';
 SPACE		: 'Space';
 MULTIINDEX	: 'MultiIndex';
