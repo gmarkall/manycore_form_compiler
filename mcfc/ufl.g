@@ -52,11 +52,18 @@ file_input	: ( NEWLINE! | stmt )* ;
 stmt            : lhs=expr eq=ASSIGN rhs=expr 
                       -> ^($eq $lhs $rhs);
 
+tuple_expr	: LPAREN exprs=expr_list RPAREN
+                      -> ^(TUPLE $exprs);
+
+expr_list	: expr COMMA expr_list
+		| expr;
+
 expr		: arith_expr
 		| source_expr
 		| ufl_expr
 		| form_expr
 		| compute_expr
+		| tuple_expr
 		;
 
 arith_expr	: term ( ( PLUS | MINUS )^ term )* ;
@@ -105,7 +112,7 @@ constant_value  : (number | string)^ ;
 binary_ufl_expr : (op=binary_op LPAREN arg1=ufl_expr COMMA arg2=ufl_expr RPAREN) 
                       -> ^($op $arg1 $arg2);
 
-binary_op       : (SPATDERIV | COMPTENSOR | SUM | INDEXED | PRODUCT | INDEXSUM)^ ;
+binary_op       : (SPATDERIV | LISTTENSOR | COMPTENSOR | SUM | INDEXED | PRODUCT | INDEXSUM)^ ;
 
 arg_expr	: (ARGUMENT LPAREN element=ufl_expr COMMA id=number RPAREN) 
                       -> ^(ARGUMENT $element $id);
@@ -136,13 +143,15 @@ space_expr	: (SPACE LPAREN dim=number RPAREN)
 
 multiindex_expr	: (MULTIINDEX LPAREN LPAREN idx=index* RPAREN COMMA LCURLY 
                    idx_dim=index_dim* RCURLY RPAREN) 
-                      -> ^(MULTIINDEX $idx $idx_dim);
+                      -> ^(MULTIINDEX $idx* $idx_dim*);
 
-index		: (UINDEX LPAREN id=number RPAREN COMMA?) 
-                      -> ^(UINDEX $id);
+index		: (index_type=index_obj LPAREN id=number RPAREN COMMA?) 
+                      -> ^($index_type $id);
 
-index_dim	: (UINDEX LPAREN idx=number RPAREN COLON dim=number COMMA?) 
-                      -> ^(UINDEX $idx $dim);
+index_dim	: (index_type=index_obj LPAREN idx=number RPAREN COLON dim=number COMMA?) 
+                      -> ^($index_type $idx $dim);
+
+index_obj	: (UINDEX | FIXEDINDEX)^ ;
 
 coeff_expr	: (COEFF LPAREN element=ufl_expr COMMA id=number RPAREN) 
                       -> ^(COEFF $element $id);
@@ -183,6 +192,7 @@ INTEGRAL	: 'Integral';
 INDEXSUM	: 'IndexSum';
 PRODUCT		: 'Product';
 INDEXED		: 'Indexed';
+LISTTENSOR	: 'ListTensor';
 COMPTENSOR	: 'ComponentTensor';
 SPATDERIV	: 'SpatialDerivative';
 ARGUMENT	: 'Argument';
@@ -196,6 +206,7 @@ MULTIINDEX	: 'MultiIndex';
 COEFF		: 'Coefficient';
 MEASURE		: 'Measure';
 UINDEX		: 'Index';
+FIXEDINDEX	: 'FixedIndex';
 SYMVALUE        : 'SymbolicValue';
 INTVALUE        : 'IntValue';
 FLOATVALUE      : 'FloatValue';
@@ -208,6 +219,9 @@ SCALAR_FIELDS   : 'scalar_fields';
 VECTOR_FIELDS   : 'vector_fields';
 TENSOR_FIELDS   : 'tensor_fields';
 SOLVE           : 'solve';
+
+// Only in the AST
+TUPLE		: 'Tuple';
 
 ////////////////////////////////////////////////////////////////////////////////
 // $<String and Bytes literals
@@ -309,7 +323,7 @@ fragment EXPONENTFLOAT
 		: ( INTPART | POINTFLOAT ) EXPONENT ;
 
 fragment INTPART
-		: DIGIT+ ;
+		: MINUS? DIGIT+ ;
 
 fragment FRACTION
 		: '.' DIGIT+ ;
