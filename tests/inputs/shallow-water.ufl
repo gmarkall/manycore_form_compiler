@@ -2,9 +2,9 @@ V = state.vector_fields["Velocity", n] # Velocity space
 H = state.scalar_fields["Height",   n] # Height space
 W = V*H                                # Mixed space of both.
 
-(v, q)=TestFunctions(W)
-(u, h)=TrialFunctions(W)
-state=Coefficient(W)
+(v, q) = TestFunctions(W)
+(u, h) = TrialFunctions(W)
+fluidstate=Coefficient(W)
 
 M_u=inner(v,u)*dx                            # Velocity mass matrix
 M_h=q*h*dx                                   # Height mass matrix
@@ -24,10 +24,10 @@ A=M_u+M_h+0.5*dt*(C+Ct+F)                    # System matrix
 
 A_r=M_u+M_h-0.5*dt*(C+Ct+F)                  # Right hand side form
 
-rhs=action(A_r,state)
-        
+rhs=action(A_r,fluidstate)
+
 # Solve the shallow water equations.
 (Vnew, Hnew) =  solve(A, rhs)
 
-state.scalar_fields["height",   n+1] = Hnew
-state.vector_fields["velocity", n+1] = Vnew
+state.scalar_fields["Height",   n+1] = Hnew
+state.vector_fields["Velocity", n+1] = Vnew
