@@ -80,27 +80,7 @@ def solve(M,b):
     vector = ufl.algorithms.preprocess(b)
     form_data = vector.form_data()
     element = form_data.arguments[0].element()
-    coefficients = buildCoefficientList(element)
-
-    if len(coefficients) is 1:
-        coefficients = coefficients[0]
-    
-    return coefficients
-
-def buildCoefficientList(element):
-
-    if isinstance(element, (ufl.finiteelement.FiniteElement, \
-                            ufl.finiteelement.VectorElement, \
-			    ufl.finiteelement.TensorElement)):
-        return [ Coefficient(element) ]
-    elif isinstance(element, ufl.finiteelement.MixedElement):
-        sub_elements = element.sub_elements()
-        coeffs = []
-        for sub_element in sub_elements:
-	    coeffs = coeffs + buildCoefficientList(sub_element)
-	return coeffs
-    else:
-        raise RuntimeError("Unexpected element type in form.")
+    return Coefficient(element)
 
 # Action needs to do the same trick
 
