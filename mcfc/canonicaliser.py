@@ -171,6 +171,9 @@ def as_vector(*args):
     uflArgs = args[0]
     return ufl.tensors.as_vector(uflArgs)
 
+def split(arg):
+    return ufl.split_functions.split(arg)
+
 def charstolines(chars):
 
     lines = []

@@ -27,7 +27,7 @@ A_r=M_u+M_h-0.5*dt*(C+Ct+F)                  # Right hand side form
 rhs=action(A_r,fluidstate)
 
 # Solve the shallow water equations.
-(Vnew, Hnew) =  solve(A, rhs)
+(Vnew, Hnew) =  split(solve(A, rhs))
 
 state.scalar_fields["Height",   n+1] = Hnew
 state.vector_fields["Velocity", n+1] = Vnew
