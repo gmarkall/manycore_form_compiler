@@ -234,8 +234,16 @@ class UFLInterpreter:
         if isinstance(_result, ufl.form.Form):
             _result = ufl.algorithms.preprocess(_result)
 
-        # Stash the resulting object
-        _uflObjects[_target] = _result
+        # Stash the resulting object. If it's a tuple of objects,
+	# we need to stash each individual one separately so they
+	# can be retrieved individually later on.
+        if isinstance(_lhs, ast.Tuple):
+	    count = len(_lhs.elts)
+	    for i in range(count):
+	        key = _lhs.elts[i].id
+	        _uflObjects[key] = _result[i]
+	else:
+            _uflObjects[_target] = _result
             
         if isToBeExecuted(_lhs,_rhs):
             # Create an assignment statement that assigns the result of 
