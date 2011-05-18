@@ -55,7 +55,7 @@ stmt            : lhs=expr eq=ASSIGN rhs=expr
 tuple_expr	: LPAREN exprs=expr_list RPAREN
                       -> ^(TUPLE $exprs);
 
-expr_list	: expr COMMA expr_list
+expr_list	: expr COMMA! expr_list
 		| expr;
 
 expr		: arith_expr
@@ -64,6 +64,7 @@ expr		: arith_expr
 		| form_expr
 		| compute_expr
 		| tuple_expr
+		| split_expr
 		;
 
 arith_expr	: term ( ( PLUS | MINUS )^ term )* ;
@@ -72,15 +73,17 @@ arith_expr	: term ( ( PLUS | MINUS )^ term )* ;
 //////////////////////////////////////////////
 // UFL Expressions
 
-form_expr	: (FORM LPAREN LBRACK integral=integral_expr RBRACK RPAREN)
-                      -> ^(FORM $integral);
+form_expr	: FORM^ LPAREN! LBRACK! integral_expr RBRACK! RPAREN!
+		;
+//                      -> ^(FORM $integral);
 
-integral_expr	: (INTEGRAL LPAREN integrand=ufl_expr COMMA measure=measure_expr RPAREN) 
-                      -> ^(INTEGRAL $integrand $measure);
+integral_expr	: INTEGRAL^ LPAREN! ufl_expr COMMA! measure_expr RPAREN!
+		;
+//-> ^(INTEGRAL $integrand $measure);
 
-measure_expr	: (MEASURE LPAREN dom_type=string COMMA dom_id=number COMMA 
-                   metadata=atom RPAREN) 
-                      -> ^(MEASURE $dom_type $dom_id $metadata);
+measure_expr	: MEASURE^ LPAREN! string COMMA! number COMMA! atom RPAREN!
+		;
+//                      -> ^(MEASURE $dom_type $dom_id $metadata);
 
 ufl_expr	: binary_ufl_expr
 		| multiindex_expr
@@ -92,72 +95,91 @@ ufl_expr	: binary_ufl_expr
 		| state_expr
 		;
 
-state_expr      : STATE DOT type=fields_expr LBRACK LPAREN 
-                  field=string COMMA LPAREN? timestep=arith_expr RPAREN? RPAREN RBRACK
-	              -> ^($type $field $timestep);
+state_expr      : STATE! DOT! fields_expr^ LBRACK! LPAREN! string COMMA! LPAREN!? arith_expr RPAREN!? RPAREN! RBRACK!
+		;
+//	              -> ^($type $field $timestep);
 
 fields_expr     : (SCALAR_FIELDS | VECTOR_FIELDS | TENSOR_FIELDS)^;
 
-source_expr     : ufl_object=ufl_expr AMPERSAND SOURCE LPAREN field=atom RPAREN 
+source_expr     : (ufl_object=ufl_expr AMPERSAND SOURCE LPAREN field=atom RPAREN)
                       -> ^($field $ufl_object);
 
-value_expr      : (op=value_op LPAREN value=constant_value COMMA LPAREN RPAREN 
-                   COMMA LPAREN RPAREN COMMA LCURLY RCURLY RPAREN) 
-                      -> ^($op $value);
+value_expr      : value_op^ LPAREN! constant_value COMMA! LPAREN! RPAREN! COMMA! LPAREN! RPAREN! COMMA! LCURLY! RCURLY! RPAREN!
+		;
+//                      -> ^($op $value);
 
-value_op        : (SYMVALUE | FLOATVALUE | INTVALUE)^ ;
+value_op        : (SYMVALUE | FLOATVALUE | INTVALUE)^ 
+		;
 
-constant_value  : (number | string)^ ;
+constant_value  : (number | string)^ 
+		;
 
-binary_ufl_expr : (op=binary_op LPAREN arg1=ufl_expr COMMA arg2=ufl_expr RPAREN) 
-                      -> ^($op $arg1 $arg2);
+binary_ufl_expr : binary_op^ LPAREN! ufl_expr COMMA! ufl_expr RPAREN!
+		;
+//                      -> ^($op $arg1 $arg2);
 
-binary_op       : (SPATDERIV | LISTTENSOR | COMPTENSOR | SUM | INDEXED | PRODUCT | INDEXSUM)^ ;
+binary_op       : (SPATDERIV | LISTTENSOR | COMPTENSOR | SUM | INDEXED | PRODUCT | INDEXSUM)^ 
+		;
 
-arg_expr	: (ARGUMENT LPAREN element=ufl_expr COMMA id=number RPAREN) 
-                      -> ^(ARGUMENT $element $id);
+arg_expr	: ARGUMENT^ LPAREN! ufl_expr COMMA! number RPAREN!
+		;
+//                      -> ^(ARGUMENT $element $id);
 
 ele_expr	: (type=element_op LPAREN family=string COMMA cell=cell_expr COMMA degree=number 
                    (COMMA LPAREN? shape1=number 
 		    (COMMA shape2=number RPAREN COMMA symmetry=atom
 		   )? 
 		  )? RPAREN) 
-                      -> ^($type $family $cell $degree $shape1? $shape2? $symmetry?);
+                      -> ^($type $family $cell $degree $shape1? $shape2? $symmetry?)
+		;
 
-element_op      : (FINELE | VECELE | TENELE)^ ;
+element_op      : (FINELE | VECELE | TENELE)^ 
+		;
 
 // For two elements only now. 
 // Long term, needs a rethink.
-mix_ele_expr	: (MIXELE LPAREN STAR LBRACK ele1=ele_expr COMMA ele2=ele_expr RBRACK COMMA attrs=mix_ele_dict RPAREN  )
-                      -> ^(MIXELE $ele1 $ele2 $attrs) ;
+mix_ele_expr	: MIXELE^ LPAREN! STAR! LBRACK! ele_expr COMMA! ele_expr RBRACK! COMMA! mix_ele_dict RPAREN!
+		;
+//                      -> ^(MIXELE $ele1 $ele2 $attrs) ;
 
-mix_ele_dict	: (DOUBLESTAR LCURLY key=string COLON LPAREN shape=number COMMA RPAREN RCURLY)
-		      -> ^($key $shape);
+mix_ele_dict	: DOUBLESTAR! LCURLY! string^ COLON! LPAREN! number COMMA! RPAREN! RCURLY!
+		;
+//		      -> ^($key $shape);
 
-cell_expr	: (CELL LPAREN domain=string COMMA degree=number COMMA 
-                   space=space_expr RPAREN) 
-                      -> ^(CELL $domain $degree $space);
+cell_expr	: CELL^ LPAREN! string COMMA! number COMMA! space_expr RPAREN!
+		;
+//                      -> ^(CELL $domain $degree $space);
 
-space_expr	: (SPACE LPAREN dim=number RPAREN) 
-                      -> ^(SPACE $dim);
+space_expr	: SPACE^ LPAREN! number RPAREN!
+		;
+//                      -> ^(SPACE $dim);
 
-multiindex_expr	: (MULTIINDEX LPAREN LPAREN idx=index* RPAREN COMMA LCURLY 
-                   idx_dim=index_dim* RCURLY RPAREN) 
-                      -> ^(MULTIINDEX $idx* $idx_dim*);
+multiindex_expr	: MULTIINDEX^ LPAREN! LPAREN! index* RPAREN! COMMA! LCURLY! index_dim* RCURLY! RPAREN!
+		;
+//                      -> ^(MULTIINDEX $idx* $idx_dim*);
 
-index		: (index_type=index_obj LPAREN id=number RPAREN COMMA?) 
-                      -> ^($index_type $id);
+index		: index_obj^ LPAREN! number RPAREN! COMMA!?
+		;
+//                      -> ^($index_type $id);
 
-index_dim	: (index_type=index_obj LPAREN idx=number RPAREN COLON dim=number COMMA?) 
-                      -> ^($index_type $idx $dim);
+index_dim	: index_obj^ LPAREN! number RPAREN! COLON! number COMMA!?
+		;
+//                      -> ^($index_type $idx $dim);
 
-index_obj	: (UINDEX | FIXEDINDEX)^ ;
+index_obj	: (UINDEX | FIXEDINDEX)^ 
+		;
 
-coeff_expr	: (COEFF LPAREN element=ufl_expr COMMA id=number RPAREN) 
-                      -> ^(COEFF $element $id);
+coeff_expr	: COEFF^ LPAREN! ufl_expr COMMA! number RPAREN!
+		;
+//                      -> ^(COEFF $element $id);
 
-compute_expr    : (SOLVE LPAREN lhs=atom COMMA rhs=atom RPAREN) 
-                      -> ^(SOLVE $lhs $rhs);
+compute_expr    : SOLVE^ LPAREN! atom COMMA! atom RPAREN!
+		;
+//                      -> ^(SOLVE $lhs $rhs);
+
+split_expr	: SPLIT^ LPAREN! atom RPAREN!
+		;
+//                      -> ^(SPLIT $arg);
 
 //////////////// terms, factors, atoms, strings, numbers etc ///////////////////
 
@@ -219,6 +241,7 @@ SCALAR_FIELDS   : 'scalar_fields';
 VECTOR_FIELDS   : 'vector_fields';
 TENSOR_FIELDS   : 'tensor_fields';
 SOLVE           : 'solve';
+SPLIT		: 'split';
 
 // Only in the AST
 TUPLE		: 'Tuple';
