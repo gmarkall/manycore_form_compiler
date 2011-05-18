@@ -75,7 +75,6 @@ arith_expr	: term ( ( PLUS | MINUS )^ term )* ;
 
 form_expr	: FORM^ LPAREN! LBRACK! integral_expr RBRACK! RPAREN!
 		;
-//                      -> ^(FORM $integral);
 
 integral_expr	: INTEGRAL^ LPAREN! ufl_expr COMMA! measure_expr RPAREN!
 		;
@@ -83,7 +82,6 @@ integral_expr	: INTEGRAL^ LPAREN! ufl_expr COMMA! measure_expr RPAREN!
 
 measure_expr	: MEASURE^ LPAREN! string COMMA! number COMMA! atom RPAREN!
 		;
-//                      -> ^(MEASURE $dom_type $dom_id $metadata);
 
 ufl_expr	: binary_ufl_expr
 		| multiindex_expr
@@ -97,7 +95,6 @@ ufl_expr	: binary_ufl_expr
 
 state_expr      : STATE! DOT! fields_expr^ LBRACK! LPAREN! string COMMA! LPAREN!? arith_expr RPAREN!? RPAREN! RBRACK!
 		;
-//	              -> ^($type $field $timestep);
 
 fields_expr     : (SCALAR_FIELDS | VECTOR_FIELDS | TENSOR_FIELDS)^;
 
@@ -106,7 +103,6 @@ source_expr     : (ufl_object=ufl_expr AMPERSAND SOURCE LPAREN field=atom RPAREN
 
 value_expr      : value_op^ LPAREN! constant_value COMMA! LPAREN! RPAREN! COMMA! LPAREN! RPAREN! COMMA! LCURLY! RCURLY! RPAREN!
 		;
-//                      -> ^($op $value);
 
 value_op        : (SYMVALUE | FLOATVALUE | INTVALUE)^ 
 		;
@@ -116,14 +112,12 @@ constant_value  : (number | string)^
 
 binary_ufl_expr : binary_op^ LPAREN! ufl_expr COMMA! ufl_expr RPAREN!
 		;
-//                      -> ^($op $arg1 $arg2);
 
 binary_op       : (SPATDERIV | LISTTENSOR | COMPTENSOR | SUM | INDEXED | PRODUCT | INDEXSUM)^ 
 		;
 
 arg_expr	: ARGUMENT^ LPAREN! ufl_expr COMMA! number RPAREN!
 		;
-//                      -> ^(ARGUMENT $element $id);
 
 ele_expr	: (type=element_op LPAREN family=string COMMA cell=cell_expr COMMA degree=number 
                    (COMMA LPAREN? shape1=number 
@@ -140,46 +134,36 @@ element_op      : (FINELE | VECELE | TENELE)^
 // Long term, needs a rethink.
 mix_ele_expr	: MIXELE^ LPAREN! STAR! LBRACK! ele_expr COMMA! ele_expr RBRACK! COMMA! mix_ele_dict RPAREN!
 		;
-//                      -> ^(MIXELE $ele1 $ele2 $attrs) ;
 
 mix_ele_dict	: DOUBLESTAR! LCURLY! string^ COLON! LPAREN! number COMMA! RPAREN! RCURLY!
 		;
-//		      -> ^($key $shape);
 
 cell_expr	: CELL^ LPAREN! string COMMA! number COMMA! space_expr RPAREN!
 		;
-//                      -> ^(CELL $domain $degree $space);
 
 space_expr	: SPACE^ LPAREN! number RPAREN!
 		;
-//                      -> ^(SPACE $dim);
 
 multiindex_expr	: MULTIINDEX^ LPAREN! LPAREN! index* RPAREN! COMMA! LCURLY! index_dim* RCURLY! RPAREN!
 		;
-//                      -> ^(MULTIINDEX $idx* $idx_dim*);
 
 index		: index_obj^ LPAREN! number RPAREN! COMMA!?
 		;
-//                      -> ^($index_type $id);
 
 index_dim	: index_obj^ LPAREN! number RPAREN! COLON! number COMMA!?
 		;
-//                      -> ^($index_type $idx $dim);
 
 index_obj	: (UINDEX | FIXEDINDEX)^ 
 		;
 
 coeff_expr	: COEFF^ LPAREN! ufl_expr COMMA! number RPAREN!
 		;
-//                      -> ^(COEFF $element $id);
 
 compute_expr    : SOLVE^ LPAREN! atom COMMA! atom RPAREN!
 		;
-//                      -> ^(SOLVE $lhs $rhs);
 
 split_expr	: SPLIT^ LPAREN! atom RPAREN!
 		;
-//                      -> ^(SPLIT $arg);
 
 //////////////// terms, factors, atoms, strings, numbers etc ///////////////////
 
