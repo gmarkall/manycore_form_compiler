@@ -78,7 +78,6 @@ form_expr	: FORM^ LPAREN! LBRACK! integral_expr RBRACK! RPAREN!
 
 integral_expr	: INTEGRAL^ LPAREN! ufl_expr COMMA! measure_expr RPAREN!
 		;
-//-> ^(INTEGRAL $integrand $measure);
 
 measure_expr	: MEASURE^ LPAREN! string COMMA! number COMMA! atom RPAREN!
 		;
@@ -130,9 +129,7 @@ ele_expr	: (type=element_op LPAREN family=string COMMA cell=cell_expr COMMA degr
 element_op      : (FINELE | VECELE | TENELE)^ 
 		;
 
-// For two elements only now. 
-// Long term, needs a rethink.
-mix_ele_expr	: MIXELE^ LPAREN! STAR! LBRACK! ele_expr COMMA! ele_expr RBRACK! COMMA! mix_ele_dict RPAREN!
+mix_ele_expr	: MIXELE^ LPAREN! STAR! LBRACK! ele_expr (COMMA! ele_expr)* RBRACK! COMMA! mix_ele_dict RPAREN!
 		;
 
 mix_ele_dict	: DOUBLESTAR! LCURLY! string^ COLON! LPAREN! number COMMA! RPAREN! RCURLY!
