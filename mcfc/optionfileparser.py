@@ -20,10 +20,106 @@
 import libspud
 from uflstate import UflState
 
-def get_all_children(optionpath, test = lambda s: True):
-    allchildren = [libspud.get_child_name(optionpath,i) for i in range(libspud.number_of_children(optionpath))]
-    allchildren = [optionpath+'/'+s for s in allchildren if test(s)]
-    return allchildren
+class _OptionIterator:
+
+    def __init__(self, path, test, return_object):
+        self.p = path
+        self.t = test
+        self.i = 0
+        self.n = libspud.number_of_children(path)
+        self.o = return_object
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.i >= self.n:
+            raise StopIteration
+        child = libspud.get_child_name(self.p,self.i)
+        self.i += 1
+        return self.o(self.p+'/'+child) if self.t(child) else self.next()
+
+class Mesh:
+
+    def __init__(self, path):
+        self.path = path
+        self.name = libspud.get_option(path+'/name')
+
+        # Meshes read from file are alway P1 CG
+        if libspud.have_option(path+'/from_file'):
+            self.shape = 'CG'
+            self.degree = 1
+
+        # For derived meshes, check if shape or degree are overridden
+        elif libspud.have_option(path+'/from_mesh'):
+            # Take the inherited options as default
+            basemesh = Mesh('/geometry/'+libspud.get_child_name(path+'/from_mesh',0))
+            self.shape = basemesh.shape
+            self.degree = basemesh.degree
+            # Override continuity if set
+            if libspud.have_option(path+'/from_mesh/mesh_continuity'):
+                if libspud.get_option(path+'/from_mesh/mesh_continuity') == 'discontinuous':
+                    self.shape = 'DG'
+            # Override polynomial degree if set
+            if libspud.have_option(path+'/from_mesh/mesh_shape/polynomial_degree'):
+                self.degree = libspud.get_option(path+'/from_mesh/mesh_shape/polynomial_degree')
+
+class _MeshIterator(_OptionIterator):
+
+    def __init__(self):
+        _OptionIterator.__init__(self, '/geometry', lambda s: s.startswith('mesh'), Mesh)
+
+class MaterialPhase:
+
+    def __init__(self, path):
+        self.path = path
+        self.name = libspud.get_option(path+'/name')
+
+class _MaterialPhaseIterator(_OptionIterator):
+
+    def __init__(self):
+        _OptionIterator.__init__(self, '/', lambda s: s.startswith('material_phase'), MaterialPhase)
+
+class Field:
+
+    def __init__(self, path, parent = None):
+        prefix = parent.name if parent else ''
+        self.name = prefix + libspud.get_option(path+'/name')
+        self.rank = int(libspud.get_option(path+'/rank')) if libspud.have_option(path+'/rank') else parent.rank
+        self.field_type = libspud.get_child_name(path,2)
+        fieldtypepath = path + '/' + self.field_type
+        # For an aliased field, store material phase and field it is
+        # aliased to, come back later to assign element of the target
+        # field
+        if self.field_type == 'aliased':
+            self.to_phase = libspud.get_option(fieldtypepath + '/material_phase_name')
+            self.to_field = libspud.get_option(fieldtypepath + '/field_name')
+        else:
+            self.mesh = libspud.get_option(fieldtypepath+'/mesh/name') if libspud.have_option(fieldtypepath+'/mesh/name') else parent.mesh
+
+class _FieldIterator(_OptionIterator):
+
+    def __init__(self, material_phase, parent):
+        _OptionIterator.__init__(self, material_phase, lambda s: s[7:].startswith('field'), lambda p: Field(p, parent))
+
+def _field_gen(material_phase):
+    for i in range(libspud.number_of_children(material_phase)):
+        child = libspud.get_child_name(material_phase,i)
+        if child[7:].startswith('field'):
+            field = Field(material_phase+'/'+child)
+            yield field
+            if field.field_type != 'aliased':
+                # Recursively treat subfields (if any)
+                for f in _FieldIterator(material_phase+'/'+child+'/'+field.field_type, field):
+                    yield f
+
+class OptionFile:
+
+    def __init__(self, filename):
+        libspud.load_options(filename)
+        self.mesh_iterator = _MeshIterator
+        self.material_phase_iterator = _MaterialPhaseIterator
+        self.field_iterator = _field_gen
 
 class OptionFileParser:
 
@@ -32,76 +128,37 @@ class OptionFileParser:
         self.states = {}
 
     def parse(self, filename):
-        libspud.load_options(filename)
-        self._build_states()
+        optionfile = OptionFile(filename)
+        self._build_states(optionfile)
 
-    def _build_states(self):
+    def _build_states(self, optionfile):
+
         # Build dictionary of element types for meshes
-        meshpaths = get_all_children('/geometry', lambda s: s.startswith('mesh'))
         self.element_types = {}
         # Get shape and degree for each mesh
-        for mesh in meshpaths:
-            name = libspud.get_option(mesh+'/name')
-
-            # Meshes read from file are alway P1 CG
-            if libspud.have_option(mesh+'/from_file'):
-                self.element_types[name] = ('CG',1)
-
-            # For derived meshes, check if shape or degree are overridden
-            elif libspud.have_option(mesh+'/from_mesh'):
-                # Take the inherited options as default
-                mesh_options = self.element_types[libspud.get_option(mesh+'/from_mesh/mesh/name')]
-                shape = mesh_options[0]
-                degree = mesh_options[1]
-                # Override continuity if set
-                if libspud.have_option(mesh+'/from_mesh/mesh_continuity'):
-                    if libspud.get_option(mesh+'/from_mesh/mesh_continuity') == 'discontinuous':
-                        shape = 'DG'
-                # Override polynomial degree if set
-                if libspud.have_option(mesh+'/from_mesh/mesh_shape/polynomial_degree'):
-                    degree = libspud.get_option(mesh+'/from_mesh/mesh_shape/polynomial_degree')
-                self.element_types[name] = (shape,degree)
+        for mesh in optionfile.mesh_iterator():
+            self.element_types[mesh.name] = (mesh.shape, mesh.degree)
 
         # Build dictionary of material phases
-        materialphasepaths = get_all_children('/', lambda s: s.startswith('material_phase'))
         aliased_fields = []
-        for phase in materialphasepaths:
-            phasename = libspud.get_option(phase+'/name')
+        for phase in optionfile.material_phase_iterator():
             # Build state (dictionary of fields)
             state = UflState()
-            fieldpaths = get_all_children(phase, lambda s: s[7:].startswith('field'))
-            for field in fieldpaths:
-                name = libspud.get_option(field+'/name')
-                rank = int(libspud.get_option(field+'/rank'))
-                fieldtype = libspud.get_child_name(field,2)
-                fieldtypepath = field + '/' + fieldtype
+            for field in optionfile.field_iterator(phase.path):
                 # For an aliased field, store material phase and field it is
                 # aliased to, come back later to assign element of the target
                 # field
-                if fieldtype == 'aliased':
-                    aliased_fields.append(
-                            {
-                                'rank': rank,
-                                'from': {'phase': phasename, 'field': name},
-                                'to': {
-                                    'phase': libspud.get_option(fieldtypepath + '/material_phase_name'),
-                                    'field': libspud.get_option(fieldtypepath + '/field_name') }
-                            }
-                        )
+                if field.field_type == 'aliased':
+                    field.phase = phase.name
+                    aliased_fields.append(field)
                 else:
-                    mesh = libspud.get_option(fieldtypepath+'/mesh/name')
-                    state.insert_field(name, rank, self.element_types[mesh])
-                    # Recurse to subfields if any
-                    subfieldpaths = get_all_children(fieldtypepath, lambda s: s[7:].startswith('field'))
-                    for subfield in subfieldpaths:
-                        childname = name + libspud.get_option(subfield+'/name')
-                        childrank = libspud.get_option(subfield+'/rank')
-                        state.insert_field(childname, rank, self.element_types[mesh])
-            self.states[phasename] = state
+                    state.insert_field(field.name, field.rank, self.element_types[field.mesh])
+
+            self.states[phase.name] = state
 
         # Resolve aliased fields
         for alias in aliased_fields:
-            self.states[alias['from']['phase']][alias['rank']][alias['from']['field']] = self.states[alias['to']['phase']][alias['rank']][alias['to']['field']]
+            self.states[alias.phase][alias.rank][alias.name] = self.states[alias.to_phase][alias.rank][alias.to_field]
 
 if __name__ == "__main__":
     import sys
