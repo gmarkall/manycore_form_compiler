@@ -27,6 +27,8 @@ class AssemblerBackend:
         raise NotImplementedError("You're supposed to implement compile()!")
 
 class AccessedFieldFinder(AntlrVisitor):
+    """ Traverses an antlr tree and returns a list of tuples of rank and field
+    name for all fields accessed from state. """
 
     def __init__(self):
         AntlrVisitor.__init__(self, preOrder)
@@ -41,11 +43,18 @@ class AccessedFieldFinder(AntlrVisitor):
 
         if label == '=':
             rhs = tree.getChild(1)
-            if str(rhs) in ['scalar_fields', 'vector_fields', 'tensor_fields']:
-                field = str(rhs.getChild(0))
-                # Strip off the quotes
-                field = field[1:-1]
-                self._fields.append(field)
+            if str(rhs) == 'scalar_fields':
+                rank = 0
+            elif str(rhs) == 'vector_fields':
+                rank = 1
+            elif str(rhs) == 'tensor_fields':
+                rank = 2
+            else:
+                return
+            field = str(rhs.getChild(0))
+            # Strip off the quotes
+            field = field[1:-1]
+            self._fields.append((rank, field))
 
     def pop(self):
         pass
@@ -55,6 +64,8 @@ def findAccessedFields(tree):
     return AFF.find(tree)
 
 class SolveResultFinder(AntlrVisitor):
+    """ Traverses an antlr tree and returns a list of all the field names that
+    the result of a solve is assigned to. """
 
     def __init__(self):
         AntlrVisitor.__init__(self, preOrder)
@@ -109,9 +120,8 @@ def findSolves(tree):
     return SF.find(tree)
 
 class CoefficientNameFinder(AntlrVisitor):
-    """Given a coefficient, this class traverses the
-    AST and finds the name of the variable holding the field
-    it came from."""
+    """Given a coefficient, this class traverses the AST and finds the
+    name of the variable holding the field it came from."""
 
     def __init__(self):
         AntlrVisitor.__init__(self, preOrder)
