@@ -34,36 +34,52 @@ class UflState:
         self.tensorfields = {}
 
     def __getitem__(self,key):
-        return (self.scalarfields+self.vectorfields+self.tensorfields)[key]
+
+        if isinstance(key,int):
+            if key == 0:
+                return self.scalarfields
+            elif key == 1:
+                return self.vectorfields
+            elif key == 2:
+                return self.tensorfields
+            else:
+                raise IndexErrror
+
+        else:
+            raise TypeErrror
+
+    def __repr__(self):
+        return str(self.scalarfields)+', '+str(self.vectorfields)+', '+str(self.tensorfields)
 
     def insert_field(self, field, rank, options):
-        if rank == 0:
-            self.scalarfields[field] = ufl.finiteelement.FiniteElement(options[0], "triangle", options[1])
-        if rank == 1:
-            self.vectorfields[field] = ufl.finiteelement.VectorElement(options[0], "triangle", options[1])
-        if rank == 2:
-            self.vectorfields[field] = ufl.finiteelement.TensorElement(options[0], "triangle", options[1])
+        self[rank][field] = ufl.finiteelement.FiniteElement(options[0], "triangle", options[1])
 
 class OptionFileParser:
 
+    def __init__(self):
+        self.element_types = {}
+        self.states = {}
+
     def parse(self, filename):
         libspud.load_options(filename)
+        self._build_states()
 
+    def _build_states(self):
         # Build dictionary of element types for meshes
         meshpaths = get_all_children('/geometry', lambda s: s.startswith('mesh'))
-        element_types = {}
+        self.element_types = {}
         # Get shape and degree for each mesh
         for mesh in meshpaths:
             name = libspud.get_option(mesh+'/name')
 
             # Meshes read from file are alway P1 CG
             if libspud.have_option(mesh+'/from_file'):
-                element_types[name] = ('CG',1)
+                self.element_types[name] = ('CG',1)
 
             # For derived meshes, check if shape or degree are overridden
             elif libspud.have_option(mesh+'/from_mesh'):
                 # Take the inherited options as default
-                mesh_options = element_types[libspud.get_option(mesh+'/from_mesh/mesh/name')]
+                mesh_options = self.element_types[libspud.get_option(mesh+'/from_mesh/mesh/name')]
                 shape = mesh_options[0]
                 degree = mesh_options[1]
                 # Override continuity if set
@@ -73,16 +89,15 @@ class OptionFileParser:
                 # Override polynomial degree if set
                 if libspud.have_option(mesh+'/from_mesh/mesh_shape/polynomial_degree'):
                     degree = libspud.get_option(mesh+'/from_mesh/mesh_shape/polynomial_degree')
-                element_types[name] = (shape,degree)
+                self.element_types[name] = (shape,degree)
 
         # Build dictionary of material phases
         materialphasepaths = get_all_children('/', lambda s: s.startswith('material_phase'))
-        materialphases = {}
         aliased_fields = []
         for phase in materialphasepaths:
             phasename = libspud.get_option(phase+'/name')
             # Build state (dictionary of fields)
-            state = {}
+            state = UflState()
             fieldpaths = get_all_children(phase, lambda s: s[7:].startswith('field'))
             for field in fieldpaths:
                 name = libspud.get_option(field+'/name')
@@ -94,39 +109,35 @@ class OptionFileParser:
                 # field
                 if fieldtype == 'aliased':
                     aliased_fields.append(
-                            {'from': {'phase': phasename, 'field': name},
-                             'to': {'phase': libspud.get_option(fieldtypepath + '/material_phase_name'),
-                                 'field': libspud.get_option(fieldtypepath + '/field_name')} }
+                            {
+                                'rank': rank,
+                                'from': {'phase': phasename, 'field': name},
+                                'to': {
+                                    'phase': libspud.get_option(fieldtypepath + '/material_phase_name'),
+                                    'field': libspud.get_option(fieldtypepath + '/field_name') }
+                            }
                         )
                 else:
                     mesh = libspud.get_option(fieldtypepath+'/mesh/name')
-                    state[name] = (rank, self._create_ufl_element(rank, element_types[mesh]))
+                    state.insert_field(name, rank, self.element_types[mesh])
                     # Recurse to subfields if any
                     subfieldpaths = get_all_children(fieldtypepath, lambda s: s[7:].startswith('field'))
                     for subfield in subfieldpaths:
                         childname = name + libspud.get_option(subfield+'/name')
                         childrank = libspud.get_option(subfield+'/rank')
-                        state[childname] = (rank, self._create_ufl_element(rank, element_types[mesh]))
-            materialphases[phasename] = state
+                        state.insert_field(childname, rank, self.element_types[mesh])
+            self.states[phasename] = state
 
         # Resolve aliased fields
         for alias in aliased_fields:
-            materialphases[alias['from']['phase']][alias['from']['field']] = materialphases[alias['to']['phase']][alias['to']['field']]
-
-        return materialphases
-
-    def _create_ufl_element(self, rank, options):
-        if rank == 0:
-            return ufl.finiteelement.FiniteElement(options[0], "triangle", options[1])
-        if rank == 1:
-            return ufl.finiteelement.VectorElement(options[0], "triangle", options[1])
-        if rank == 2:
-            return ufl.finiteelement.TensorElement(options[0], "triangle", options[1])
+            self.states[alias['from']['phase']][alias['rank']][alias['from']['field']] = self.states[alias['to']['phase']][alias['rank']][alias['to']['field']]
 
 if __name__ == "__main__":
     import sys
     filename = sys.argv[1]
     p = OptionFileParser()
-    print p.parse(filename)
+    p.parse(filename)
+    print 'element types: ', p.element_types
+    print 'states: ', p.states
         
 # vim:sw=4:ts=4:sts=4:et
