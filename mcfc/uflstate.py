@@ -17,7 +17,9 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-import ufl.finiteelement
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+
+ufl_elements = [FiniteElement, VectorElement, TensorElement]
 
 class UflState:
 
@@ -45,6 +47,6 @@ class UflState:
         return str(self.scalarfields)+', '+str(self.vectorfields)+', '+str(self.tensorfields)
 
     def insert_field(self, field, rank, options):
-        self[rank][field] = ufl.finiteelement.FiniteElement(options[0], "triangle", options[1])
+        self[rank][field] = ufl_elements[rank](options[0], "triangle", options[1])
 
 # vim:sw=4:ts=4:sts=4:et
