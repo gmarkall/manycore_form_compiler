@@ -1,5 +1,4 @@
 # This file is part of the Manycore Form Compiler.
-
 #
 # The Manycore Form Compiler is free software: you can redistribute it and/or
 # modify it under the terms of the GNU General Public License as published by
@@ -18,41 +17,13 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-import ufl.finiteelement
 import libspud
+from uflstate import UflState
 
 def get_all_children(optionpath, test = lambda s: True):
     allchildren = [libspud.get_child_name(optionpath,i) for i in range(libspud.number_of_children(optionpath))]
     allchildren = [optionpath+'/'+s for s in allchildren if test(s)]
     return allchildren
-
-class UflState:
-
-    def __init__(self):
-        self.scalarfields = {}
-        self.vectorfields = {}
-        self.tensorfields = {}
-
-    def __getitem__(self,key):
-
-        if isinstance(key,int):
-            if key == 0:
-                return self.scalarfields
-            elif key == 1:
-                return self.vectorfields
-            elif key == 2:
-                return self.tensorfields
-            else:
-                raise IndexErrror
-
-        else:
-            raise TypeErrror
-
-    def __repr__(self):
-        return str(self.scalarfields)+', '+str(self.vectorfields)+', '+str(self.tensorfields)
-
-    def insert_field(self, field, rank, options):
-        self[rank][field] = ufl.finiteelement.FiniteElement(options[0], "triangle", options[1])
 
 class OptionFileParser:
 
