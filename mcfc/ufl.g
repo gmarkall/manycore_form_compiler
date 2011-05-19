@@ -92,7 +92,7 @@ ufl_expr	: binary_ufl_expr
 		| state_expr
 		;
 
-state_expr      : STATE! DOT! fields_expr^ LBRACK! LPAREN! string COMMA! LPAREN!? arith_expr RPAREN!? RPAREN! RBRACK!
+state_expr      : STATE! DOT! fields_expr^ LBRACK! string RBRACK!
 		;
 
 fields_expr     : (SCALAR_FIELDS | VECTOR_FIELDS | TENSOR_FIELDS)^;

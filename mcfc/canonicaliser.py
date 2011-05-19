@@ -43,13 +43,11 @@ from symbolicvalue import SymbolicValue
 def init():
 
     # Symbolic values that we need during the interpretation of UFL
-    global c, n, dt
+    global dt
     # List of the temporary fields, and their elements
     global _uflObjects
 
     _uflObjects = {}
-    n = state.TemporalIndex()
-    c = state.ConstantTemporalIndex()
     dt = SymbolicValue("dt")
 
 # Intended as the front-end interface to the parser. e.g. to use,

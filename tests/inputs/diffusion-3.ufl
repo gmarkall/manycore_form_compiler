@@ -1,4 +1,4 @@
-T=state.scalar_fields["Tracer",n]
+T=state.scalar_fields["Tracer"]
 
 t=Coefficient(T)
 p=TrialFunction(T)
@@ -13,4 +13,4 @@ A=M-0.5*d
 rhs=action(M+0.5*d,t)
 tnew=solve(A,rhs)
 
-state.scalar_fields["Tracer",n+1]=tnew
+state.scalar_fields["Tracer"]=tnew
