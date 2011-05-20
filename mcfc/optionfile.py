@@ -85,7 +85,10 @@ class Field:
         prefix = parent.name if parent else ''
         self.name = prefix + libspud.get_option(path+'/name')
         self.rank = int(libspud.get_option(path+'/rank')) if libspud.have_option(path+'/rank') else parent.rank
-        self.field_type = libspud.get_child_name(path,2)
+        for field_type in [ 'diagnostic', 'prescribed', 'prognostic', 'aliased' ]:
+            if libspud.have_option(path + '/' + field_type):
+                self.field_type = field_type
+                break
         fieldtypepath = path + '/' + self.field_type
         # For an aliased field, store material phase and field it is
         # aliased to, come back later to assign element of the target
@@ -99,12 +102,12 @@ class Field:
 class _FieldIterator(_OptionIterator):
 
     def __init__(self, material_phase, parent):
-        _OptionIterator.__init__(self, material_phase, lambda s: s[7:].startswith('field'), lambda p: Field(p, parent))
+        _OptionIterator.__init__(self, material_phase, lambda s: s[:12] in ('scalar_field', 'vector_field', 'tensor_field'), lambda p: Field(p, parent))
 
 def _field_gen(material_phase):
     for i in range(libspud.number_of_children(material_phase)):
         child = libspud.get_child_name(material_phase,i)
-        if child[7:].startswith('field'):
+        if child[:12] in ('scalar_field', 'vector_field', 'tensor_field'):
             field = Field(material_phase+'/'+child)
             yield field
             if field.field_type != 'aliased':
