@@ -36,7 +36,6 @@ import StringIO
 # If we need debugging
 import pdb
 # The remaining modules are part of the form compiler
-import state
 from symbolicvalue import SymbolicValue
 
 
@@ -53,20 +52,18 @@ def init():
 # Intended as the front-end interface to the parser. e.g. to use,
 # call canonicalise(filename).
 
-def canonicalise(filename):
+def canonicalise(ufl, _state, _states):
    
-    init()
+    global state, states
+    state = _state
+    states = _states
 
-    # Read in the AST
-    fd = open(filename, 'r')
-    chars = fd.read()
-    lines = charstolines(chars)
-    fd.close
+    init()
 
     canonical = StringIO.StringIO()
 
     # Interpret the UFL file line by line
-    for line in lines:
+    for line in ufl:
         UFLInterpreter(line, canonical)
 
     return canonical.getvalue(), _uflObjects
