@@ -33,7 +33,7 @@ class OptionFileParser:
         self.element_types = {}
         # Get shape and degree for each mesh
         for mesh in optionfile.mesh_iterator():
-            self.element_types[mesh.name] = (mesh.shape, mesh.degree)
+            self.element_types[mesh.name] = mesh.shape, mesh.degree
 
         # Build dictionary of material phases
         aliased_fields = []
@@ -48,7 +48,8 @@ class OptionFileParser:
                     field.phase = phase.name
                     aliased_fields.append(field)
                 else:
-                    state.insert_field(field.name, field.rank, self.element_types[field.mesh])
+                    shape, degree = self.element_types[field.mesh]
+                    state.insert_field(field.name, field.rank, shape, degree)
                     # Store the UFL input if present
                     if hasattr(field, 'ufl_equation'):
                         self.uflinput[phase.name+field.name] = (phase.name, field.name, field.ufl_equation)

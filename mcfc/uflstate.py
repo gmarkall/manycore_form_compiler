@@ -46,7 +46,7 @@ class UflState:
     def __repr__(self):
         return str(self.scalarfields)+', '+str(self.vectorfields)+', '+str(self.tensorfields)
 
-    def insert_field(self, field, rank, options):
-        self[rank][field] = ufl_elements[rank](options[0], "triangle", options[1])
+    def insert_field(self, field, rank, shape = 'CG', degree = 1):
+        self[rank][field] = ufl_elements[rank](shape, "triangle", degree)
 
 # vim:sw=4:ts=4:sts=4:et
