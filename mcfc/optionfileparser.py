@@ -22,15 +22,12 @@ from optionfile import OptionFile
 
 class OptionFileParser:
 
-    def __init__(self):
+    def __init__(self, filename):
         self.element_types = {}
         self.states = {}
+        self.uflinput = {}
 
-    def parse(self, filename):
         optionfile = OptionFile(filename)
-        self._build_states(optionfile)
-
-    def _build_states(self, optionfile):
 
         # Build dictionary of element types for meshes
         self.element_types = {}
@@ -52,6 +49,9 @@ class OptionFileParser:
                     aliased_fields.append(field)
                 else:
                     state.insert_field(field.name, field.rank, self.element_types[field.mesh])
+                    # Store the UFL input if present
+                    if hasattr(field, 'ufl_equation'):
+                        self.uflinput[phase.name+field.name] = (phase.name, field.name, field.ufl_equation)
 
             self.states[phase.name] = state
 
@@ -59,12 +59,18 @@ class OptionFileParser:
         for alias in aliased_fields:
             self.states[alias.phase][alias.rank][alias.name] = self.states[alias.to_phase][alias.rank][alias.to_field]
 
+        # Build list of UFL equations with associated state
+        for key in self.uflinput:
+            ufl = self.uflinput[key][2]
+            phase = self.uflinput[key][0]
+            self.uflinput[key] = ufl, self.states[phase]
+
 if __name__ == "__main__":
     import sys
     filename = sys.argv[1]
-    p = OptionFileParser()
-    p.parse(filename)
+    p = OptionFileParser(filename)
     print 'element types: ', p.element_types
     print 'states: ', p.states
+    print 'ufl input: ', p.uflinput
         
 # vim:sw=4:ts=4:sts=4:et

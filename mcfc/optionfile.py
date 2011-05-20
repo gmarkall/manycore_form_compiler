@@ -98,6 +98,9 @@ class Field:
             self.to_field = libspud.get_option(fieldtypepath + '/field_name')
         else:
             self.mesh = libspud.get_option(fieldtypepath+'/mesh/name') if libspud.have_option(fieldtypepath+'/mesh/name') else parent.mesh
+            if self.field_type == 'prognostic':
+                if libspud.have_option(fieldtypepath + '/equation/name') and libspud.get_option(fieldtypepath + '/equation/name') == 'UFL':
+                    self.ufl_equation = libspud.get_option(fieldtypepath + '/equation::UFL')
 
 class _FieldIterator(_OptionIterator):
 
