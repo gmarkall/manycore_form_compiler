@@ -24,19 +24,19 @@ ufl_elements = [FiniteElement, VectorElement, TensorElement]
 class UflState:
 
     def __init__(self):
-        self.scalarfields = {}
-        self.vectorfields = {}
-        self.tensorfields = {}
+        self.scalar_fields = {}
+        self.vector_fields = {}
+        self.tensor_fields = {}
 
     def __getitem__(self,key):
 
         if isinstance(key,int):
             if key == 0:
-                return self.scalarfields
+                return self.scalar_fields
             elif key == 1:
-                return self.vectorfields
+                return self.vector_fields
             elif key == 2:
-                return self.tensorfields
+                return self.tensor_fields
             else:
                 raise IndexErrror
 
@@ -44,7 +44,7 @@ class UflState:
             raise TypeErrror
 
     def __repr__(self):
-        return str(self.scalarfields)+', '+str(self.vectorfields)+', '+str(self.tensorfields)
+        return str(self.scalar_fields)+', '+str(self.vector_fields)+', '+str(self.tensor_fields)
 
     def insert_field(self, field, rank, shape = 'CG', degree = 1):
         self[rank][field] = ufl_elements[rank](shape, "triangle", degree)
