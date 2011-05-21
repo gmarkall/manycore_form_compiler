@@ -43,9 +43,9 @@ def main():
     # Check for non-interactive execution (e.g. on the
     # buildbot.
     if 'noninteractive' in keys or 'n' in keys:
-	print "Running in non-interactive mode."
-	global interactive
-	interactive = False
+        print "Running in non-interactive mode."
+        global interactive
+        interactive = False
 
     # Delete the outputs folder if it exists, to avoid
     # any stale files.
@@ -88,19 +88,23 @@ def check(sourcefile):
     frontend.testHook(inputfile, outputfile)
 
     cmd = "diff -u " + expectedfile + " " + outputfile
-    diff = Popen(cmd, shell=True, stdout=PIPE)
+    diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
     diffout, differr = diff.communicate()
-    
-    check_diff(sourcefile, diffout)
+    if differr:
+        print differr
+        global failed
+        failed = 1
+    else:
+        check_diff(sourcefile, diffout)
 
 def check_diff(sourcefile, diff):
 
     if diff:
         print "Difference detected in %s." % sourcefile
-	global failed
-	failed = 1
+        global failed
+        failed = 1
         
-	if interactive:
+        if interactive:
             diffmenu(sourcefile, diff)
 
 def diffmenu(sourcefile, diffout):

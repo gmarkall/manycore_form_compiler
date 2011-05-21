@@ -73,7 +73,7 @@ def run(inputFile, opts = {}):
 
     for key in uflinput:
 
-        outputFile = outputFileBase + '_' + key
+        outputFile = outputFileBase + key
         ufl = uflinput[key][0].splitlines()
         state = uflinput[key][1]
 
