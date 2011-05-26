@@ -19,25 +19,6 @@
 
 import libspud
 
-class _OptionIterator:
-
-    def __init__(self, path, test, return_object):
-        self.p = path
-        self.t = test
-        self.i = 0
-        self.n = libspud.number_of_children(path)
-        self.o = return_object
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        if self.i >= self.n:
-            raise StopIteration
-        child = libspud.get_child_name(self.p,self.i)
-        self.i += 1
-        return self.o(self.p+'/'+child) if self.t(child) else self.next()
-
 class Mesh:
 
     def __init__(self, path):
@@ -63,21 +44,11 @@ class Mesh:
             if libspud.have_option(path+'/from_mesh/mesh_shape/polynomial_degree'):
                 self.degree = libspud.get_option(path+'/from_mesh/mesh_shape/polynomial_degree')
 
-class _MeshIterator(_OptionIterator):
-
-    def __init__(self):
-        _OptionIterator.__init__(self, '/geometry', lambda s: s.startswith('mesh'), Mesh)
-
 class MaterialPhase:
 
     def __init__(self, path):
         self.path = path
         self.name = libspud.get_option(path+'/name')
-
-class _MaterialPhaseIterator(_OptionIterator):
-
-    def __init__(self):
-        _OptionIterator.__init__(self, '/', lambda s: s.startswith('material_phase'), MaterialPhase)
 
 class Field:
 
@@ -102,28 +73,32 @@ class Field:
                 if libspud.have_option(fieldtypepath + '/equation/name') and libspud.get_option(fieldtypepath + '/equation/name') == 'UFL':
                     self.ufl_equation = libspud.get_option(fieldtypepath + '/equation::UFL')
 
-class _FieldIterator(_OptionIterator):
-
-    def __init__(self, material_phase, parent):
-        _OptionIterator.__init__(self, material_phase, lambda s: s[:12] in ('scalar_field', 'vector_field', 'tensor_field'), lambda p: Field(p, parent))
-
-def _field_gen(material_phase):
-    for i in range(libspud.number_of_children(material_phase)):
-        child = libspud.get_child_name(material_phase,i)
-        if child[:12] in ('scalar_field', 'vector_field', 'tensor_field'):
-            field = Field(material_phase+'/'+child)
-            yield field
-            if field.field_type != 'aliased':
-                # Recursively treat subfields (if any)
-                for f in _FieldIterator(material_phase+'/'+child+'/'+field.field_type, field):
-                    yield f
-
 class OptionFile:
 
     def __init__(self, filename):
         libspud.load_options(filename)
-        self.mesh_iterator = _MeshIterator
-        self.material_phase_iterator = _MaterialPhaseIterator
-        self.field_iterator = _field_gen
-        
+
+    def _children(self, path, test):
+        for i in range(libspud.number_of_children(path)):
+            child = libspud.get_child_name(path,i)
+            if test(child):
+                yield child
+
+    def meshes(self):
+        for child in self._children('/geometry', lambda s: s.startswith('mesh')):
+            yield Mesh('/geometry/'+child)
+
+    def material_phases(self):
+        for child in self._children('/', lambda s: s.startswith('material_phase')):
+            yield MaterialPhase('/'+child)
+
+    def fields(self, material_phase, parent = None):
+        for child in self._children(material_phase, lambda s: s[:12] in ('scalar_field', 'vector_field', 'tensor_field')):
+            field = Field(material_phase+'/'+child, parent)
+            yield field
+            if field.field_type != 'aliased':
+                # Recursively treat subfields (if any)
+                for subfield in self.fields(material_phase+'/'+child+'/'+field.field_type, field):
+                    yield subfield
+            
 # vim:sw=4:ts=4:sts=4:et

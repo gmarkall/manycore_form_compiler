@@ -32,15 +32,15 @@ class OptionFileParser:
         # Build dictionary of element types for meshes
         self.element_types = {}
         # Get shape and degree for each mesh
-        for mesh in optionfile.mesh_iterator():
+        for mesh in optionfile.meshes():
             self.element_types[mesh.name] = mesh.shape, mesh.degree
 
         # Build dictionary of material phases
         aliased_fields = []
-        for phase in optionfile.material_phase_iterator():
+        for phase in optionfile.material_phases():
             # Build state (dictionary of fields)
             state = UflState()
-            for field in optionfile.field_iterator(phase.path):
+            for field in optionfile.fields(phase.path):
                 # For an aliased field, store material phase and field it is
                 # aliased to, come back later to assign element of the target
                 # field
