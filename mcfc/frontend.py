@@ -22,7 +22,8 @@
 
     Options: 
     
-      --visualise, -v Output a visualisation of the AST as a PDF file
+      --visualise, -v Output a DAG of the AST as a PDF file
+      --split, -s     Output a PDF file for each line of UFL input
       -o:<filename>   Specify the output file basename
       -p, --print     Output to stdout instead of file
       -b:<backend>    Specify the backend (defaults to CUDA)"""
@@ -56,16 +57,17 @@ def run(inputFile, opts = {}):
     else:
         outputFileBase = os.path.splitext(inputFile)[0]
 
+    screen = False
     if 'print' in opts or 'p' in opts:
         screen = True
         fd = sys.stdout
-    else:
-        screen = False
 
+    vis = False
+    split = False
     if 'visualise' in opts or 'v' in opts:
         vis = True
-    else:
-        vis = False
+        if 'split' in opts or 's' in opts:
+            split = True
 
     # Parse input
 
@@ -74,13 +76,15 @@ def run(inputFile, opts = {}):
     for key in uflinput:
 
         outputFile = outputFileBase + key
+
         ufl = uflinput[key][0].splitlines()
         state = uflinput[key][1]
 
         ast, uflObjects = readSource(ufl, state, states)
 
         if vis:
-            visualise(ast, outputFile+".pdf")
+            visualise(ast, outputFile, split)
+            continue
 
         if not screen:
             fd = open(outputFile+extensions[backend], 'w')
@@ -112,10 +116,14 @@ def parse_input(inputFile):
         return p.states, p.uflinput
 
 
-def visualise(ast, filename):
+def visualise(ast, filename, split = False):
 
-    v = visualiser.Visualiser(filename)
-    v.visualise(ast)
+    v = visualiser.Visualiser()
+    if split:
+        for i, child in enumerate(ast.getChildren()):
+            v.visualise(child, "%s%02d.pdf" % (filename, i))
+    else:
+        v.visualise(ast, filename+".pdf")
 
 def readSource(ufl, state, states):
 
@@ -132,7 +140,7 @@ def readSource(ufl, state, states):
 
 def _get_options():
     try: 
-        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvpo:", ["visualise", "print"])
+        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvspo:", ["visualise", "split", "print"])
     except getopt.error, msg:
         print msg
         print __doc__

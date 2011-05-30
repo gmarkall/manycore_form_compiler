@@ -24,9 +24,8 @@ import subprocess
 
 class Visualiser(visitor.AntlrVisitor):
 
-    def __init__(self, outputFile="tmpvis.pdf"):
+    def __init__(self):
         visitor.AntlrVisitor.__init__(self, visitor.preOrder)
-        self._pdfFile = outputFile
         self._count = 0
         self._history = []
     
@@ -35,7 +34,7 @@ class Visualiser(visitor.AntlrVisitor):
         self._count = self._count + 1
         return str(nodeID)
 
-    def visualise(self, tree):
+    def visualise(self, tree, outputFile="tmpvis.pdf"):
         self._graph = pydot.Dot(graph_type='digraph')
         
         # We need one node to be the root of all others
@@ -55,7 +54,7 @@ class Visualiser(visitor.AntlrVisitor):
 
         # Create and write out pdf
         pdf = self._graph.create_pdf(prog='dot')
-        fd = open(self._pdfFile, 'w')
+        fd = open(outputFile, 'w')
         fd.write(pdf)
         fd.close
 
