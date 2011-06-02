@@ -25,6 +25,7 @@ the input and write it out.
 # The UFL packages are required so that the sources execute correctly
 # when they are read in
 import ufl
+from ufl.algorithms.tuplenotation import as_form
 # For indices, measures, spaces and cells pretty syntax (dx, i, j, etc...)
 from ufl.objects import *
 # Regular python modules
@@ -35,6 +36,7 @@ from unparse import Unparser
 import StringIO
 # If we need debugging
 import pdb
+import pprint
 # The remaining modules are part of the form compiler
 import state
 from symbolicvalue import SymbolicValue
@@ -55,7 +57,7 @@ def init():
 # Intended as the front-end interface to the parser. e.g. to use,
 # call canonicalise(filename).
 
-def canonicalise(filename):
+def oldcanonicalise(filename):
    
     init()
 
@@ -72,6 +74,33 @@ def canonicalise(filename):
         UFLInterpreter(line, canonical)
 
     return canonical.getvalue(), _uflObjects
+
+def canonicalise(filename):
+
+    dt = SymbolicValue("dt")
+    n = state.TemporalIndex()
+    c = state.ConstantTemporalIndex()
+    namespace = { "dt": dt, "n": n, "c": c, "solve": solve }
+
+    fd = open(filename, 'r')
+    code = fd.read()
+    fd.close
+
+    code = "from ufl import *\n" + \
+           "from mcfc import state\n" + \
+	   "" + code
+    exec code in namespace
+    
+    uflObjects = {}
+
+    for name, value in namespace.iteritems():
+        if isinstance(value, (ufl.form.Form, tuple)):
+	    uflObjects[name] = as_form(value)
+	elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
+	    uflObjects[name] = value
+
+    pprint.pprint(uflObjects)
+    exit()
 
 # Solve needs to return an appropriate function in order for the interpretation
 # to continue
