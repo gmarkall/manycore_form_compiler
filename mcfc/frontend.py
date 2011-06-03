@@ -52,7 +52,8 @@ def main():
         print __doc__
         sys.exit(-1)
 
-    ast, uflObjects = readSource(inputFile)
+    #ast, uflObjects = readSource(inputFile)
+    ast, uflObjects = canonicaliser.canonicalise(inputFile)
 
     if 'visualise' in keys or 'v' in keys:
         if 'o' in keys:
@@ -89,7 +90,8 @@ def main():
 
 def testHook(inputFile, outputFile, backend = "cuda"):
 
-    ast, uflObjects = readSource(inputFile)
+    #ast, uflObjects = readSource(inputFile)
+    ast, uflObjects = canonicaliser.canonicalise(inputFile)
     fd = open(outputFile, 'w')
     driver = drivers[backend]()
     driver.drive(ast, uflObjects, fd)
@@ -118,18 +120,18 @@ def visualise(ast, filename):
     v = visualiser.Visualiser(filename)
     v.visualise(ast)
 
-def readSource(inputFile):
-
-    canned, uflObjects = canonicaliser.canonicalise(inputFile)
-    charStream = antlr3.ANTLRStringStream(canned)
-    lexer = uflLexer(charStream)
-    tokens = antlr3.CommonTokenStream(lexer)
-    tokens.discardOffChannelTokens = True
-    parser = uflParser(tokens)
-    r = parser.file_input()
-    root = r.tree
-    
-    return root, uflObjects
+#def readSource(inputFile):
+#
+#    canned, uflObjects = canonicaliser.canonicalise(inputFile)
+#    charStream = antlr3.ANTLRStringStream(canned)
+#    lexer = uflLexer(charStream)
+#    tokens = antlr3.CommonTokenStream(lexer)
+#    tokens.discardOffChannelTokens = True
+#    parser = uflParser(tokens)
+#    r = parser.file_input()
+#    root = r.tree
+#    
+#    return root, uflObjects
 
 if __name__ == "__main__":
     sys.exit(main())
