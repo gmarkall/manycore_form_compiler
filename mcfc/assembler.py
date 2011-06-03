@@ -35,7 +35,6 @@ class AccessedFieldFinder(NodeVisitor):
 	return self._fields
 
     def visit_Assign(self, tree):
-        print "Visiting assign"
 	rhs = tree.value
 	if len(tree.targets)==1:
 	    try:
@@ -51,6 +50,8 @@ class AccessedFieldFinder(NodeVisitor):
 	    except AttributeError:
 	        # This is not a field access, so no action necessary.
 		pass
+	else:
+	    raise NotImplementedError("Tuple assignment needs implementing.")
 
 	    
 
@@ -82,27 +83,46 @@ def findAccessedFields(tree):
     AFF = AccessedFieldFinder()
     return AFF.find(tree)
 
-class SolveResultFinder(AntlrVisitor):
-
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
+class SolveResultFinder(NodeVisitor):
 
     def find(self, tree):
         self._results = []
-        self.traverse(tree)
-        return self._results
+	self.visit(tree)
+	return self._results
 
-    def visit(self, tree):
-        label = str(tree)
+    def visit_Assign(self, tree):
+        rhs = tree.value
+	if len(tree.targets)==1:
+	    try:
+	        func = rhs.func.id
+		if func == "solve":
+		    result = tree.targets[0].id
+		    self._results.append(result)
+	    except AttributeError:
+	        # This is not a call to a solve, so no action is required anywya
+	        pass
 
-        if label == '=':
-            rhs = tree.getChild(1)
-            if str(rhs) == 'solve':
-                result = str(tree.getChild(0))
-                self._results.append(result)
-
-    def pop(self):
-        pass
+#class SolveResultFinder(AntlrVisitor):
+#
+#    def __init__(self):
+#        AntlrVisitor.__init__(self, preOrder)
+#
+#    def find(self, tree):
+#        self._results = []
+#        self.traverse(tree)
+#        return self._results
+#
+#    def visit(self, tree):
+#        label = str(tree)
+#
+#        if label == '=':
+#            rhs = tree.getChild(1)
+#            if str(rhs) == 'solve':
+#                result = str(tree.getChild(0))
+#                self._results.append(result)
+#
+#    def pop(self):
+#        pass
 
 def findSolveResults(tree):
     SRF = SolveResultFinder()
