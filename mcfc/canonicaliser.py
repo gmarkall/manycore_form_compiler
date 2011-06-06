@@ -110,7 +110,7 @@ def solve(M,b):
     vector = ufl.algorithms.preprocess(b)
     form_data = vector.form_data()
     element = form_data.arguments[0].element()
-    return Coefficient(element)
+    return ufl.coefficient.Coefficient(element)
 
 # Action needs to do the same trick
 

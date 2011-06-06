@@ -24,7 +24,7 @@ import subprocess
 from ast import NodeVisitor
 
 
-class PyASTVisualiser:
+class Visualiser:
 
     def __init__(self, outputFile="tmpvis.pdf"):
         self._pdfFile = outputFile
@@ -178,6 +178,9 @@ class PyASTVisualiser:
     def _Str(self, t):
         self._build_node(repr(t.s))
 
+    def _Num(self, t):
+        self._build_node(repr(t.n))
+
     def _Name(self, t):
         self._build_node(repr(t.id))
 
@@ -212,7 +215,7 @@ class PyASTVisualiser:
     unop = {"Invert":"~", "Not": "not", "UAdd":"+", "USub":"-"}
 
     def _UnaryOp(self, t):
-        self._build_node(unop[t.op.__class__.__name__])
+        self._build_node(self.unop[t.op.__class__.__name__])
 	self.dispatch(t.operand)
     
     binop = { "Add":"+", "Sub":"-", "Mult":"*", "Div":"/", "Mod":"%",
@@ -234,9 +237,12 @@ class PyASTVisualiser:
 	self._history.pop()
 
     def _Call(self, t):
-        self._build_node("%s()" % t.value)
+        self._build_node("Call")
+	self.dispatch(t.func)
+	self._build_node("Arguments")
 	for arg in t.args:
 	    self.dispatch(arg)
+	self._history.pop()
 	
     def _Subscript(self, t):
         self._build_node("Subscript")
@@ -269,61 +275,61 @@ class PyASTVisualiser:
         raise NotImplementedError("Not implemented yet.")
 
 
-class Visualiser(visitor.AntlrVisitor):
-
-    def __init__(self, outputFile="tmpvis.pdf"):
-        visitor.AntlrVisitor.__init__(self, visitor.preOrder)
-        self._pdfFile = outputFile
-        self._count = 0
-        self._history = []
-    
-    def _getFreshID(self):
-        nodeID = self._count
-        self._count = self._count + 1
-        return str(nodeID)
-
-    def visualise(self, tree):
-        self._graph = pydot.Dot(graph_type='digraph')
-        
-        # We need one node to be the root of all others
-        beginID = self._getFreshID()
-        self._graph.add_node(pydot.Node(beginID, label='begin'))
-        self._history.append(beginID)
-
-        # Traverse the rest of the tree
-        self.traverse(tree)
-        
-        # The root node is left over, and needs popping
-        self._history.pop()
-        
-        # Something went wrong if there's anything left
-        if not len(self._history) == 0:
-            raise RuntimeError("History stack not empty.")
-
-        # Create and write out pdf
-        pdf = self._graph.create_pdf(prog='dot')
-        fd = open(self._pdfFile, 'w')
-        fd.write(pdf)
-        fd.close
-
-    def visit(self, tree):
-        # Identifiers for the new and previous node
-        nodeID = self._getFreshID()
-        prevNodeID = self._history[-1]
-        nodeLabel = str(tree)
-        
-        # Construct new node and edge
-        node = pydot.Node(nodeID, label=nodeLabel)
-        edge = pydot.Edge(prevNodeID,nodeID)
-        
-        # Add node and edge to graph
-        self._graph.add_node(node)
-        self._graph.add_edge(edge)
-        
-        # Add the current node to the history stack
-        self._history.append(nodeID)
-
-    def pop(self):
-        self._history.pop()
+#class Visualiser(visitor.AntlrVisitor):
+#
+#    def __init__(self, outputFile="tmpvis.pdf"):
+#        visitor.AntlrVisitor.__init__(self, visitor.preOrder)
+#        self._pdfFile = outputFile
+#        self._count = 0
+#        self._history = []
+#    
+#    def _getFreshID(self):
+#        nodeID = self._count
+#        self._count = self._count + 1
+#        return str(nodeID)
+#
+#    def visualise(self, tree):
+#        self._graph = pydot.Dot(graph_type='digraph')
+#        
+#        # We need one node to be the root of all others
+#        beginID = self._getFreshID()
+#        self._graph.add_node(pydot.Node(beginID, label='begin'))
+#        self._history.append(beginID)
+#
+#        # Traverse the rest of the tree
+#        self.traverse(tree)
+#        
+#        # The root node is left over, and needs popping
+#        self._history.pop()
+#        
+#        # Something went wrong if there's anything left
+#        if not len(self._history) == 0:
+#            raise RuntimeError("History stack not empty.")
+#
+#        # Create and write out pdf
+#        pdf = self._graph.create_pdf(prog='dot')
+#        fd = open(self._pdfFile, 'w')
+#        fd.write(pdf)
+#        fd.close
+#
+#    def visit(self, tree):
+#        # Identifiers for the new and previous node
+#        nodeID = self._getFreshID()
+#        prevNodeID = self._history[-1]
+#        nodeLabel = str(tree)
+#        
+#        # Construct new node and edge
+#        node = pydot.Node(nodeID, label=nodeLabel)
+#        edge = pydot.Edge(prevNodeID,nodeID)
+#        
+#        # Add node and edge to graph
+#        self._graph.add_node(node)
+#        self._graph.add_edge(edge)
+#        
+#        # Add the current node to the history stack
+#        self._history.append(nodeID)
+#
+#    def pop(self):
+#        self._history.pop()
 
 # vim:sw=4:ts=4:sts=4:et
