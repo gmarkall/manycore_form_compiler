@@ -179,7 +179,7 @@ class PyASTVisualiser:
         self._build_node(repr(t.s))
 
     def _Name(self, t):
-        self._build_node(repr(t.n))
+        self._build_node(repr(t.id))
 
     def _Repr(self, t):
         raise NotImplementedError("Not implemented yet.")
@@ -228,16 +228,45 @@ class PyASTVisualiser:
         raise NotImplementedError("Not implemented yet.")
 
     def _Attribute(self, t):
-        se:w
-
+        self.dispatch(t.value)
+	self._build_node("Attr")
+	self._build_node(t.attr)
+	self._history.pop()
 
     def _Call(self, t):
+        self._build_node("%s()" % t.value)
+	for arg in t.args:
+	    self.dispatch(arg)
+	
+    def _Subscript(self, t):
+        self._build_node("Subscript")
+	self.dispatch(t.value)
+	self.dispatch(t.slice)
+
+    def _Ellipsis(self, t):
         raise NotImplementedError("Not implemented yet.")
 
-    def _Subscript
+    def _Index(self, t):
+        self._build_node("Index")
+	self.dispatch(t.value)
 
+    def _Slice(self, t):
+        raise NotImplementedError("Not implemented yet.")
 
+    def _ExtSlice(self, t):
+        raise NotImplementedError("Not implemented yet.")
 
+    def _arguments(self, t):
+        raise NotImplementedError("Not implemented yet.")
+
+    def _keyword(self, t):
+        raise NotImplementedError("Not implemented yet.")
+
+    def _Lambda(self, t):
+        raise NotImplementedError("Not implemented yet.")
+
+    def _alias(self, t):
+        raise NotImplementedError("Not implemented yet.")
 
 
 class Visualiser(visitor.AntlrVisitor):
