@@ -101,6 +101,8 @@ class SolveResultFinder(NodeVisitor):
 	    except AttributeError:
 	        # This is not a call to a solve, so no action is required anywya
 	        pass
+	else:
+	    raise NotImplementedError("Tuple assignment not implemented")
 
 #class SolveResultFinder(AntlrVisitor):
 #
@@ -148,6 +150,8 @@ class SolveFinder(NodeVisitor):
 	    except AttributeError:
 	        # This is not a call to a solve, so no action is required anywya
 	        pass
+	else:
+	    raise NotImplementedError("Tuple assignment not implemented.")
 
    
 
