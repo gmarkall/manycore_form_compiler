@@ -248,34 +248,66 @@ def findFieldFromCoefficient(ast, coeff):
     FNF = FieldNameFinder()
     return FNF.find(ast, CNF.find(ast, coeff))
 
-class ReturnedFieldFinder(AntlrVisitor):
+class ReturnedFieldFinder(NodeVisitor):
     """Return a list of the fields that need to be returned to the host. These
     are pairs (hostField, GPUField), where hostField is the name of the field
     that will be overwritted with data currently stored in GPUField."""
 
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
-
     def find(self, ast):
-        self._returnFields = []
-        self.traverse(ast)
-        return self._returnFields
+       self._returnFields = []
+       self.traverse(ast)
+       return self._returnFields
 
-    def visit(self, tree):
-        label = str(tree)
+    def visit_Assign(self, tree):
+	if len(tree.targets) == 1:
+	    try:
+	        lhs = tree.targets[0]
+                rhs = tree.value
+	        # subscript -> attribute -> name
+		objname = lhs.value.value.id
+		# subscript -> attribute -> string
+		objmember = lhs.value.attr
+		fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
+		print objname, objmember
+		if objname == "state" and objmember in fieldholders:
+		    hostField = lhs.slice.value.elts[0].s
+		    GPUField  = rhs.id
+		    self._returnFields.append((hostField, GPUField))
+            except AttributeError:
+	        # This is not a returning of a field, so no action required.
+	        pass
+	else:
+	    raise NotImplementedError("Tuple assignment not implemented.")
 
-        if label == '=':
-            lhs = tree.getChild(0)
-            rhs = tree.getChild(1)
-            if str(lhs) in [ 'scalar_fields', 'vector_fields', 'tensor_fields' ]:
-                hostField = str(lhs.getChild(0))
-                # Strip off the quotes
-                hostField = hostField[1:-1]
-                GPUField = str(rhs)
-                self._returnFields.append((hostField, GPUField))
-    
-    def pop(self):
-        pass
+
+#class ReturnedFieldFinder(AntlrVisitor):
+#    """Return a list of the fields that need to be returned to the host. These
+#    are pairs (hostField, GPUField), where hostField is the name of the field
+#    that will be overwritted with data currently stored in GPUField."""
+#
+#    def __init__(self):
+#        AntlrVisitor.__init__(self, preOrder)
+#
+#    def find(self, ast):
+#        self._returnFields = []
+#        self.traverse(ast)
+#        return self._returnFields
+#
+#    def visit(self, tree):
+#        label = str(tree)
+#
+#        if label == '=':
+#            lhs = tree.getChild(0)
+#            rhs = tree.getChild(1)
+#            if str(lhs) in [ 'scalar_fields', 'vector_fields', 'tensor_fields' ]:
+#                hostField = str(lhs.getChild(0))
+#                # Strip off the quotes
+#                hostField = hostField[1:-1]
+#                GPUField = str(rhs)
+#                self._returnFields.append((hostField, GPUField))
+#    
+#    def pop(self):
+#        pass
 
 def findReturnedFields(ast):
     RFF = ReturnedFieldFinder()
