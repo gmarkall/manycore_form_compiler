@@ -433,7 +433,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             if isinstance(obj, ufl.coefficient.Coefficient):
                 # find which field this coefficient came from, then
                 # extract from that field.
-                field = findFieldFromCoefficient(self._ast, obj)
+                field = findFieldFromCoefficient(self._ast, self._uflObjects, obj)
                 var = self.extractCoefficient(func, field)
                 params.append(var)
             

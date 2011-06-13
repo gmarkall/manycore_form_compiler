@@ -183,36 +183,36 @@ def findSolves(tree):
     SF = SolveFinder()
     return SF.find(tree)
 
-class CoefficientNameFinder(AntlrVisitor):
-    """Given a coefficient, this class traverses the
-    AST and finds the name of the variable holding the field
-    it came from."""
-
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
-
-    def find(self, ast, coeff):
-        self._count = str(coeff.count())
-        self._var = None
-        self.traverse(ast)
-        return self._var
-
-    def visit(self, tree):
-        label = str(tree)
-
-        if label == 'Coefficient':
-            count = str(tree.getChild(1))
-            if count == self._count:
-                # Found the correct Field. However, we need to make sure this
-                # was a version of the field alone on the right-hand side of 
-                # an assignment.
-                field = tree.getParent()
-                fieldParent = field.getParent()
-                if str(fieldParent) == '=':
-                    self._var = str(field)
-
-    def pop(self):
-        pass
+#class CoefficientNameFinder(AntlrVisitor):
+#    """Given a coefficient, this class traverses the
+#    AST and finds the name of the variable holding the field
+#    it came from."""
+#
+#    def __init__(self):
+#        AntlrVisitor.__init__(self, preOrder)
+#
+#    def find(self, ast, coeff):
+#        self._count = str(coeff.count())
+#        self._var = None
+#        self.traverse(ast)
+#        return self._var
+#
+#    def visit(self, tree):
+#        label = str(tree)
+#
+#        if label == 'Coefficient':
+#            count = str(tree.getChild(1))
+#            if count == self._count:
+#                # Found the correct Field. However, we need to make sure this
+#                # was a version of the field alone on the right-hand side of 
+#                # an assignment.
+#                field = tree.getParent()
+#                fieldParent = field.getParent()
+#                if str(fieldParent) == '=':
+#                    self._var = str(field)
+#
+#    def pop(self):
+#        pass
 
 class FieldNameFinder(AntlrVisitor):
     """Given the name of the variable holding a field,
@@ -243,10 +243,19 @@ class FieldNameFinder(AntlrVisitor):
     def pop(self):
         pass
 
-def findFieldFromCoefficient(ast, coeff):
-    CNF = CoefficientNameFinder()
+def findCoefficientName(uflObjects, coeff):
+    seeking = coeff.count()
+    for key, value in uflObjects:
+        if isinstance(value, ufl.coefficient.Coefficient):
+	    count = value.count()
+	    if count == seeking:
+	        return key
+    print "Warning: coefficient not found."
+
+def findFieldFromCoefficient(ast, uflObjects, coeff):
+#    CNF = CoefficientNameFinder()
     FNF = FieldNameFinder()
-    return FNF.find(ast, CNF.find(ast, coeff))
+    return FNF.find(ast, findCoefficientName(uflObjects, coeff))
 
 class ReturnedFieldFinder(NodeVisitor):
     """Return a list of the fields that need to be returned to the host. These
