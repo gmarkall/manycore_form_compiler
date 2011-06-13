@@ -11,10 +11,25 @@ int* matrix_colm;
 int* matrix_findrm;
 
 
-__global__ void M(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
+__global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1, double* d_CG1)
 {
   for(int i_ele = THREAD_ID; i_ele < n_ele; (i_ele += THREAD_COUNT))
   {
+    __shared__ double c_q0[24];
+    for(int i_g = 0; i_g < 6; i_g++)
+    {
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] = 0.0;
+          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+          {
+            c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += (c0[(((i_ele + (n_ele * i_d_0)) + (2 * (n_ele * i_d_1))) + (2 * (2 * (n_ele * i_r_0))))] * CG1[(i_r_0 + (3 * i_g))]);
+          };
+        };
+      };
+    };
     for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
     {
       for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
@@ -23,6 +38,13 @@ __global__ void M(double* localTensor, int n_ele, double dt, double* detwei, dou
         for(int i_g = 0; i_g < 6; i_g++)
         {
           localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] += ((CG1[(i_r_0 + (3 * i_g))] * CG1[(i_r_1 + (3 * i_g))]) * detwei[(i_ele + (n_ele * i_g))]);
+          for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+          {
+            for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+            {
+              localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] += ((-1 * (0.5 * (-1 * ((c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] * d_CG1[(((i_ele + (n_ele * i_d_1)) + (2 * (n_ele * i_g))) + (6 * (2 * (n_ele * i_r_0))))]) * d_CG1[(((i_ele + (n_ele * i_d_0)) + (2 * (n_ele * i_g))) + (6 * (2 * (n_ele * i_r_1))))])))) * detwei[(i_ele + (n_ele * i_g))]);
+            };
+          };
         };
       };
     };
@@ -68,25 +90,10 @@ __global__ void d(double* localTensor, int n_ele, double dt, double* detwei, dou
   };
 }
 
-__global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1, double* d_CG1)
+__global__ void M(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
 {
   for(int i_ele = THREAD_ID; i_ele < n_ele; (i_ele += THREAD_COUNT))
   {
-    __shared__ double c_q0[24];
-    for(int i_g = 0; i_g < 6; i_g++)
-    {
-      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
-      {
-        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
-        {
-          c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] = 0.0;
-          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
-          {
-            c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] += (c0[(((i_ele + (n_ele * i_d_0)) + (2 * (n_ele * i_d_1))) + (2 * (2 * (n_ele * i_r_0))))] * CG1[(i_r_0 + (3 * i_g))]);
-          };
-        };
-      };
-    };
     for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
     {
       for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
@@ -95,13 +102,6 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
         for(int i_g = 0; i_g < 6; i_g++)
         {
           localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] += ((CG1[(i_r_0 + (3 * i_g))] * CG1[(i_r_1 + (3 * i_g))]) * detwei[(i_ele + (n_ele * i_g))]);
-          for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
-          {
-            for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
-            {
-              localTensor[((i_ele + (n_ele * i_r_0)) + (3 * (n_ele * i_r_1)))] += ((-1 * (0.5 * (-1 * ((c_q0[((i_g + (6 * i_d_0)) + (2 * (6 * i_d_1)))] * d_CG1[(((i_ele + (n_ele * i_d_1)) + (2 * (n_ele * i_g))) + (6 * (2 * (n_ele * i_r_0))))]) * d_CG1[(((i_ele + (n_ele * i_d_0)) + (2 * (n_ele * i_g))) + (6 * (2 * (n_ele * i_r_1))))])))) * detwei[(i_ele + (n_ele * i_g))]);
-            };
-          };
         };
       };
     };
