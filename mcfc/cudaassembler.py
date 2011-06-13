@@ -347,10 +347,10 @@ class CudaAssemblerBackend(AssemblerBackend):
         
         for solve in solves:
             # Unpack the bits of information we want
-            result = str(solve.getChild(0))
-            solveNode = solve.getChild(1)
-            matrix = solveNode.getChild(0)
-            vector = solveNode.getChild(1)
+            result = solve.targets[0].id
+            solveArgs = solve.value.args
+            matrix = solveArgs[0].id
+            vector = solveArgs[1].id
             
             # Call the matrix assembly
             form = self._uflObjects[str(matrix)]

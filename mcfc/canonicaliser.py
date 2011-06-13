@@ -97,7 +97,7 @@ def canonicalise(filename):
 
     for name, value in namespace.iteritems():
         if isinstance(value, (ufl.form.Form, tuple)):
-	    uflObjects[name] = as_form(value)
+	    uflObjects[name] = ufl.algorithms.preprocess(as_form(value))
 	elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
 	    uflObjects[name] = value
 
