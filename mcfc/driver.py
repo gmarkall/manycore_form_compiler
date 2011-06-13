@@ -25,9 +25,9 @@ import ufl.form
 def findForms(uflObjects):
 
     forms = []
-    for key, value in uflObjects:
+    for key, value in uflObjects.items():
         if isinstance(value, ufl.form.Form):
-	    forms.append[key]
+	    forms.append(key)
 
     return forms
 

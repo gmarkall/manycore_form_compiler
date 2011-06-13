@@ -19,6 +19,7 @@
 
 from visitor import *
 from ast import NodeVisitor
+from ufl.coefficient import Coefficient
 
 # Placeholder; will probably fill with things later on.
 # Should be inherited by all assembler implementations.
@@ -43,7 +44,6 @@ class AccessedFieldFinder(NodeVisitor):
 		# subscript -> attribute -> string
 		objmember = rhs.value.attr
 		fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
-		print objname, objmember
 		if objname == "state" and objmember in fieldholders:
 		    fieldname = rhs.slice.value.elts[0].s
 		    self._fields.append(fieldname)
@@ -219,18 +219,23 @@ class FieldVarFinder(NodeVisitor):
     def find(self, ast, name):
         self._name = name
         self._fieldVar = None
-        self.traverse(ast)
+        self.visit(ast)
         return self._fieldVar
 
     def visit_Assign(self, tree):
-        if len(targets) == 1:
-	    target = targets[0]
+        if len(tree.targets) == 1:
+	    target = tree.targets[0]
 	    try:
-	        if target.id == self._name:
+	        var = target.id
+	    except AttributeError:
+	        # If this happens, the LHS is not what we're looking for.
+		return
+	    if var == self._name:
+	        try:
 		    self._fieldVar = tree.value.args[0].id
-	    except:
-		# If we got here, then the RHS was not as expected
-		raise RuntimeError("Unexpected RHS for coefficient %s" % self._name)
+	        except AttributeError:
+		    # If we got here, then the RHS was not as expected
+		    raise RuntimeError("Unexpected RHS for coefficient %s" % self._name)
 	else:
 	    raise NotImplementedError("Tuple assignment not implemented.")
 
@@ -239,18 +244,23 @@ class FieldNameFinder(NodeVisitor):
     def find(self, ast, var):
         self._var = var
         self._field = None
-        self.traverse(ast)
+        self.visit(ast)
         return self._field
 
     def visit_Assign(self, tree):
-        if len(targets) == 1:
-	    target = targets[0]
+        if len(tree.targets) == 1:
+	    target = tree.targets[0]
 	    try:
-	        if target.id == self._var:
-	            self._field = tree.value.value.slice.value.elts[0].s
+	        var = target.id
+            except AttributeError:
+	        # If this happens, the LHS is not what we're looking for.
+		return
+	    try:
+	        if var == self._var:
+	            self._field = tree.value.slice.value.elts[0].s
             except AttributeError:
 		# If we got here, then the RHS was not as expected
-		raise RuntimeError("Unexpected RHS for field var %s" % self._name)
+		raise RuntimeError("Unexpected RHS for field var %s" % self._var)
 	else:
 	    raise NotImplementedError("Tuple assignment not implemented.")
 	   
@@ -286,8 +296,8 @@ class FieldNameFinder(NodeVisitor):
 
 def findCoefficientName(uflObjects, coeff):
     seeking = coeff.count()
-    for key, value in uflObjects:
-        if isinstance(value, ufl.coefficient.Coefficient):
+    for key, value in uflObjects.items():
+        if isinstance(value, Coefficient):
 	    count = value.count()
 	    if count == seeking:
 	        return key
@@ -307,7 +317,7 @@ class ReturnedFieldFinder(NodeVisitor):
 
     def find(self, ast):
        self._returnFields = []
-       self.traverse(ast)
+       self.visit(ast)
        return self._returnFields
 
     def visit_Assign(self, tree):
@@ -320,7 +330,6 @@ class ReturnedFieldFinder(NodeVisitor):
 		# subscript -> attribute -> string
 		objmember = lhs.value.attr
 		fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
-		print objname, objmember
 		if objname == "state" and objmember in fieldholders:
 		    hostField = lhs.slice.value.elts[0].s
 		    GPUField  = rhs.id
