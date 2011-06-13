@@ -117,27 +117,6 @@ class CudaFormBackend(FormBackend):
             rank = operand.rank() + 1
             self.buildCoefficientLoopNest(spatialDerivative, rank, gaussLoop)
 
-
-#            # Build loop over the correct number of dimensions
-#            for r in range(rank):
-#                indVar = dimInductionVariable(r)
-#                dimLoop = buildSimpleForLoop(indVar, numDimensions)
-#                loop.append(dimLoop)
-#                loop = dimLoop
-#
-#            # Add initialiser here
-#            initialiser = self.buildCoeffQuadratureInitialiser(coeff)
-#            loop.append(initialiser)
-#
-#            # One loop over the basis functions
-#            indVar = basisInductionVariable(0)
-#            basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
-#            loop.append(basisLoop)
-#        
-#            # Add the expression to compute the value inside the basis loop
-#            computation = self.buildQuadratureExpression(coeff)
-#            basisLoop.append(computation)
-#
         return gaussLoop
 
     def buildCoefficientLoopNest(self, coeff, rank, scope):

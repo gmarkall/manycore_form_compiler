@@ -31,10 +31,6 @@
 
 # Python libs
 import sys, getopt, pprint
-# ANTLR runtime and generated code
-import antlr3
-from uflLexer import uflLexer
-from uflParser import uflParser
 # MCFC libs
 import visualiser
 import canonicaliser
@@ -52,7 +48,6 @@ def main():
         print __doc__
         sys.exit(-1)
 
-    #ast, uflObjects = readSource(inputFile)
     ast, uflObjects = canonicaliser.canonicalise(inputFile)
 
     if 'visualise' in keys or 'v' in keys:
@@ -90,7 +85,6 @@ def main():
 
 def testHook(inputFile, outputFile, backend = "cuda"):
 
-    #ast, uflObjects = readSource(inputFile)
     ast, uflObjects = canonicaliser.canonicalise(inputFile)
     fd = open(outputFile, 'w')
     driver = drivers[backend]()
@@ -119,19 +113,6 @@ def visualise(ast, filename):
 
     v = visualiser.Visualiser(filename)
     v.visualise(ast)
-
-#def readSource(inputFile):
-#
-#    canned, uflObjects = canonicaliser.canonicalise(inputFile)
-#    charStream = antlr3.ANTLRStringStream(canned)
-#    lexer = uflLexer(charStream)
-#    tokens = antlr3.CommonTokenStream(lexer)
-#    tokens.discardOffChannelTokens = True
-#    parser = uflParser(tokens)
-#    r = parser.file_input()
-#    root = r.tree
-#    
-#    return root, uflObjects
 
 if __name__ == "__main__":
     sys.exit(main())

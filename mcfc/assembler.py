@@ -53,32 +53,6 @@ class AccessedFieldFinder(NodeVisitor):
 	else:
 	    raise NotImplementedError("Tuple assignment needs implementing.")
 
-	    
-
-#class AccessedFieldFinder(AntlrVisitor):
-#
-#    def __init__(self):
-#        AntlrVisitor.__init__(self, preOrder)
-#
-#    def find(self, tree):
-#        self._fields = []
-#        self.traverse(tree)
-#        return self._fields
-#
-#    def visit(self, tree):
-#        label = str(tree)
-#
-#        if label == '=':
-#            rhs = tree.getChild(1)
-#            if str(rhs) in ['scalar_fields', 'vector_fields', 'tensor_fields']:
-#                field = str(rhs.getChild(0))
-#                # Strip off the quotes
-#                field = field[1:-1]
-#                self._fields.append(field)
-#
-#    def pop(self):
-#        pass
-
 def findAccessedFields(tree):
     AFF = AccessedFieldFinder()
     return AFF.find(tree)
@@ -103,28 +77,6 @@ class SolveResultFinder(NodeVisitor):
 	        pass
 	else:
 	    raise NotImplementedError("Tuple assignment not implemented")
-
-#class SolveResultFinder(AntlrVisitor):
-#
-#    def __init__(self):
-#        AntlrVisitor.__init__(self, preOrder)
-#
-#    def find(self, tree):
-#        self._results = []
-#        self.traverse(tree)
-#        return self._results
-#
-#    def visit(self, tree):
-#        label = str(tree)
-#
-#        if label == '=':
-#            rhs = tree.getChild(1)
-#            if str(rhs) == 'solve':
-#                result = str(tree.getChild(0))
-#                self._results.append(result)
-#
-#    def pop(self):
-#        pass
 
 def findSolveResults(tree):
     SRF = SolveResultFinder()
@@ -153,66 +105,9 @@ class SolveFinder(NodeVisitor):
 	else:
 	    raise NotImplementedError("Tuple assignment not implemented.")
 
-   
-
-#class SolveFinder(AntlrVisitor):
-#    """ Traverses an antlr tree and returns the assignment node of
-#    solves, rather than the solve node itself. This way we can get
-#    to the target as well as the solve node."""
-#
-#    def __init__(self):
-#        AntlrVisitor.__init__(self, preOrder)
-#
-#    def find(self, tree):
-#        self._solves = []
-#        self.traverse(tree)
-#        return self._solves
-#
-#    def visit(self, tree):
-#        label = str(tree)
-#
-#        if label == '=':
-#            rhs = tree.getChild(1)
-#            if str(rhs) == 'solve':
-#                self._solves.append(tree)
-#    
-#    def pop(self):
-#        pass
-
 def findSolves(tree):
     SF = SolveFinder()
     return SF.find(tree)
-
-#class CoefficientNameFinder(AntlrVisitor):
-#    """Given a coefficient, this class traverses the
-#    AST and finds the name of the variable holding the field
-#    it came from."""
-#
-#    def __init__(self):
-#        AntlrVisitor.__init__(self, preOrder)
-#
-#    def find(self, ast, coeff):
-#        self._count = str(coeff.count())
-#        self._var = None
-#        self.traverse(ast)
-#        return self._var
-#
-#    def visit(self, tree):
-#        label = str(tree)
-#
-#        if label == 'Coefficient':
-#            count = str(tree.getChild(1))
-#            if count == self._count:
-#                # Found the correct Field. However, we need to make sure this
-#                # was a version of the field alone on the right-hand side of 
-#                # an assignment.
-#                field = tree.getParent()
-#                fieldParent = field.getParent()
-#                if str(fieldParent) == '=':
-#                    self._var = str(field)
-#
-#    def pop(self):
-#        pass
 
 class FieldVarFinder(NodeVisitor):
     
@@ -264,36 +159,6 @@ class FieldNameFinder(NodeVisitor):
 	else:
 	    raise NotImplementedError("Tuple assignment not implemented.")
 	   
-
-#class FieldNameFinder(AntlrVisitor):
-#    """Given the name of the variable holding a field,
-#    return the name of that field."""
-#
-#    def __init__(self):
-#        AntlrVisitor.__init__(self, preOrder)
-#
-#    def find(self, ast, name):
-#        self._name = name
-#        self._field = None
-#        self.traverse(ast)
-#        return self._field
-#
-#    def visit(self, tree):
-#        label = str(tree)
-#
-#        if label == '=':
-#            lhs = tree.getChild(0)
-#            rhs = tree.getChild(1)
-#
-#            if str(lhs) == self._name:
-#                field = rhs.getChild(0)
-#                self._field = str(field)
-#                # Strip the quotes
-#                self._field = self._field[1:-1]
-#
-#    def pop(self):
-#        pass
-
 def findCoefficientName(uflObjects, coeff):
     seeking = coeff.count()
     for key, value in uflObjects.items():
@@ -304,7 +169,6 @@ def findCoefficientName(uflObjects, coeff):
     print "Warning: coefficient not found."
 
 def findFieldFromCoefficient(ast, uflObjects, coeff):
-#    CNF = CoefficientNameFinder()
     FVF = FieldVarFinder()
     FNF = FieldNameFinder()
     var = FVF.find(ast, findCoefficientName(uflObjects, coeff))
@@ -339,36 +203,6 @@ class ReturnedFieldFinder(NodeVisitor):
 	        pass
 	else:
 	    raise NotImplementedError("Tuple assignment not implemented.")
-
-
-#class ReturnedFieldFinder(AntlrVisitor):
-#    """Return a list of the fields that need to be returned to the host. These
-#    are pairs (hostField, GPUField), where hostField is the name of the field
-#    that will be overwritted with data currently stored in GPUField."""
-#
-#    def __init__(self):
-#        AntlrVisitor.__init__(self, preOrder)
-#
-#    def find(self, ast):
-#        self._returnFields = []
-#        self.traverse(ast)
-#        return self._returnFields
-#
-#    def visit(self, tree):
-#        label = str(tree)
-#
-#        if label == '=':
-#            lhs = tree.getChild(0)
-#            rhs = tree.getChild(1)
-#            if str(lhs) in [ 'scalar_fields', 'vector_fields', 'tensor_fields' ]:
-#                hostField = str(lhs.getChild(0))
-#                # Strip off the quotes
-#                hostField = hostField[1:-1]
-#                GPUField = str(rhs)
-#                self._returnFields.append((hostField, GPUField))
-#    
-#    def pop(self):
-#        pass
 
 def findReturnedFields(ast):
     RFF = ReturnedFieldFinder()
