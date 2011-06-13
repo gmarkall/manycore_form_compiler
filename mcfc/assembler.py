@@ -214,34 +214,75 @@ def findSolves(tree):
 #    def pop(self):
 #        pass
 
-class FieldNameFinder(AntlrVisitor):
-    """Given the name of the variable holding a field,
-    return the name of that field."""
-
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
-
+class FieldVarFinder(NodeVisitor):
+    
     def find(self, ast, name):
         self._name = name
+        self._fieldVar = None
+        self.traverse(ast)
+        return self._fieldVar
+
+    def visit_Assign(self, tree):
+        if len(targets) == 1:
+	    target = targets[0]
+	    try:
+	        if target.id == self._name:
+		    self._fieldVar = tree.value.args[0].id
+	    except:
+		# If we got here, then the RHS was not as expected
+		raise RuntimeError("Unexpected RHS for coefficient %s" % self._name)
+	else:
+	    raise NotImplementedError("Tuple assignment not implemented.")
+
+class FieldNameFinder(NodeVisitor):
+
+    def find(self, ast, var):
+        self._var = var
         self._field = None
         self.traverse(ast)
         return self._field
 
-    def visit(self, tree):
-        label = str(tree)
+    def visit_Assign(self, tree):
+        if len(targets) == 1:
+	    target = targets[0]
+	    try:
+	        if target.id == self._var:
+	            self._field = tree.value.value.slice.value.elts[0].s
+            except AttributeError:
+		# If we got here, then the RHS was not as expected
+		raise RuntimeError("Unexpected RHS for field var %s" % self._name)
+	else:
+	    raise NotImplementedError("Tuple assignment not implemented.")
+	   
 
-        if label == '=':
-            lhs = tree.getChild(0)
-            rhs = tree.getChild(1)
-
-            if str(lhs) == self._name:
-                field = rhs.getChild(0)
-                self._field = str(field)
-                # Strip the quotes
-                self._field = self._field[1:-1]
-
-    def pop(self):
-        pass
+#class FieldNameFinder(AntlrVisitor):
+#    """Given the name of the variable holding a field,
+#    return the name of that field."""
+#
+#    def __init__(self):
+#        AntlrVisitor.__init__(self, preOrder)
+#
+#    def find(self, ast, name):
+#        self._name = name
+#        self._field = None
+#        self.traverse(ast)
+#        return self._field
+#
+#    def visit(self, tree):
+#        label = str(tree)
+#
+#        if label == '=':
+#            lhs = tree.getChild(0)
+#            rhs = tree.getChild(1)
+#
+#            if str(lhs) == self._name:
+#                field = rhs.getChild(0)
+#                self._field = str(field)
+#                # Strip the quotes
+#                self._field = self._field[1:-1]
+#
+#    def pop(self):
+#        pass
 
 def findCoefficientName(uflObjects, coeff):
     seeking = coeff.count()
@@ -254,8 +295,10 @@ def findCoefficientName(uflObjects, coeff):
 
 def findFieldFromCoefficient(ast, uflObjects, coeff):
 #    CNF = CoefficientNameFinder()
+    FVF = FieldVarFinder()
     FNF = FieldNameFinder()
-    return FNF.find(ast, findCoefficientName(uflObjects, coeff))
+    var = FVF.find(ast, findCoefficientName(uflObjects, coeff))
+    return FNF.find(ast, var)
 
 class ReturnedFieldFinder(NodeVisitor):
     """Return a list of the fields that need to be returned to the host. These
