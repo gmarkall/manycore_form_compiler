@@ -28,9 +28,6 @@ from assembler import *
 from cudaparameters import generateKernelParameters
 from codegeneration import *
 from utilities import uniqify
-# This is referred to as mcfcstate because of the clash with the
-# variable called state.
-import state as mcfcstate
 # FEniCS UFL libs
 import ufl.finiteelement
 from ufl.differentiation import SpatialDerivative
@@ -131,8 +128,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         # Extract accessed fields
         accessedFields = findAccessedFields(self._ast)
-        for field in accessedFields:
-            rank = mcfcstate.getRank(field)
+        for rank, field in accessedFields:
             params = [ Literal(field), Literal(rank) ]
             call = FunctionCall('extractField',params)
             arrow = ArrowOp(state, call)
@@ -233,20 +229,9 @@ class CudaAssemblerBackend(AssemblerBackend):
         """Find a field with the same basis as the named field. You should
         always be able to find a similar field."""
 
-        obj = self._uflObjects[field]
-        element = obj.element()
-        degree = element.degree()
-        
-        if isinstance(element, ufl.finiteelement.FiniteElement):
-            sourceFields = mcfcstate._finiteElements
-        elif isinstance(element, ufl.finiteelement.VectorElement):
-            sourceFields = mcfcstate._vectorElements
-        elif isinstance(element, ufl.finiteelement.TensorElement):
-            sourceFields = mcfcstate._tensorElements
-
-        for k in sourceFields:
-            if sourceFields[k] == degree:
-                return k
+        returnedFields = findReturnedFields(self._ast)
+        similarField = [f[0] for f in returnedFields if f[1] == field][0]
+        return similarField
 
     def _buildFinaliser(self):
         func = FunctionDefinition(Void(), 'finalise_gpu_')

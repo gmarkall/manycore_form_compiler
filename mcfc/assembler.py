@@ -43,10 +43,15 @@ class AccessedFieldFinder(NodeVisitor):
 	        objname = rhs.value.value.id
 		# subscript -> attribute -> string
 		objmember = rhs.value.attr
-		fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
-		if objname == "state" and objmember in fieldholders:
+		if objname == "state":
+		    if objmember == "scalar_fields":
+		        rank = 0
+		    if objmember == "vector_fields":
+		        rank = 1
+		    if objmember == "tensor_fields":
+		        rank = 2
 		    fieldname = rhs.slice.value.s
-		    self._fields.append(fieldname)
+		    self._fields.append((rank, fieldname))
 	    except AttributeError:
 	        # This is not a field access, so no action necessary.
 		pass
