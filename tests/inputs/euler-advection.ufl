@@ -1,5 +1,5 @@
-T=state.scalar_fields["Tracer",n]
-V=state.vector_fields["Velocity",c]
+T=state.scalar_fields["Tracer"]
+V=state.vector_fields["Velocity"]
 
 u=Coefficient(V)
 t=Coefficient(T)
@@ -12,4 +12,4 @@ rhs = (q*t+dt*dot(grad(q),u)*t)*dx
 
 tnew=solve(Mass,rhs)
 
-state.scalar_fields["Tracer",n+1]=tnew
+state.scalar_fields["Tracer"]=tnew

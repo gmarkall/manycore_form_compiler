@@ -35,9 +35,7 @@ from symbolicvalue import SymbolicValue
 def canonicalise(filename):
 
     dt = SymbolicValue("dt")
-    n = state.TemporalIndex()
-    c = state.ConstantTemporalIndex()
-    namespace = { "dt": dt, "n": n, "c": c, "solve": solve }
+    namespace = { "dt": dt, "solve": solve }
 
     fd = open(filename, 'r')
     code = fd.read()
