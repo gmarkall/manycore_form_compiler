@@ -120,10 +120,10 @@ arg_expr	: ARGUMENT^ LPAREN! ufl_expr COMMA! number RPAREN!
 
 ele_expr	: (type=element_op LPAREN family=string COMMA cell=cell_expr COMMA degree=number 
                    (COMMA LPAREN? shape1=number 
-		    (COMMA shape2=number RPAREN COMMA symmetry=atom
-		   )? 
-		  )? RPAREN) 
-                      -> ^($type $family $cell $degree $shape1? $shape2? $symmetry?)
+                    (COMMA shape2=number RPAREN COMMA symmetry=atom
+                    )? 
+                   )? COMMA scheme=atom RPAREN) 
+                      -> ^($type $family $cell $degree $shape1? $shape2? $symmetry? $scheme)
 		;
 
 element_op      : (FINELE | VECELE | TENELE)^ 
@@ -135,7 +135,7 @@ mix_ele_expr	: MIXELE^ LPAREN! STAR! LBRACK! ele_expr (COMMA! ele_expr)* RBRACK!
 mix_ele_dict	: DOUBLESTAR! LCURLY! string^ COLON! LPAREN! number COMMA! RPAREN! RCURLY!
 		;
 
-cell_expr	: CELL^ LPAREN! string COMMA! number COMMA! space_expr RPAREN!
+cell_expr	: CELL^ LPAREN! string COMMA! space_expr RPAREN!
 		;
 
 space_expr	: SPACE^ LPAREN! number RPAREN!

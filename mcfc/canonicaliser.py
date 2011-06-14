@@ -72,8 +72,7 @@ def canonicalise(ufl, _state, _states):
 # to continue
 
 def solve(M,b):
-    vector = ufl.algorithms.preprocess(b)
-    form_data = vector.form_data()
+    form_data = b.compute_form_data()
     element = form_data.arguments[0].element()
     return Coefficient(element)
 
@@ -210,17 +209,22 @@ class UFLInterpreter:
         # If the result of executing the RHS is a form, we need to
         # preprocess it
         if isinstance(_result, ufl.form.Form):
-            _result = ufl.algorithms.preprocess(_result)
+            # Compute the form data (internally preprocesses the form)
+            form_data = _result.compute_form_data()
+            # Overwrite with preprocessed form extracted from form data
+            _result = form_data.preprocessed_form
+            # Re-attach form data
+            _result._form_data = form_data
 
         # Stash the resulting object. If it's a tuple of objects,
-	# we need to stash each individual one separately so they
-	# can be retrieved individually later on.
+        # we need to stash each individual one separately so they
+        # can be retrieved individually later on.
         if isinstance(_lhs, ast.Tuple):
-	    count = len(_lhs.elts)
-	    for i in range(count):
-	        key = _lhs.elts[i].id
-	        _uflObjects[key] = _result[i]
-	else:
+            count = len(_lhs.elts)
+            for i in range(count):
+                key = _lhs.elts[i].id
+                _uflObjects[key] = _result[i]
+        else:
             _uflObjects[_target] = _result
             
         if isToBeExecuted(_lhs,_rhs):
