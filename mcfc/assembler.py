@@ -45,7 +45,7 @@ class AccessedFieldFinder(NodeVisitor):
 		objmember = rhs.value.attr
 		fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
 		if objname == "state" and objmember in fieldholders:
-		    fieldname = rhs.slice.value.elts[0].s
+		    fieldname = rhs.slice.value.s
 		    self._fields.append(fieldname)
 	    except AttributeError:
 	        # This is not a field access, so no action necessary.
@@ -152,7 +152,7 @@ class FieldNameFinder(NodeVisitor):
 		return
 	    try:
 	        if var == self._var:
-	            self._field = tree.value.slice.value.elts[0].s
+	            self._field = tree.value.slice.value.s
             except AttributeError:
 		# If we got here, then the RHS was not as expected
 		raise RuntimeError("Unexpected RHS for field var %s" % self._var)
@@ -195,7 +195,7 @@ class ReturnedFieldFinder(NodeVisitor):
 		objmember = lhs.value.attr
 		fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
 		if objname == "state" and objmember in fieldholders:
-		    hostField = lhs.slice.value.elts[0].s
+		    hostField = lhs.slice.value.s
 		    GPUField  = rhs.id
 		    self._returnFields.append((hostField, GPUField))
             except AttributeError:
