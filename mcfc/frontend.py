@@ -55,7 +55,7 @@ def main():
             outputFile = opts['o']
         else:
             outputFile = inputFile[:-3] + "pdf"
-        visualise(ast, outputFile)
+        visualise(ast, uflObjects, outputFile)
         return 0
 
     if 'o' in keys:
@@ -109,9 +109,12 @@ def get_options():
     
     return opts_dict, args
 
-def visualise(ast, filename):
+def visualise(ast, uflObjects, filename):
 
     ASTVisualiser(ast, filename)
+    for i in uflObjects.keys():
+        objectfile = "%s_%s.pdf" % (filename[:-4], i)
+	ObjectVisualiser(uflObjects[i], objectfile)
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -230,8 +230,11 @@ class ObjectVisualiser(DOTVisualiser):
 	        self._dispatch(objattr)
 	self._edgeLabel = savedLabel
 
-    def _visit_int(self, obj):
+    def _generic_visit_number(self, obj):
         self._build_node(str(obj), self._edgeLabel)
+
+    _visit_int = _generic_visit_number
+    _visit_float = _generic_visit_number
 
     def _visit_str(self, obj):
         oneline = obj.replace("\n", "/").replace("\r","")
@@ -243,12 +246,12 @@ class ObjectVisualiser(DOTVisualiser):
         self._build_node(short, self._edgeLabel)
 
     def _visit_list(self, obj):
-        self._visit_array(obj, "list")
+        self._generic_visit_array(obj, "list")
 
     def _visit_tuple(self, obj):
-        self._visit_array(obj, "tuple")
+        self._generic_visit_array(obj, "tuple")
 
-    def _visit_array(self, arr, rootLabel):
+    def _generic_visit_array(self, arr, rootLabel):
         nodeID = self._build_node(rootLabel, self._edgeLabel)
 	OID = id(arr)
 	self._seen[OID] = nodeID
