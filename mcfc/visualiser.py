@@ -39,6 +39,8 @@ class ASTVisualiser:
 
     def visualise(self, tree):
         self._graph = pydot.Dot(graph_type='digraph')
+        self._seen = {}
+	self._edgeLabel = ""
 
 	# We need one node to be the root of all others
 	beginID = self._getFreshID()
@@ -46,7 +48,7 @@ class ASTVisualiser:
 	self._history.append(beginID)
 
 	# Traverse the rest of the tree
-	self.dispatch(tree)
+	self._dispatch(tree)
 
 	# The root node is left over, and needs popping
 	self._history.pop()
@@ -61,13 +63,15 @@ class ASTVisualiser:
 	fd.write(pdf)
 	fd.close()
 
-    def dispatch(self, tree):
+    def _dispatch(self, tree):
         if isinstance(tree, list):
-	    # FIXME: Create a list node to act as the root
 	    for t in tree:
-		self.dispatch(t)
+		self._dispatch(t)
 	    return
-	meth = getattr(self, "_"+tree.__class__.__name__)
+	try:
+	    meth = getattr(self, "_"+tree.__class__.__name__)
+	except AttributeError:
+            raise NotImplementedError("Not implemented yet.")
 	meth(tree)
 	self._history.pop()
 
@@ -87,14 +91,17 @@ class ASTVisualiser:
         # Add the current node to the history stack
         self._history.append(nodeID)
 
+	# In case we want to do anything with the new node
+	return nodeID
+
     def _Module(self, tree):
         self._build_node("Module")
 	for stmt in tree.body:
-	    self.dispatch(stmt)
+	    self._dispatch(stmt)
 
     def _Expr(self, tree):
         self._build_node("Expr")
-	self.dispatch(tree.value)
+	self._dispatch(tree.value)
 
     def _Import(self, t):
         self._build_node("Import")
@@ -102,79 +109,13 @@ class ASTVisualiser:
 	    self._build_node(a.name)
 	    self._history.pop()
 
-    def _ImportFrom(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
     def _Assign(self, t):
         self._build_node("Assign")
 	self._build_node("targets")
 	for target in t.targets:
-	    self.dispatch(target)
+	    self._dispatch(target)
 	self._history.pop()
-	self.dispatch(t.value)
-
-    def _AugAssign(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Return(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Pass(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Break(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Continue(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Delete(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Assert(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Exec(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Print(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Global(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Yield(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Raise(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _TryExcept(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _TryFinally(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _ExceptHandler(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _ClassDef(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _FunctionDef(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _For(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _If(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _While(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _With(self, t):
-        raise NotImplementedError("Not implemented yet.")
+	self._dispatch(t.value)
 
     def _Str(self, t):
         self._build_node(repr(t.s))
@@ -185,39 +126,21 @@ class ASTVisualiser:
     def _Name(self, t):
         self._build_node(repr(t.id))
 
-    def _Repr(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
     def _List(self, t):
         self._build_node("List")
 	for el in t.elts:
-	    self.dispatch(el)
+	    self._dispatch(el)
 	
-    def _ListComp(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _GeneratorExp(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _comprehension(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _IfExp(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Dict(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
     def _Tuple(self, t):
         self._build_node("Tuple")
 	for el in t.elts:
-	    self.dispatch(el)
+	    self._dispatch(el)
 
     unop = {"Invert":"~", "Not": "not", "UAdd":"+", "USub":"-"}
 
     def _UnaryOp(self, t):
         self._build_node(self.unop[t.op.__class__.__name__])
-	self.dispatch(t.operand)
+	self._dispatch(t.operand)
     
     binop = { "Add":"+", "Sub":"-", "Mult":"*", "Div":"/", "Mod":"%",
               "LShift":">>", "RShift":"<<", "BitOr":"|", "BitXor":"^", "BitAnd":"&",
@@ -225,55 +148,32 @@ class ASTVisualiser:
 
     def _BinOp(self, t):
         self._build_node(self.binop[t.op.__class__.__name__])
-	self.dispatch(t.left)
-	self.dispatch(t.right)
-
-    def _Compare(self, t):
-        raise NotImplementedError("Not implemented yet.")
+	self._dispatch(t.left)
+	self._dispatch(t.right)
 
     def _Attribute(self, t):
-        self.dispatch(t.value)
+        self._dispatch(t.value)
 	self._build_node("Attr")
 	self._build_node(t.attr)
 	self._history.pop()
 
     def _Call(self, t):
         self._build_node("Call")
-	self.dispatch(t.func)
+	self._dispatch(t.func)
 	self._build_node("Arguments")
 	for arg in t.args:
-	    self.dispatch(arg)
+	    self._dispatch(arg)
 	self._history.pop()
 	
     def _Subscript(self, t):
         self._build_node("Subscript")
-	self.dispatch(t.value)
-	self.dispatch(t.slice)
-
-    def _Ellipsis(self, t):
-        raise NotImplementedError("Not implemented yet.")
+	self._dispatch(t.value)
+	self._dispatch(t.slice)
 
     def _Index(self, t):
         self._build_node("Index")
-	self.dispatch(t.value)
+	self._dispatch(t.value)
 
-    def _Slice(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _ExtSlice(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _arguments(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _keyword(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _Lambda(self, t):
-        raise NotImplementedError("Not implemented yet.")
-
-    def _alias(self, t):
-        raise NotImplementedError("Not implemented yet.")
 
 class ObjectVisualiser:
 
