@@ -25,18 +25,8 @@ import string
 from ast import NodeVisitor
 
 
-class ASTVisualiser:
-
-    def __init__(self, outputFile="tmpvis.pdf"):
-        self._pdfFile = outputFile
-	self._count = 0
-	self._history = []
-
-    def _getFreshID(self):
-        nodeID = self._count
-	self._count = self._count + 1
-	return str(nodeID)
-
+class DOTVisualiser:
+    
     def visualise(self, tree):
         self._graph = pydot.Dot(graph_type='digraph')
         self._seen = {}
@@ -64,16 +54,17 @@ class ASTVisualiser:
 	fd.close()
 
     def _dispatch(self, tree):
-        if isinstance(tree, list):
-	    for t in tree:
-		self._dispatch(t)
-	    return
-	try:
-	    meth = getattr(self, "_"+tree.__class__.__name__)
-	except AttributeError:
-            raise NotImplementedError("Not implemented yet.")
-	meth(tree)
-	self._history.pop()
+        raise NotImplementedError("You're supposed to implement _dispatch!")
+ 
+    def __init__(self, outputFile="tmpvis.pdf"):
+        self._pdfFile = outputFile
+	self._count = 0
+	self._history = []
+
+    def _getFreshID(self):
+        nodeID = self._count
+	self._count = self._count + 1
+	return str(nodeID)
 
     def _build_node(self, nodeLabel, edgeLabel=""):
         # Identifiers for the new and previous node
@@ -93,6 +84,26 @@ class ASTVisualiser:
 
 	# In case we want to do anything with the new node
 	return nodeID
+
+    def _build_edge_to_existing(self, existingID, edgeLabel=""):
+        prevNodeID = self._history[-1]
+	edge = pydot.Edge(prevNodeID, existingID, label=edgeLabel)
+	self._graph.add_edge(edge)
+
+
+class ASTVisualiser(DOTVisualiser):
+
+    def _dispatch(self, tree):
+        if isinstance(tree, list):
+	    for t in tree:
+		self._dispatch(t)
+	    return
+	try:
+	    meth = getattr(self, "_"+tree.__class__.__name__)
+	except AttributeError:
+            raise NotImplementedError("Not implemented yet.")
+	meth(tree)
+	self._history.pop()
 
     def _Module(self, tree):
         self._build_node("Module")
@@ -175,67 +186,7 @@ class ASTVisualiser:
 	self._dispatch(t.value)
 
 
-class ObjectVisualiser:
-
-    def __init__(self, outputFile="tmpvis.pdf"):
-        self._pdfFile = outputFile
-	self._count = 0
-	self._history = []
-
-    def _getFreshID(self):
-        nodeID = self._count
-	self._count = self._count + 1
-	return str(nodeID)
-
-    def visualise(self, tree):
-        self._graph = pydot.Dot(graph_type='digraph')
-        self._seen = {}
-	self._edgeLabel = ""
-
-	# We need one node to be the root of all others
-	beginID = self._getFreshID()
-	self._graph.add_node(pydot.Node(beginID, label='begin'))
-	self._history.append(beginID)
-
-	# Traverse the rest of the tree
-	self._dispatch(tree)
-
-	# The root node is left over, and needs popping
-	self._history.pop()
-
-	# Something went wrong if there's anything left
-	if not len(self._history) == 0:
-	    raise RuntimeError("History stack not empty.")
-
-	# Create and write out pdf
-	pdf = self._graph.create_pdf(prog='dot')
-	fd = open(self._pdfFile, 'w')
-	fd.write(pdf)
-	fd.close()
-    
-    def _build_node(self, nodeLabel, edgeLabel=""):
-        # Identifiers for the new and previous node
-        nodeID = self._getFreshID()
-        prevNodeID = self._history[-1]
-                
-	# Construct new node and edge
-        node = pydot.Node(nodeID, label=nodeLabel)
-        edge = pydot.Edge(prevNodeID,nodeID,label=edgeLabel)
-        
-        # Add node and edge to graph
-        self._graph.add_node(node)
-        self._graph.add_edge(edge)
-        
-        # Add the current node to the history stack
-        self._history.append(nodeID)
-
-	# In case we want to do anything with the new node
-	return nodeID
-
-    def _build_edge_to_existing(self, existingID, edgeLabel=""):
-        prevNodeID = self._history[-1]
-	edge = pydot.Edge(prevNodeID, existingID, label=edgeLabel)
-	self._graph.add_edge(edge)
+class ObjectVisualiser(DOTVisualiser):
 
     def _dispatch(self, obj):
         # Don't redraw an object we've already seen; just link to it.
