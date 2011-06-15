@@ -17,14 +17,15 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-
+import sys
 import visitor
 import pydot
 import subprocess
+import string
 from ast import NodeVisitor
 
 
-class Visualiser:
+class ASTVisualiser:
 
     def __init__(self, outputFile="tmpvis.pdf"):
         self._pdfFile = outputFile
@@ -273,5 +274,146 @@ class Visualiser:
 
     def _alias(self, t):
         raise NotImplementedError("Not implemented yet.")
+
+class ObjectVisualiser:
+
+    def __init__(self, outputFile="tmpvis.pdf"):
+        self._pdfFile = outputFile
+	self._count = 0
+	self._history = []
+
+    def _getFreshID(self):
+        nodeID = self._count
+	self._count = self._count + 1
+	return str(nodeID)
+
+    def visualise(self, tree):
+        self._graph = pydot.Dot(graph_type='digraph')
+        self._seen = {}
+	self._edgeLabel = ""
+
+	# We need one node to be the root of all others
+	beginID = self._getFreshID()
+	self._graph.add_node(pydot.Node(beginID, label='begin'))
+	self._history.append(beginID)
+
+	# Traverse the rest of the tree
+	self._dispatch(tree)
+
+	# The root node is left over, and needs popping
+	self._history.pop()
+
+	# Something went wrong if there's anything left
+	if not len(self._history) == 0:
+	    raise RuntimeError("History stack not empty.")
+
+	# Create and write out pdf
+	pdf = self._graph.create_pdf(prog='dot')
+	fd = open(self._pdfFile, 'w')
+	fd.write(pdf)
+	fd.close()
+    
+    def _build_node(self, nodeLabel, edgeLabel=""):
+        # Identifiers for the new and previous node
+        nodeID = self._getFreshID()
+        prevNodeID = self._history[-1]
+                
+	# Construct new node and edge
+        node = pydot.Node(nodeID, label=nodeLabel)
+        edge = pydot.Edge(prevNodeID,nodeID,label=edgeLabel)
+        
+        # Add node and edge to graph
+        self._graph.add_node(node)
+        self._graph.add_edge(edge)
+        
+        # Add the current node to the history stack
+        self._history.append(nodeID)
+
+	# In case we want to do anything with the new node
+	return nodeID
+
+    def _build_edge_to_existing(self, existingID, edgeLabel=""):
+        prevNodeID = self._history[-1]
+	edge = pydot.Edge(prevNodeID, existingID, label=edgeLabel)
+	self._graph.add_edge(edge)
+
+    def _dispatch(self, obj):
+        # Don't redraw an object we've already seen; just link to it.
+	OID = id(obj)
+	if OID in self._seen.keys():
+	    nodeID = self._seen[OID]
+	    self._build_edge_to_existing(nodeID, self._edgeLabel)
+	    return
+	
+	try:
+	    meth = getattr(self, "_visit_" + obj.__class__.__name__)
+	except AttributeError:
+	    meth = self._generic_visit
+	meth(obj)
+	self._history.pop()
+
+    def _printable(self, s):
+        printable = True
+	for c in s:
+	    if c not in string.printable:
+	        printable = False
+	if printable:
+	    return s
+	else:
+	    return "Unprintable"
+
+    def _generic_visit(self, obj):
+        label = obj.__class__.__name__
+	nodeID = self._build_node(label, self._edgeLabel)
+	OID = id(obj)
+	self._seen[OID] = nodeID
+	savedLabel = self._edgeLabel
+	attrs = dir(obj)
+	visible = [ s for s in attrs if s[:2] != "__" ]
+	for a in visible:
+	    self._edgeLabel = a
+	    try:
+	        objattr = getattr(obj, a)
+	    except:
+	        self._handle_exception(sys.exc_info()[1])
+		continue
+	    attrtype = objattr.__class__.__name__
+	    if attrtype not in [ "builtin_function_or_method", "instancemethod" ]:
+	        self._dispatch(objattr)
+	self._edgeLabel = savedLabel
+
+    def _visit_int(self, obj):
+        self._build_node(str(obj), self._edgeLabel)
+
+    def _visit_str(self, obj):
+        oneline = obj.replace("\n", "/").replace("\r","")
+	printable = self._printable(oneline)
+	if len(printable) > 30:
+	    short = printable[:30] + "..."
+	else:
+	    short = printable
+        self._build_node(short, self._edgeLabel)
+
+    def _visit_list(self, obj):
+        self._visit_array(obj, "list")
+
+    def _visit_tuple(self, obj):
+        self._visit_array(obj, "tuple")
+
+    def _visit_array(self, arr, rootLabel):
+        nodeID = self._build_node(rootLabel, self._edgeLabel)
+	OID = id(arr)
+	self._seen[OID] = nodeID
+	savedLabel = self._edgeLabel
+	count = 0
+	for i in arr:
+	    self._edgeLabel = str(count)
+	    self._dispatch(i)
+	    count = count + 1
+	self._edgeLabel = savedLabel
+
+    def _handle_exception(self, ex):
+        print "getattr() failed. Not fatal. Exception follows:"
+	print str(ex)
 
 # vim:sw=4:ts=4:sts=4:et

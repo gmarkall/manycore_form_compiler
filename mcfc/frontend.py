@@ -111,7 +111,7 @@ def get_options():
 
 def visualise(ast, filename):
 
-    v = visualiser.Visualiser(filename)
+    v = visualiser.ASTVisualiser(filename)
     v.visualise(ast)
 
 if __name__ == "__main__":
