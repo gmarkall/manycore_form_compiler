@@ -19,7 +19,7 @@ from pygments.lexers import DiffLexer
 from pygments.formatters import TerminalFormatter
 
 # MCFC modules
-from mcfc import frontend
+from mcfc import frontend, optionfileparser
 
 # Global status
 failed = 0
@@ -53,12 +53,14 @@ def main():
     os.mkdir('outputs', 0755)
 
     test_formcompiler()
-    #test_optionfileparser()
+    test_optionfileparser()
 
     # Exit code is 0 if no tests failed.
     sys.exit(failed)
 
 def test_formcompiler():
+
+    print 'Running form compiler tests...'
 
     sources = ['diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
                'laplacian', 'helmholtz', 'euler-advection', 'identity-vector' ]
@@ -70,6 +72,23 @@ def test_formcompiler():
 
     # Create the outputs folder
     os.mkdir('outputs/cuda', 0755)
+
+    for sourcefile in sources:
+        tester.check(sourcefile)
+
+def test_optionfileparser():
+
+    print 'Running option file parser tests...'
+
+    sources = ['test', 'cdisk_adv_diff']
+
+    tester = AutoTester(optionfileparser.testHook, 
+        lambda name: "inputs/flml/" + name + ".flml",
+        lambda name: "outputs/optionfile/" + name + ".dat",
+        lambda name: "expected/optionfile/" + name + ".dat")
+
+    # Create the outputs folder
+    os.mkdir('outputs/optionfile', 0755)
 
     for sourcefile in sources:
         tester.check(sourcefile)
@@ -100,13 +119,13 @@ class AutoTester:
 
     def check(self, sourcefile):
 
-        print "Testing " + sourcefile
+        print "  Testing " + sourcefile
 
         inputfile = self.infile(sourcefile)
         outputfile = self.outfile(sourcefile)
         expectedfile = self.expectfile(sourcefile)
 
-        frontend.testHook(inputfile, outputfile)
+        self.testhook(inputfile, outputfile)
 
         cmd = "diff -u " + expectedfile + " " + outputfile
         diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
@@ -121,7 +140,7 @@ class AutoTester:
     def check_diff(self, sourcefile, diff):
 
         if diff:
-            print "Difference detected in %s." % sourcefile
+            print "    Difference detected in %s." % sourcefile
             global failed
             failed = 1
             
@@ -130,7 +149,7 @@ class AutoTester:
 
     def diffmenu(self, sourcefile, diffout):
         
-        print "[Continue, Abort, View, Replace, Show IR?] ",
+        print "    [Continue, Abort, View, Replace, Show IR?] ",
         response = sys.stdin.readline()
         rchar = response[0].upper()
 
@@ -149,7 +168,7 @@ class AutoTester:
             frontend.showGraph()
             self.diffmenu(sourcefile, diffout)
         else:
-            print "Please enter a valid option: ", 
+            print "    Please enter a valid option: ", 
             self.diffmenu(sourcefile, diffout)
 
 # Execute main
