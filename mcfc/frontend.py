@@ -32,7 +32,7 @@
 # Python libs
 import sys, getopt, pprint
 # MCFC libs
-import visualiser
+from visualiser import ASTVisualiser, ObjectVisualiser
 import canonicaliser
 from driverfactory import drivers
 
@@ -111,8 +111,7 @@ def get_options():
 
 def visualise(ast, filename):
 
-    v = visualiser.ASTVisualiser(filename)
-    v.visualise(ast)
+    ASTVisualiser(ast, filename)
 
 if __name__ == "__main__":
     sys.exit(main())

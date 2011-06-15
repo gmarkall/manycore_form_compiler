@@ -27,11 +27,13 @@ from ast import NodeVisitor
 
 class DOTVisualiser:
     
-    def visualise(self, tree):
-        self._graph = pydot.Dot(graph_type='digraph')
-        self._seen = {}
+    def __init__(self, tree, outputFile="tmpvis.pdf"):
+        self._count = 0
+	self._history = []
+	self._seen = {}
 	self._edgeLabel = ""
 
+        self._graph = pydot.Dot(graph_type='digraph')
 	# We need one node to be the root of all others
 	beginID = self._getFreshID()
 	self._graph.add_node(pydot.Node(beginID, label='begin'))
@@ -49,18 +51,13 @@ class DOTVisualiser:
 
 	# Create and write out pdf
 	pdf = self._graph.create_pdf(prog='dot')
-	fd = open(self._pdfFile, 'w')
+	fd = open(outputFile, 'w')
 	fd.write(pdf)
 	fd.close()
 
     def _dispatch(self, tree):
         raise NotImplementedError("You're supposed to implement _dispatch!")
  
-    def __init__(self, outputFile="tmpvis.pdf"):
-        self._pdfFile = outputFile
-	self._count = 0
-	self._history = []
-
     def _getFreshID(self):
         nodeID = self._count
 	self._count = self._count + 1
