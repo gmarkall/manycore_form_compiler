@@ -78,6 +78,9 @@ class OptionFile:
     def __init__(self, filename):
         libspud.load_options(filename)
 
+    def __del__(self):
+        libspud.clear_options()
+
     def _children(self, path, test):
         for i in range(libspud.number_of_children(path)):
             child = libspud.get_child_name(path,i)

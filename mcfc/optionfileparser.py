@@ -66,12 +66,17 @@ class OptionFileParser:
             phase = self.uflinput[key][0]
             self.uflinput[key] = ufl, self.states[phase]
 
+def testHook(inputFile, outputFile = None):
+    p = OptionFileParser(inputFile)
+    # Print to output file if given, stdout otherwise
+    with open(outputFile, 'w') if outputFile else sys.stdout as fd:
+        print >>fd, 'element types: ', p.element_types
+        print >>fd, 'states: ', p.states
+        print >>fd, 'ufl input: ', p.uflinput
+
 if __name__ == "__main__":
     import sys
     filename = sys.argv[1]
-    p = OptionFileParser(filename)
-    print 'element types: ', p.element_types
-    print 'states: ', p.states
-    print 'ufl input: ', p.uflinput
+    testHook(filename, sys.argv[2] if len(sys.argv)>2 else None)
         
 # vim:sw=4:ts=4:sts=4:et
