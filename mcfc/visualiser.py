@@ -18,7 +18,6 @@
 # holders.
 
 import sys
-import visitor
 import pydot
 import subprocess
 import string

@@ -17,7 +17,6 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from visitor import *
 from ast import NodeVisitor
 from ufl.coefficient import Coefficient
 

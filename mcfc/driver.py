@@ -18,8 +18,6 @@
 # holders.
 
 
-from visitor import *
-
 import ufl.form
 
 def findForms(uflObjects):
