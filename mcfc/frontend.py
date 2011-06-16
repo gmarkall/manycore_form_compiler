@@ -18,11 +18,9 @@
 # holders.
 
 
-"""    Frontend. Usage:
- 
-    frontend.py [options] input
+"""    Usage: frontend.py [OPTIONS] FILE
 
-    Options can be: 
+    Options: 
     
       --visualise, -v to output a visualisation of the AST
       --objvisualise  to output a deep visualisation of every ufl object
@@ -31,74 +29,74 @@
       -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
-import sys, getopt, pprint, ast
+import os, sys, getopt, pprint, ast
 # MCFC libs
+from optionfileparser import OptionFileParser
 from visualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
 import canonicaliser
 from driverfactory import drivers
+from uflstate import UflState
 
-def main():
+extensions = {'cuda': '.cu', 'op2': '.cpp'}
 
-    opts,args = get_options()
-    keys = opts.keys()
+def run(inputFile, opts = {}):
 
-    if len(args) > 0: 
-        inputFile = args[0]
-    else:
-        print "No input."
-        print __doc__
-        sys.exit(-1)
+    # Parse options
 
-    ast, uflObjects = canonicaliser.canonicalise(inputFile)
-
-    if 'visualise' in keys or 'v' in keys:
-        return visualise(ast, uflObjects, inputFile)
-
-    if 'objvisualise' in keys:
-        return visualise(ast, uflObjects, inputFile, True)
-
-    if 'o' in keys:
-        outputFile = opts['o']
-    else:
-        outputFile = inputFile[:-3] +'cu'
-
-    if 'b' in keys:
+    if 'b' in opts:
         backend = opts['b']
     else:
         backend = "cuda"
 
-    fd = open(outputFile, 'w')
-    driver = drivers[backend]()
-    driver.drive(ast, uflObjects, fd)
-    fd.close()
+    if 'o' in opts:
+        outputFileBase = os.path.splitext(opts['o'])[0]
+    else:
+        outputFileBase = os.path.splitext(inputFile)[0]
 
-    return 0
+    if 'visualise' in opts or 'v' in opts:
+        vis = True
+    else:
+        vis = False
 
-def testHook(inputFile, outputFile, backend = "cuda"):
+    # Parse input
 
-    ast, uflObjects = canonicaliser.canonicalise(inputFile)
-    fd = open(outputFile, 'w')
-    driver = drivers[backend]()
-    driver.drive(ast, uflObjects, fd)
-    fd.close()
-    return 0
+    states, uflinput = parse_input(inputFile)
 
+    for key in uflinput:
 
-def get_options():
-    try: 
-        opts, args = getopt.getopt(sys.argv[1:], "b:hvo:", ["visualise", "objvisualise"])
-    except getopt.error, msg:
-        print msg
-        print __doc__
-        sys.exit(-1)
+        outputFile = outputFileBase + "_" + key
+        ufl = uflinput[key][0]
+        state = uflinput[key][1]
+        ast, uflObjects = canonicaliser.canonicalise(ufl, state, states)
 
-    opts_dict = {}
-    for opt in opts:
-        key = opt[0].lstrip('-')
-        value = opt[1]
-        opts_dict[key] = value
-    
-    return opts_dict, args
+        if vis:
+            visualise(ast, outputFile+".pdf")
+
+        fd = open(outputFile+extensions[backend], 'w')
+        driver = drivers[backend]()
+        driver.drive(ast, uflObjects, fd)
+        fd.close()
+
+def parse_input(inputFile):
+
+    # FIXME this is for backwards compatibility, remove when not needed anymore
+    if inputFile.endswith('ufl'):
+        # read ufl input file
+        with open(inputFile, 'r') as fd:
+            ufl_input = fd.read()
+        # Build a fake state
+        phase = ""
+        state = UflState()
+        state.insert_field('Tracer',0)
+        state.insert_field('Height',0)
+        state.insert_field('Velocity',1)
+        state.insert_field('NewVelocity',1)
+        state.insert_field('TracerDiffusivity',2)
+        return {phase: state}, {phase: (ufl_input, state)}
+    else:
+        p = OptionFileParser(inputFile)
+        return p.states, p.uflinput
+
 
 def visualise(st, uflObjects, filename, obj=False):
     basename = filename[:-4]
@@ -110,6 +108,40 @@ def visualise(st, uflObjects, filename, obj=False):
 	else:
 	    rep = ast.parse(repr(uflObjects[i]))
 	    ReprVisualiser(rep, objectfile)
+    return 0
+
+def _get_options():
+    try: 
+        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvo:", ["visualise", "objvisualise"])
+    except getopt.error, msg:
+        print msg
+        print __doc__
+        sys.exit(-1)
+
+    opts = {}
+    for opt in opts_list:
+        key = opt[0].lstrip('-')
+        value = opt[1]
+        opts[key] = value
+
+    if len(args) > 0: 
+        inputFile = args[0]
+    else:
+        print "No input file given."
+        print __doc__
+        sys.exit(-1)
+
+    return inputFile, opts
+
+def main():
+    inputFile, opts = _get_options()
+    run(inputFile, opts)
+    return 0
+
+def testHook(inputFile, outputFile, backend = "cuda"):
+
+    opts = {'o': outputFile, 'b': backend}
+    run(inputFile, opts)
     return 0
 
 if __name__ == "__main__":

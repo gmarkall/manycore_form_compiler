@@ -29,17 +29,15 @@ from ufl.algorithms.tuplenotation import as_form
 # Regular python modules
 import getopt, sys, ast
 # The remaining modules are part of the form compiler
-import state
 from symbolicvalue import SymbolicValue
 
-def canonicalise(filename):
+# Intended as the front-end interface to the parser. e.g. to use,
+# call canonicalise(filename).
 
+def canonicalise(code, _state, _states):
+ 
     dt = SymbolicValue("dt")
-    namespace = { "dt": dt, "solve": solve }
-
-    fd = open(filename, 'r')
-    code = fd.read()
-    fd.close
+    namespace = { "dt": dt, "solve": solve, "state": _state, "states": _states }
 
     st = ast.parse(code)
 
