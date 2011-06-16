@@ -266,4 +266,30 @@ class ObjectVisualiser(DOTVisualiser):
         print "getattr() failed. Not fatal. Exception follows:"
 	print str(ex)
 
+class ReprVisualiser(DOTVisualiser):
+
+    def _dispatch(self, obj):
+        if isinstance(obj, list):
+	    for o in obj:
+		self._dispatch(o)
+	    return
+	try:
+	    meth = getattr(self, "_visit_"+obj.__class__.__name__)
+	except AttributeError:
+            raise NotImplementedError("Not implemented yet.")
+	meth(tree)
+        
+    def _visit_Module(self, obj):
+        for stmt in tree.body:
+	    self._dispatch(stmt)
+
+    def _visit_Expr(self, obj):
+        self._dispatch(obj.value)
+
+    def _visit_Call(self, obj):
+        self._build_node(obj.value)
+        for arg in obj.args:
+	    self._dispatch(arg)
+	self._history.pop()
+
 # vim:sw=4:ts=4:sts=4:et
