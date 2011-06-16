@@ -25,8 +25,9 @@
     Options can be: 
     
       --visualise, -v to output a visualisation of the AST
+      --objvisualise  to output a deep visualisation of every ufl object
+                      (warning: creates very big PDFs)
       -o:<filename>   to specify the output filename
-      -p, --print     to print code to screen
       -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
@@ -51,35 +52,25 @@ def main():
     ast, uflObjects = canonicaliser.canonicalise(inputFile)
 
     if 'visualise' in keys or 'v' in keys:
-        if 'o' in keys:
-            outputFile = opts['o']
-        else:
-            outputFile = inputFile[:-3] + "pdf"
-        visualise(ast, uflObjects, outputFile)
-        return 0
+        return visualise(ast, uflObjects, inputFile)
+
+    if 'objvisualise' in keys:
+        return visualise(ast, uflObjects, inputFile, True)
 
     if 'o' in keys:
         outputFile = opts['o']
     else:
         outputFile = inputFile[:-3] +'cu'
 
-    if 'print' in keys or 'p' in keys:
-        screen = True
-        fd = sys.stdout
-    else:
-        screen = False
-        fd = open(outputFile, 'w')
-
     if 'b' in keys:
         backend = opts['b']
     else:
         backend = "cuda"
 
+    fd = open(outputFile, 'w')
     driver = drivers[backend]()
     driver.drive(ast, uflObjects, fd)
-
-    if not screen:
-        fd.close()
+    fd.close()
 
     return 0
 
@@ -95,7 +86,7 @@ def testHook(inputFile, outputFile, backend = "cuda"):
 
 def get_options():
     try: 
-        opts, args = getopt.getopt(sys.argv[1:], "b:hvpo:", ["visualise", "print"])
+        opts, args = getopt.getopt(sys.argv[1:], "b:hvo:", ["visualise", "objvisualise"])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -109,13 +100,17 @@ def get_options():
     
     return opts_dict, args
 
-def visualise(st, uflObjects, filename):
-
-    ASTVisualiser(st, filename)
+def visualise(st, uflObjects, filename, obj=False):
+    basename = filename[:-4]
+    ASTVisualiser(st, basename + ".pdf")
     for i in uflObjects.keys():
-        objectfile = "%s_%s.pdf" % (filename[:-4], i)
-	rep = ast.parse(repr(uflObjects[i]))
-	ReprVisualiser(rep, objectfile)
+        objectfile = "%s_%s.pdf" % (basename, i)
+	if obj:
+	    ObjectVisualiser(uflObjects[i], objectfile)
+	else:
+	    rep = ast.parse(repr(uflObjects[i]))
+	    ReprVisualiser(rep, objectfile)
+    return 0
 
 if __name__ == "__main__":
     sys.exit(main())
