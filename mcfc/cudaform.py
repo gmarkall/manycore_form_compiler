@@ -42,11 +42,8 @@ class CudaFormBackend(FormBackend):
 
     def compile(self, name, form):
 
-        if form.form_data() is None:
-            form = preprocess(form)
-
         integrand = form.integrals()[0].integrand()
-        form_data = form.form_data()
+        form_data = form.compute_form_data()
         rank = form_data.rank
         
         # Things for kernel declaration.

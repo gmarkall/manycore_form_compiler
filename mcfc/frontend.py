@@ -39,7 +39,7 @@ from uflstate import UflState
 
 extensions = {'cuda': '.cu', 'op2': '.cpp'}
 
-def run(inputFile, opts = {}):
+def run(inputFile, opts = None):
 
     # Parse options
 

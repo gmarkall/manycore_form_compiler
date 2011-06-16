@@ -50,7 +50,11 @@ def canonicalise(code, _state, _states):
 
     for name, value in namespace.iteritems():
         if isinstance(value, (ufl.form.Form, tuple)):
-	    uflObjects[name] = ufl.algorithms.preprocess(as_form(value))
+	    form = as_form(value)
+	    form_data = form.compute_form_data()
+	    form = form_data.preprocessed_form
+	    form._form_data = form_data
+	    uflObjects[name] = form
 	elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
 	    uflObjects[name] = value
 
@@ -60,8 +64,7 @@ def canonicalise(code, _state, _states):
 # to continue
 
 def solve(M,b):
-    vector = ufl.algorithms.preprocess(b)
-    form_data = vector.form_data()
+    form_data = b.compute_form_data()
     element = form_data.arguments[0].element()
     return ufl.coefficient.Coefficient(element)
 

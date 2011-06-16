@@ -398,7 +398,7 @@ def buildArgumentName(tree):
             element = sub_elements[0]
         
     name = element.shortstr()
-    return name
+    return name[:name.find('(')]
 
 def buildSpatialDerivativeName(tree):
     operand = tree.operands()[0]
