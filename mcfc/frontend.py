@@ -53,10 +53,9 @@ def run(inputFile, opts = {}):
     else:
         outputFileBase = os.path.splitext(inputFile)[0]
 
+    vis = False
     if 'visualise' in opts or 'v' in opts:
         vis = True
-    else:
-        vis = False
 
     # Parse input
 
@@ -70,7 +69,8 @@ def run(inputFile, opts = {}):
         ast, uflObjects = canonicaliser.canonicalise(ufl, state, states)
 
         if vis:
-            visualise(ast, outputFile+".pdf")
+            visualise(ast, uflObjects, inputFile)
+            continue
 
         fd = open(outputFile+extensions[backend], 'w')
         driver = drivers[backend]()
