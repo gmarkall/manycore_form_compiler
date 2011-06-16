@@ -276,20 +276,55 @@ class ReprVisualiser(DOTVisualiser):
 	try:
 	    meth = getattr(self, "_visit_"+obj.__class__.__name__)
 	except AttributeError:
-            raise NotImplementedError("Not implemented yet.")
-	meth(tree)
+            print "Class:", obj.__class__.__name__
+	    raise NotImplementedError("Not implemented yet.")
+	meth(obj)
         
     def _visit_Module(self, obj):
-        for stmt in tree.body:
+        for stmt in obj.body:
 	    self._dispatch(stmt)
 
     def _visit_Expr(self, obj):
         self._dispatch(obj.value)
 
     def _visit_Call(self, obj):
-        self._build_node(obj.value)
+        self._build_node(obj.func.id)
         for arg in obj.args:
 	    self._dispatch(arg)
+	self._history.pop()
+
+    def _visit_List(self, obj):
+        self._generic_visit_array(obj, "list")
+
+    def _visit_Tuple(self, obj):
+        self._generic_visit_array(obj, "tuple")
+
+    def _generic_visit_array(self, obj, label):
+        self._build_node(label)
+	for item in obj.elts:
+	    self._dispatch(item)
+	self._history.pop()
+
+    def _visit_Num(self, obj):
+        self._build_node(str(obj.n))
+	self._history.pop()
+
+    def _visit_Dict(self, obj):
+        self._build_node("dict")
+        for key, value in zip(obj.keys, obj.values):
+	    self._build_node("item")
+	    self._dispatch(key)
+	    self._dispatch(value)
+	    self._history.pop()
+	self._history.pop()
+
+    def _visit_Str(self, obj):
+        s = "'%s'" % obj.s
+	self._build_node(s)
+	self._history.pop()
+
+    def _visit_Name(self, obj):
+        self._build_node(obj.id)
 	self._history.pop()
 
 # vim:sw=4:ts=4:sts=4:et

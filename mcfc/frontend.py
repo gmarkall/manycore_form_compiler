@@ -30,9 +30,9 @@
       -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
-import sys, getopt, pprint
+import sys, getopt, pprint, ast
 # MCFC libs
-from visualiser import ASTVisualiser, ObjectVisualiser
+from visualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
 import canonicaliser
 from driverfactory import drivers
 
@@ -109,12 +109,13 @@ def get_options():
     
     return opts_dict, args
 
-def visualise(ast, uflObjects, filename):
+def visualise(st, uflObjects, filename):
 
-    ASTVisualiser(ast, filename)
+    ASTVisualiser(st, filename)
     for i in uflObjects.keys():
         objectfile = "%s_%s.pdf" % (filename[:-4], i)
-	ObjectVisualiser(uflObjects[i], objectfile)
+	rep = ast.parse(repr(uflObjects[i]))
+	ReprVisualiser(rep, objectfile)
 
 if __name__ == "__main__":
     sys.exit(main())
