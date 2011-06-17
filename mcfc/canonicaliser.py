@@ -35,7 +35,11 @@ from symbolicvalue import SymbolicValue
 # call canonicalise(filename).
 
 def canonicalise(code, _state, _states):
- 
+
+    _state.readyToRun()
+    for key in _states:
+        _states[key].readyToRun()
+
     dt = SymbolicValue("dt")
     namespace = { "dt": dt, "solve": solve, "state": _state, "states": _states }
 
@@ -44,7 +48,7 @@ def canonicalise(code, _state, _states):
     code = "from ufl import *\n" + \
            "" + code
     exec code in namespace
-    
+
     uflObjects = {}
 
     for name, value in namespace.iteritems():

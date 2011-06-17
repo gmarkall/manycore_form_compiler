@@ -27,6 +27,8 @@ class field_dict(dict):
 
     def __init__(self):
         self._run = False
+	self._accessedFields = set()
+	self._returnedFields = set()
 	dict.__init__(self)
 
     def readyToRun(self):
@@ -36,12 +38,12 @@ class field_dict(dict):
 
     def __getitem__(self, key):
         if self._run:
-            accessedFields.add(key)
+            self._accessedFields.add(key)
 	return dict.__getitem__(self, key)
 
     def __setitem__(self, key, data):
         if self._run:
-	    returnedFields.add(key)
+	    self._returnedFields.add(key)
 	dict.__setitem__(self, key, data)
 
 class UflState:
@@ -71,5 +73,10 @@ class UflState:
 
     def insert_field(self, field, rank, shape = 'CG', degree = 1):
         self[rank][field] = ufl_elements[rank](shape, "triangle", degree)
+
+    def readyToRun(self):
+        self.scalar_fields.readyToRun()
+        self.vector_fields.readyToRun()
+        self.tensor_fields.readyToRun()
 
 # vim:sw=4:ts=4:sts=4:et
