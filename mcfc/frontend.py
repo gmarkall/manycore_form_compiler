@@ -107,11 +107,11 @@ def visualise(st, uflObjects, filename, obj=False):
     ASTVisualiser(st, basename + ".pdf")
     for i in uflObjects.keys():
         objectfile = "%s_%s.pdf" % (basename, i)
-	if obj:
-	    ObjectVisualiser(uflObjects[i], objectfile)
-	else:
-	    rep = ast.parse(repr(uflObjects[i]))
-	    ReprVisualiser(rep, objectfile)
+        if obj:
+            ObjectVisualiser(uflObjects[i], objectfile)
+        else:
+            rep = ast.parse(repr(uflObjects[i]))
+            ReprVisualiser(rep, objectfile)
     return 0
 
 def _get_options():

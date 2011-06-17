@@ -135,7 +135,7 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         for r in range(rank):
             index = DimIndex(r)
             indices.append(index)
-	indices.append(BasisIndex(0))
+        indices.append(BasisIndex(0))
         return indices
 
     def subscript_argument(self, tree):

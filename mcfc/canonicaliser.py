@@ -43,20 +43,20 @@ def canonicalise(code, _state, _states):
 
     code = "from ufl import *\n" + \
            "from mcfc import state\n" + \
-	   "" + code
+           "" + code
     exec code in namespace
     
     uflObjects = {}
 
     for name, value in namespace.iteritems():
         if isinstance(value, (ufl.form.Form, tuple)):
-	    form = as_form(value)
-	    form_data = form.compute_form_data()
-	    form = form_data.preprocessed_form
-	    form._form_data = form_data
-	    uflObjects[name] = form
-	elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
-	    uflObjects[name] = value
+            form = as_form(value)
+            form_data = form.compute_form_data()
+            form = form_data.preprocessed_form
+            form._form_data = form_data
+            uflObjects[name] = form
+        elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
+            uflObjects[name] = value
 
     return st, uflObjects
 

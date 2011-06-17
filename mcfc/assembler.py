@@ -31,31 +31,31 @@ class AccessedFieldFinder(NodeVisitor):
 
     def find(self, tree):
         self._fields = []
-	self.visit(tree)
-	return self._fields
+        self.visit(tree)
+        return self._fields
 
     def visit_Assign(self, tree):
-	rhs = tree.value
-	if len(tree.targets)==1:
-	    try:
-	        # subscript -> attribute -> name
-	        objname = rhs.value.value.id
-		# subscript -> attribute -> string
-		objmember = rhs.value.attr
-		if objname == "state":
-		    if objmember == "scalar_fields":
-		        rank = 0
-		    if objmember == "vector_fields":
-		        rank = 1
-		    if objmember == "tensor_fields":
-		        rank = 2
-		    fieldname = rhs.slice.value.s
-		    self._fields.append((rank, fieldname))
-	    except AttributeError:
-	        # This is not a field access, so no action necessary.
-		pass
-	else:
-	    raise NotImplementedError("Tuple assignment needs implementing.")
+        rhs = tree.value
+        if len(tree.targets)==1:
+            try:
+                # subscript -> attribute -> name
+                objname = rhs.value.value.id
+                # subscript -> attribute -> string
+                objmember = rhs.value.attr
+                if objname == "state":
+                    if objmember == "scalar_fields":
+                        rank = 0
+                    if objmember == "vector_fields":
+                        rank = 1
+                    if objmember == "tensor_fields":
+                        rank = 2
+                    fieldname = rhs.slice.value.s
+                    self._fields.append((rank, fieldname))
+            except AttributeError:
+                # This is not a field access, so no action necessary.
+                pass
+        else:
+            raise NotImplementedError("Tuple assignment needs implementing.")
 
 def findAccessedFields(tree):
     AFF = AccessedFieldFinder()
@@ -65,22 +65,22 @@ class SolveResultFinder(NodeVisitor):
 
     def find(self, tree):
         self._results = []
-	self.visit(tree)
-	return self._results
+        self.visit(tree)
+        return self._results
 
     def visit_Assign(self, tree):
         rhs = tree.value
-	if len(tree.targets)==1:
-	    try:
-	        func = rhs.func.id
-		if func == "solve":
-		    result = tree.targets[0].id
-		    self._results.append(result)
-	    except AttributeError:
-	        # This is not a call to a solve, so no action is required anywya
-	        pass
-	else:
-	    raise NotImplementedError("Tuple assignment not implemented")
+        if len(tree.targets)==1:
+            try:
+                func = rhs.func.id
+                if func == "solve":
+                    result = tree.targets[0].id
+                    self._results.append(result)
+            except AttributeError:
+                # This is not a call to a solve, so no action is required anywya
+                pass
+        else:
+            raise NotImplementedError("Tuple assignment not implemented")
 
 def findSolveResults(tree):
     SRF = SolveResultFinder()
@@ -98,16 +98,16 @@ class SolveFinder(NodeVisitor):
     
     def visit_Assign(self, tree):
         rhs = tree.value
-	if len(tree.targets)==1:
-	    try:
-	        func = rhs.func.id
-		if func == "solve":
-		    self._solves.append(tree)
-	    except AttributeError:
-	        # This is not a call to a solve, so no action is required anywya
-	        pass
-	else:
-	    raise NotImplementedError("Tuple assignment not implemented.")
+        if len(tree.targets)==1:
+            try:
+                func = rhs.func.id
+                if func == "solve":
+                    self._solves.append(tree)
+            except AttributeError:
+                # This is not a call to a solve, so no action is required anywya
+                pass
+        else:
+            raise NotImplementedError("Tuple assignment not implemented.")
 
 def findSolves(tree):
     SF = SolveFinder()
@@ -123,20 +123,20 @@ class FieldVarFinder(NodeVisitor):
 
     def visit_Assign(self, tree):
         if len(tree.targets) == 1:
-	    target = tree.targets[0]
-	    try:
-	        var = target.id
-	    except AttributeError:
-	        # If this happens, the LHS is not what we're looking for.
-		return
-	    if var == self._name:
-	        try:
-		    self._fieldVar = tree.value.args[0].id
-	        except AttributeError:
-		    # If we got here, then the RHS was not as expected
-		    raise RuntimeError("Unexpected RHS for coefficient %s" % self._name)
-	else:
-	    raise NotImplementedError("Tuple assignment not implemented.")
+            target = tree.targets[0]
+            try:
+                var = target.id
+            except AttributeError:
+                # If this happens, the LHS is not what we're looking for.
+                return
+            if var == self._name:
+                try:
+                    self._fieldVar = tree.value.args[0].id
+                except AttributeError:
+                    # If we got here, then the RHS was not as expected
+                    raise RuntimeError("Unexpected RHS for coefficient %s" % self._name)
+        else:
+            raise NotImplementedError("Tuple assignment not implemented.")
 
 class FieldNameFinder(NodeVisitor):
 
@@ -148,28 +148,28 @@ class FieldNameFinder(NodeVisitor):
 
     def visit_Assign(self, tree):
         if len(tree.targets) == 1:
-	    target = tree.targets[0]
-	    try:
-	        var = target.id
+            target = tree.targets[0]
+            try:
+                var = target.id
             except AttributeError:
-	        # If this happens, the LHS is not what we're looking for.
-		return
-	    try:
-	        if var == self._var:
-	            self._field = tree.value.slice.value.s
+                # If this happens, the LHS is not what we're looking for.
+                return
+            try:
+                if var == self._var:
+                    self._field = tree.value.slice.value.s
             except AttributeError:
-		# If we got here, then the RHS was not as expected
-		raise RuntimeError("Unexpected RHS for field var %s" % self._var)
-	else:
-	    raise NotImplementedError("Tuple assignment not implemented.")
-	   
+                # If we got here, then the RHS was not as expected
+                raise RuntimeError("Unexpected RHS for field var %s" % self._var)
+        else:
+            raise NotImplementedError("Tuple assignment not implemented.")
+           
 def findCoefficientName(uflObjects, coeff):
     seeking = coeff.count()
     for key, value in uflObjects.items():
         if isinstance(value, Coefficient):
-	    count = value.count()
-	    if count == seeking:
-	        return key
+            count = value.count()
+            if count == seeking:
+                return key
     print "Warning: coefficient not found."
 
 def findFieldFromCoefficient(ast, uflObjects, coeff):
@@ -189,24 +189,24 @@ class ReturnedFieldFinder(NodeVisitor):
        return self._returnFields
 
     def visit_Assign(self, tree):
-	if len(tree.targets) == 1:
-	    try:
-	        lhs = tree.targets[0]
+        if len(tree.targets) == 1:
+            try:
+                lhs = tree.targets[0]
                 rhs = tree.value
-	        # subscript -> attribute -> name
-		objname = lhs.value.value.id
-		# subscript -> attribute -> string
-		objmember = lhs.value.attr
-		fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
-		if objname == "state" and objmember in fieldholders:
-		    hostField = lhs.slice.value.s
-		    GPUField  = rhs.id
-		    self._returnFields.append((hostField, GPUField))
+                # subscript -> attribute -> name
+                objname = lhs.value.value.id
+                # subscript -> attribute -> string
+                objmember = lhs.value.attr
+                fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
+                if objname == "state" and objmember in fieldholders:
+                    hostField = lhs.slice.value.s
+                    GPUField  = rhs.id
+                    self._returnFields.append((hostField, GPUField))
             except AttributeError:
-	        # This is not a returning of a field, so no action required.
-	        pass
-	else:
-	    raise NotImplementedError("Tuple assignment not implemented.")
+                # This is not a returning of a field, so no action required.
+                pass
+        else:
+            raise NotImplementedError("Tuple assignment not implemented.")
 
 def findReturnedFields(ast):
     RFF = ReturnedFieldFinder()
