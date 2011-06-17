@@ -21,12 +21,35 @@ from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 
 ufl_elements = [FiniteElement, VectorElement, TensorElement]
 
+class field_dict(dict):
+    """Used for the state.xxx_fields dicts. It functions like a regular dict,
+       but remembers which keys are set and get when in the 'run' mode."""
+
+    def __init__(self):
+        self._run = False
+	dict.__init__(self)
+
+    def readyToRun(self):
+        """Call this when the dict has been set up with the fields, before
+	   the ufl input runs"""
+	self._run = True
+
+    def __getitem__(self, key):
+        if self._run:
+            accessedFields.add(key)
+	return dict.__getitem__(self, key)
+
+    def __setitem__(self, key, data):
+        if self._run:
+	    returnedFields.add(key)
+	dict.__setitem__(self, key, data)
+
 class UflState:
 
     def __init__(self):
-        self.scalar_fields = {}
-        self.vector_fields = {}
-        self.tensor_fields = {}
+        self.scalar_fields = field_dict()
+        self.vector_fields = field_dict()
+        self.tensor_fields = field_dict()
 
     def __getitem__(self,key):
 
