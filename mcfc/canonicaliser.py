@@ -42,7 +42,6 @@ def canonicalise(code, _state, _states):
     st = ast.parse(code)
 
     code = "from ufl import *\n" + \
-           "from mcfc import state\n" + \
            "" + code
     exec code in namespace
     
