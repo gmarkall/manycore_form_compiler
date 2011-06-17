@@ -24,7 +24,7 @@
     
       --visualise, -v to output a visualisation of the AST
       --objvisualise  to output a deep visualisation of every ufl object
-                      (warning: creates very big PDFs)
+                      (warning: creates very big PDFs), implies --visualise
       -o:<filename>   to specify the output filename
       -b:<backend>    to specify the backend (defaults to CUDA)"""
 
@@ -56,6 +56,10 @@ def run(inputFile, opts = None):
     vis = False
     if 'visualise' in opts or 'v' in opts:
         vis = True
+    objvis = False
+    if 'objvisualise' in opts:
+        vis = True
+        objvis = True
 
     # Parse input
 
@@ -69,7 +73,7 @@ def run(inputFile, opts = None):
         ast, uflObjects = canonicaliser.canonicalise(ufl, state, states)
 
         if vis:
-            visualise(ast, uflObjects, inputFile)
+            visualise(ast, uflObjects, inputFile, objvis)
             continue
 
         fd = open(outputFile+extensions[backend], 'w')
