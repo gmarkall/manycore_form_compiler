@@ -25,48 +25,40 @@ the input and write it out.
 # The UFL packages are required so that the sources execute correctly
 # when they are read in
 import ufl
-# For indices, measures, spaces and cells pretty syntax (dx, i, j, etc...)
-from ufl.objects import *
+from ufl.algorithms.tuplenotation import as_form
 # Regular python modules
 import getopt, sys, ast
-# Python unparser
-from unparse import Unparser
-# For getting unparsed stuff to execute it
-import StringIO
-# If we need debugging
-import pdb
 # The remaining modules are part of the form compiler
 from symbolicvalue import SymbolicValue
-
-
-def init():
-
-    # Symbolic values that we need during the interpretation of UFL
-    global dt
-    # List of the temporary fields, and their elements
-    global _uflObjects
-
-    _uflObjects = {}
-    dt = SymbolicValue("dt")
 
 # Intended as the front-end interface to the parser. e.g. to use,
 # call canonicalise(filename).
 
-def canonicalise(ufl, _state, _states):
-   
-    global state, states
-    state = _state
-    states = _states
+def canonicalise(code, _state, _states):
+ 
+    dt = SymbolicValue("dt")
+    namespace = { "dt": dt, "solve": solve, "state": _state, "states": _states }
 
-    init()
+    st = ast.parse(code)
 
-    canonical = StringIO.StringIO()
+    code = "from ufl import *\n" + \
+           "from mcfc import state\n" + \
+           "" + code
+    exec code in namespace
+    
+    uflObjects = {}
 
-    # Interpret the UFL file line by line
-    for line in ufl:
-        UFLInterpreter(line, canonical)
+    for name, value in namespace.iteritems():
+        if isinstance(value, (ufl.form.Form, tuple)):
+            form = as_form(value)
+            form_data = form.compute_form_data()
+            form = form_data.preprocessed_form
+            form._form_data = form_data
+            uflObjects[name] = form
+        elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
+            uflObjects[name] = value
 
-    return canonical.getvalue(), _uflObjects
+    return st, uflObjects
 
 # Solve needs to return an appropriate function in order for the interpretation
 # to continue
@@ -74,12 +66,7 @@ def canonicalise(ufl, _state, _states):
 def solve(M,b):
     form_data = b.compute_form_data()
     element = form_data.arguments[0].element()
-    return Coefficient(element)
-
-# Action needs to do the same trick
-
-def action(M,v):
-    return ufl.formoperators.action(M,v)
+    return ufl.coefficient.Coefficient(element)
 
 def main():
     
@@ -107,197 +94,6 @@ def main():
     print canonical
 
     return 0
-
-
-def Coefficient(arg):
-    return ufl.coefficient.Coefficient(arg)
-
-def TestFunction(arg):
-    return ufl.argument.TestFunction(arg)
-
-def TestFunctions(*args):
-    uflArgs = args[0]
-    return ufl.argument.TestFunctions(uflArgs)
-
-def TrialFunctions(*args):
-    uflArgs = args[0]
-    return ufl.argument.TrialFunctions(uflArgs)
-
-def TrialFunction(arg):
-    return ufl.argument.TrialFunction(arg)
-
-def dot(arg1, arg2):
-    return ufl.operators.dot(arg1,arg2)
-
-def inner(arg1, arg2):
-    return ufl.operators.inner(arg1, arg2)
-
-def grad(arg):
-    return ufl.operators.grad(arg)
-
-def div(arg):
-    return ufl.operators.div(arg)
-
-def adjoint(arg):
-    return ufl.formoperators.adjoint(arg)
-
-def as_vector(*args):
-    uflArgs = args[0]
-    return ufl.tensors.as_vector(uflArgs)
-
-def split(arg):
-    return ufl.split_functions.split(arg)
-
-def charstolines(chars):
-
-    lines = []
-    line = ''
-
-    for char in chars:
-        if not char == '\n':
-            line = line + char
-        else:
-            lines.append(line)
-            line = ''
-    
-    return lines
-
-class UFLInterpreter:
-
-    def __init__(self, line, f=sys.stdout):
-        self._file = f
-        st = ast.parse(line)
-        print >>self._file, '# ' + line
-        self.dispatch(st)
-        self._file.flush
-
-    def dispatch(self, tree):
-        if isinstance(tree, list):
-            for s in tree:
-                self.dispatch(s)
-        name = "_"+tree.__class__.__name__
-        
-        try:
-            meth = getattr(self, name)
-        except AttributeError:
-            return
-        meth(tree)
-
-    def _Module(self, tree):
-        for stmt in tree.body:
-            self.dispatch(stmt)
-            
-    def _Assign(self, tree):
-
-        global _uflObjects
-        
-        # Since we execute code from the source file in this function,
-        # all locals are prefixed with _ to prevent name collision.
- 
-        # Get the left-hand side of the assignment
-        _lhs = tree.targets[0]
-        _target = unparse(_lhs)
-
-        # Get the AST of the right-hand side of the expression
-        _rhs = tree.value
-        # Evaluate the RHS of the expression
-        _statement =  _target + ' = ' + unparse(_rhs)
-        exec(_statement,globals())
-        
-        # Get hold of the result of the execution
-        _result = eval(_target)
-        # If the result of executing the RHS is a form, we need to
-        # preprocess it
-        if isinstance(_result, ufl.form.Form):
-            # Compute the form data (internally preprocesses the form)
-            form_data = _result.compute_form_data()
-            # Overwrite with preprocessed form extracted from form data
-            _result = form_data.preprocessed_form
-            # Re-attach form data
-            _result._form_data = form_data
-
-        # Stash the resulting object. If it's a tuple of objects,
-        # we need to stash each individual one separately so they
-        # can be retrieved individually later on.
-        if isinstance(_lhs, ast.Tuple):
-            count = len(_lhs.elts)
-            for i in range(count):
-                key = _lhs.elts[i].id
-                _uflObjects[key] = _result[i]
-        else:
-            _uflObjects[_target] = _result
-            
-        if isToBeExecuted(_lhs,_rhs):
-            # Create an assignment statement that assigns the result of 
-            # executing the statement to the LHS.
-           
-            # Construct the representation that we are going to print
-            _newstatement = _target + ' = ' + repr(_result)
-            
-            # If the RHS uses values from a field, we need to remember
-            # which field it is from.
-            if usesValuesFromField(_rhs):
-                _source = getSourceField(_rhs)
-                _newstatement = _newstatement + ' & source(' + _source + ')'
-
-            print >>self._file, _newstatement
-        # This is the case where we print the original statement, not the
-        # result of executing it
-        else:
-            print >>self._file, _statement
-
-def isToBeExecuted(lhs,rhs):
-    # We don't want to put the result of executing certain functions
-    # in our output source code. Instead, we want to print them out
-    # verbatim. These include solve, and action.
-    
-    # If the LHS is a subscript, then it is returning something into
-    # state. Either the RHS is a variable, or it is a solve or
-    # action, or a sum of functions. In any of these cases, we don't
-    # want to print the result of executing it.
-    if isinstance(lhs, ast.Subscript):
-        return False
-
-    # Anything that isn't a function is to be executed, except subscripts
-    # (Because subscripts provide access to the syntax for state)
-    if not isinstance(rhs, ast.Call):
-        if isinstance(rhs, ast.Subscript):
-            return False
-        else:
-            return True
-    
-    # Check if the function is one to avoid executing
-    name = rhs.func.id
-    if name in ['solve']:
-        return False
-    else:
-        return True
-
-def usesValuesFromField(st):
-    # TestFunctions, TrialFunctions and Coefficients use values that
-    # we need to pull from fields.
-    
-    # Things that aren't functions don't use values from a field
-    # (well, not directly anyway, so we don't care)
-    if not isinstance(st, ast.Call):
-        return False
-    
-    name = st.func.id
-    if name in ['TestFunction', 'TrialFunction', 'Coefficient']:
-        return True
-    else:
-        return False
-
-def getSourceField(st):
-    # Get us the name of the field from which the argument's value
-    # is derived.
-    return st.args[0].id
-
-def unparse(st):
-    value = StringIO.StringIO()
-    Unparser(st,value)
-    return value.getvalue().rstrip('\n')
-
 
 if __name__ == "__main__":
     sys.exit(main())

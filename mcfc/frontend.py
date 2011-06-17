@@ -22,21 +22,17 @@
 
     Options: 
     
-      --visualise, -v Output a DAG of the AST as a PDF file
-      --split, -s     Output a PDF file for each line of UFL input
-      -o:<filename>   Specify the output file basename
-      -p, --print     Output to stdout instead of file
-      -b:<backend>    Specify the backend (defaults to CUDA)"""
+      --visualise, -v to output a visualisation of the AST
+      --objvisualise  to output a deep visualisation of every ufl object
+                      (warning: creates very big PDFs), implies --visualise
+      -o:<filename>   to specify the output filename
+      -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
-import os, sys, getopt, pprint
-# ANTLR runtime and generated code
-import antlr3
-from uflLexer import uflLexer
-from uflParser import uflParser
+import os, sys, getopt, pprint, ast
 # MCFC libs
 from optionfileparser import OptionFileParser
-import visualiser
+from visualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
 import canonicaliser
 from driverfactory import drivers
 from uflstate import UflState
@@ -57,17 +53,13 @@ def run(inputFile, opts = None):
     else:
         outputFileBase = os.path.splitext(inputFile)[0]
 
-    screen = False
-    if 'print' in opts or 'p' in opts:
-        screen = True
-        fd = sys.stdout
-
     vis = False
-    split = False
     if 'visualise' in opts or 'v' in opts:
         vis = True
-        if 'split' in opts or 's' in opts:
-            split = True
+    objvis = False
+    if 'objvisualise' in opts:
+        vis = True
+        objvis = True
 
     # Parse input
 
@@ -76,24 +68,18 @@ def run(inputFile, opts = None):
     for key in uflinput:
 
         outputFile = outputFileBase + key
-
-        ufl = uflinput[key][0].splitlines()
+        ufl = uflinput[key][0]
         state = uflinput[key][1]
-
-        ast, uflObjects = readSource(ufl, state, states)
+        ast, uflObjects = canonicaliser.canonicalise(ufl, state, states)
 
         if vis:
-            visualise(ast, outputFile, split)
+            visualise(ast, uflObjects, inputFile, objvis)
             continue
 
-        if not screen:
-            fd = open(outputFile+extensions[backend], 'w')
-
+        fd = open(outputFile+extensions[backend], 'w')
         driver = drivers[backend]()
         driver.drive(ast, uflObjects, fd)
-
-        if not screen:
-            fd.close()
+        fd.close()
 
 def parse_input(inputFile):
 
@@ -116,31 +102,21 @@ def parse_input(inputFile):
         return p.states, p.uflinput
 
 
-def visualise(ast, filename, split = False):
-
-    v = visualiser.Visualiser()
-    if split:
-        for i, child in enumerate(ast.getChildren()):
-            v.visualise(child, "%s%02d.pdf" % (filename, i))
-    else:
-        v.visualise(ast, filename+".pdf")
-
-def readSource(ufl, state, states):
-
-    canned, uflObjects = canonicaliser.canonicalise(ufl, state, states)
-    charStream = antlr3.ANTLRStringStream(canned)
-    lexer = uflLexer(charStream)
-    tokens = antlr3.CommonTokenStream(lexer)
-    tokens.discardOffChannelTokens = True
-    parser = uflParser(tokens)
-    r = parser.file_input()
-    root = r.tree
-    
-    return root, uflObjects
+def visualise(st, uflObjects, filename, obj=False):
+    basename = filename[:-4]
+    ASTVisualiser(st, basename + ".pdf")
+    for i in uflObjects.keys():
+        objectfile = "%s_%s.pdf" % (basename, i)
+        if obj:
+            ObjectVisualiser(uflObjects[i], objectfile)
+        else:
+            rep = ast.parse(repr(uflObjects[i]))
+            ReprVisualiser(rep, objectfile)
+    return 0
 
 def _get_options():
     try: 
-        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvspo:", ["visualise", "split", "print"])
+        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvo:", ["visualise", "objvisualise"])
     except getopt.error, msg:
         print msg
         print __doc__

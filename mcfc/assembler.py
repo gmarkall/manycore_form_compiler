@@ -17,7 +17,8 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from visitor import *
+from ast import NodeVisitor
+from ufl.coefficient import Coefficient
 
 # Placeholder; will probably fill with things later on.
 # Should be inherited by all assembler implementations.
@@ -26,191 +27,186 @@ class AssemblerBackend:
     def compile(self, ast, uflObjects):
         raise NotImplementedError("You're supposed to implement compile()!")
 
-class AccessedFieldFinder(AntlrVisitor):
-    """ Traverses an antlr tree and returns a list of tuples of rank and field
-    name for all fields accessed from state. """
-
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
+class AccessedFieldFinder(NodeVisitor):
 
     def find(self, tree):
         self._fields = []
-        self.traverse(tree)
+        self.visit(tree)
         return self._fields
 
-    def visit(self, tree):
-        label = str(tree)
-
-        if label == '=':
-            rhs = tree.getChild(1)
-            if str(rhs) == 'scalar_fields':
-                rank = 0
-            elif str(rhs) == 'vector_fields':
-                rank = 1
-            elif str(rhs) == 'tensor_fields':
-                rank = 2
-            else:
-                return
-            field = str(rhs.getChild(0))
-            # Strip off the quotes
-            field = field[1:-1]
-            self._fields.append((rank, field))
-
-    def pop(self):
-        pass
+    def visit_Assign(self, tree):
+        rhs = tree.value
+        if len(tree.targets)==1:
+            try:
+                # subscript -> attribute -> name
+                objname = rhs.value.value.id
+                # subscript -> attribute -> string
+                objmember = rhs.value.attr
+                if objname == "state":
+                    if objmember == "scalar_fields":
+                        rank = 0
+                    if objmember == "vector_fields":
+                        rank = 1
+                    if objmember == "tensor_fields":
+                        rank = 2
+                    fieldname = rhs.slice.value.s
+                    self._fields.append((rank, fieldname))
+            except AttributeError:
+                # This is not a field access, so no action necessary.
+                pass
+        else:
+            raise NotImplementedError("Tuple assignment needs implementing.")
 
 def findAccessedFields(tree):
     AFF = AccessedFieldFinder()
     return AFF.find(tree)
 
-class SolveResultFinder(AntlrVisitor):
-    """ Traverses an antlr tree and returns a list of all the field names that
-    the result of a solve is assigned to. """
-
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
+class SolveResultFinder(NodeVisitor):
 
     def find(self, tree):
         self._results = []
-        self.traverse(tree)
+        self.visit(tree)
         return self._results
 
-    def visit(self, tree):
-        label = str(tree)
-
-        if label == '=':
-            rhs = tree.getChild(1)
-            if str(rhs) == 'solve':
-                result = str(tree.getChild(0))
-                self._results.append(result)
-
-    def pop(self):
-        pass
+    def visit_Assign(self, tree):
+        rhs = tree.value
+        if len(tree.targets)==1:
+            try:
+                func = rhs.func.id
+                if func == "solve":
+                    result = tree.targets[0].id
+                    self._results.append(result)
+            except AttributeError:
+                # This is not a call to a solve, so no action is required anywya
+                pass
+        else:
+            raise NotImplementedError("Tuple assignment not implemented")
 
 def findSolveResults(tree):
     SRF = SolveResultFinder()
     return SRF.find(tree)
 
-class SolveFinder(AntlrVisitor):
+class SolveFinder(NodeVisitor):
     """ Traverses an antlr tree and returns the assignment node of
     solves, rather than the solve node itself. This way we can get
     to the target as well as the solve node."""
 
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
-
     def find(self, tree):
         self._solves = []
-        self.traverse(tree)
+        self.visit(tree)
         return self._solves
-
-    def visit(self, tree):
-        label = str(tree)
-
-        if label == '=':
-            rhs = tree.getChild(1)
-            if str(rhs) == 'solve':
-                self._solves.append(tree)
     
-    def pop(self):
-        pass
+    def visit_Assign(self, tree):
+        rhs = tree.value
+        if len(tree.targets)==1:
+            try:
+                func = rhs.func.id
+                if func == "solve":
+                    self._solves.append(tree)
+            except AttributeError:
+                # This is not a call to a solve, so no action is required anywya
+                pass
+        else:
+            raise NotImplementedError("Tuple assignment not implemented.")
 
 def findSolves(tree):
     SF = SolveFinder()
     return SF.find(tree)
 
-class CoefficientNameFinder(AntlrVisitor):
-    """Given a coefficient, this class traverses the AST and finds the
-    name of the variable holding the field it came from."""
-
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
-
-    def find(self, ast, coeff):
-        self._count = str(coeff.count())
-        self._var = None
-        self.traverse(ast)
-        return self._var
-
-    def visit(self, tree):
-        label = str(tree)
-
-        if label == 'Coefficient':
-            count = str(tree.getChild(1))
-            if count == self._count:
-                # Found the correct Field. However, we need to make sure this
-                # was a version of the field alone on the right-hand side of 
-                # an assignment.
-                field = tree.getParent()
-                fieldParent = field.getParent()
-                if str(fieldParent) == '=':
-                    self._var = str(field)
-
-    def pop(self):
-        pass
-
-class FieldNameFinder(AntlrVisitor):
-    """Given the name of the variable holding a field,
-    return the name of that field."""
-
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
-
+class FieldVarFinder(NodeVisitor):
+    
     def find(self, ast, name):
         self._name = name
+        self._fieldVar = None
+        self.visit(ast)
+        return self._fieldVar
+
+    def visit_Assign(self, tree):
+        if len(tree.targets) == 1:
+            target = tree.targets[0]
+            try:
+                var = target.id
+            except AttributeError:
+                # If this happens, the LHS is not what we're looking for.
+                return
+            if var == self._name:
+                try:
+                    self._fieldVar = tree.value.args[0].id
+                except AttributeError:
+                    # If we got here, then the RHS was not as expected
+                    raise RuntimeError("Unexpected RHS for coefficient %s" % self._name)
+        else:
+            raise NotImplementedError("Tuple assignment not implemented.")
+
+class FieldNameFinder(NodeVisitor):
+
+    def find(self, ast, var):
+        self._var = var
         self._field = None
-        self.traverse(ast)
+        self.visit(ast)
         return self._field
 
-    def visit(self, tree):
-        label = str(tree)
+    def visit_Assign(self, tree):
+        if len(tree.targets) == 1:
+            target = tree.targets[0]
+            try:
+                var = target.id
+            except AttributeError:
+                # If this happens, the LHS is not what we're looking for.
+                return
+            try:
+                if var == self._var:
+                    self._field = tree.value.slice.value.s
+            except AttributeError:
+                # If we got here, then the RHS was not as expected
+                raise RuntimeError("Unexpected RHS for field var %s" % self._var)
+        else:
+            raise NotImplementedError("Tuple assignment not implemented.")
+           
+def findCoefficientName(uflObjects, coeff):
+    seeking = coeff.count()
+    for key, value in uflObjects.items():
+        if isinstance(value, Coefficient):
+            count = value.count()
+            if count == seeking:
+                return key
+    print "Warning: coefficient not found."
 
-        if label == '=':
-            lhs = tree.getChild(0)
-            rhs = tree.getChild(1)
-
-            if str(lhs) == self._name:
-                field = rhs.getChild(0)
-                self._field = str(field)
-                # Strip the quotes
-                self._field = self._field[1:-1]
-
-    def pop(self):
-        pass
-
-def findFieldFromCoefficient(ast, coeff):
-    CNF = CoefficientNameFinder()
+def findFieldFromCoefficient(ast, uflObjects, coeff):
+    FVF = FieldVarFinder()
     FNF = FieldNameFinder()
-    return FNF.find(ast, CNF.find(ast, coeff))
+    var = FVF.find(ast, findCoefficientName(uflObjects, coeff))
+    return FNF.find(ast, var)
 
-class ReturnedFieldFinder(AntlrVisitor):
+class ReturnedFieldFinder(NodeVisitor):
     """Return a list of the fields that need to be returned to the host. These
     are pairs (hostField, GPUField), where hostField is the name of the field
     that will be overwritted with data currently stored in GPUField."""
 
-    def __init__(self):
-        AntlrVisitor.__init__(self, preOrder)
-
     def find(self, ast):
-        self._returnFields = []
-        self.traverse(ast)
-        return self._returnFields
+       self._returnFields = []
+       self.visit(ast)
+       return self._returnFields
 
-    def visit(self, tree):
-        label = str(tree)
-
-        if label == '=':
-            lhs = tree.getChild(0)
-            rhs = tree.getChild(1)
-            if str(lhs) in [ 'scalar_fields', 'vector_fields', 'tensor_fields' ]:
-                hostField = str(lhs.getChild(0))
-                # Strip off the quotes
-                hostField = hostField[1:-1]
-                GPUField = str(rhs)
-                self._returnFields.append((hostField, GPUField))
-    
-    def pop(self):
-        pass
+    def visit_Assign(self, tree):
+        if len(tree.targets) == 1:
+            try:
+                lhs = tree.targets[0]
+                rhs = tree.value
+                # subscript -> attribute -> name
+                objname = lhs.value.value.id
+                # subscript -> attribute -> string
+                objmember = lhs.value.attr
+                fieldholders = ['scalar_fields', 'vector_fields', 'tensor_fields']
+                if objname == "state" and objmember in fieldholders:
+                    hostField = lhs.slice.value.s
+                    GPUField  = rhs.id
+                    self._returnFields.append((hostField, GPUField))
+            except AttributeError:
+                # This is not a returning of a field, so no action required.
+                pass
+        else:
+            raise NotImplementedError("Tuple assignment not implemented.")
 
 def findReturnedFields(ast):
     RFF = ReturnedFieldFinder()
