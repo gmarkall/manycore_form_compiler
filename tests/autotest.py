@@ -8,7 +8,8 @@ user may replace the testcase with the new output.
 usage: autotest.py [OPTIONS] [INPUT-FILE]
     where OPTIONS can be one of
         -n, --non-interactive  Run in non-interactive (batch) mode
-        --no-cuda              Do not test CUDA output
+        --no-cuda              Do not test the CUDA backend
+        --no-op2               Do not test the OP2 backend
         --no-optionfile        Do not test the option file parser
 """
 
@@ -43,6 +44,7 @@ def main():
         tester = AutoTester()
 
     check_cuda =  'no-cuda' not in keys
+    check_op2 =  'no-op2' not in keys
     check_optionfile = 'no-optionfile' not in keys
 
     ufl_sources = ['diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
@@ -58,6 +60,7 @@ def main():
         elif args[0] in optionfile_sources:
             optionfile_sources = [ args[0] ]
             check_cuda = False
+            check_op2 = False
         else:
             print "Unsupported source file:",args[0]
             print "Needs to be in",ufl_sources,"or",optionfile_sources
@@ -81,7 +84,19 @@ def main():
             lambda name: "outputs/cuda/" + name + ".cu",
             lambda name: "expected/cuda/" + name + ".cu",
             ufl_sources,
-            'Running form compiler tests...')
+            'Running form compiler tests (CUDA backend)...')
+
+    if check_op2:
+
+        # Create the cuda outputs folder
+        os.mkdir('outputs/op2', 0755)
+
+        tester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'), 
+            lambda name: "inputs/ufl/" + name + ".ufl",
+            lambda name: "outputs/op2/" + name + ".cpp",
+            lambda name: "expected/op2/" + name + ".cpp",
+            ufl_sources,
+            'Running form compiler tests (OP2 backend)...')
 
     if check_optionfile:
 
@@ -100,7 +115,7 @@ def main():
 
 def get_options():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "n", ["non-interactive", "no-cuda", "no-optionfile"])
+        opts, args = getopt.getopt(sys.argv[1:], "n", ["non-interactive", "no-cuda", "no-op2", "no-optionfile"])
     except getopt.error, msg:
         print msg
         print __doc__
