@@ -26,6 +26,7 @@
       --objvisualise  to output a deep visualisation of every ufl object
                       (warning: creates very big PDFs), implies --visualise
       -o:<filename>   to specify the output filename
+      -p, --print     to print code to screen
       -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
@@ -53,6 +54,11 @@ def run(inputFile, opts = None):
     else:
         outputFileBase = os.path.splitext(inputFile)[0]
 
+    if 'p' in opts:
+        screen = sys.stdout
+    else:
+        screen = None
+
     vis = False
     if 'visualise' in opts or 'v' in opts:
         vis = True
@@ -76,10 +82,9 @@ def run(inputFile, opts = None):
             visualise(ast, uflObjects, inputFile, objvis)
             continue
 
-        fd = open(outputFile+extensions[backend], 'w')
-        driver = drivers[backend]()
-        driver.drive(ast, uflObjects, fd)
-        fd.close()
+        with screen or open(outputFile+extensions[backend], 'w') as fd:
+            driver = drivers[backend]()
+            driver.drive(ast, uflObjects, fd)
 
 def parse_input(inputFile):
 
@@ -116,7 +121,7 @@ def visualise(st, uflObjects, filename, obj=False):
 
 def _get_options():
     try: 
-        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvo:", ["visualise", "objvisualise"])
+        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvo:p", ["visualise", "objvisualise", "print"])
     except getopt.error, msg:
         print msg
         print __doc__
