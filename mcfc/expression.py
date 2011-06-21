@@ -22,6 +22,10 @@ from symbolicvalue import SymbolicValue
 
 class ExpressionBuilder(Transformer):
 
+    def __init__(self, form):
+        Transformer.__init__(self)
+        self._form = form
+
     def build(self, tree):
         self._exprStack = []
         # When we pass through the first IndexSum, this will get incremented
@@ -132,6 +136,9 @@ class ExpressionBuilder(Transformer):
 
 class QuadratureExpressionBuilder:
 
+    def __init__(self, form):
+        self._form = form
+
     def build(self, tree):
         # Build Accessor for values at nodes
         indices = self.subscript(tree)
@@ -176,3 +183,4 @@ class QuadratureExpressionBuilder:
     def subscript_spatial_derivative(self, tree):
         raise NotImplementedError("You're supposed to implement subscript_spatial_derivative()!")
 
+# vim:sw=4:ts=4:sts=4:et

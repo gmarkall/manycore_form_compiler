@@ -31,8 +31,8 @@ class Op2FormBackend(FormBackend):
 
     def __init__(self):
         FormBackend.__init__(self)
-        self._expressionBuilder = Op2ExpressionBuilder()
-        self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder()
+        self._expressionBuilder = Op2ExpressionBuilder(self)
+        self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder(self)
         self._indexSumCounter = IndexSumCounter()
 
     def compile(self, name, form):
@@ -87,8 +87,8 @@ class Op2FormBackend(FormBackend):
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         # Outer loop over gauss points
-        indVar = GaussIndex().name()
-        gaussLoop = buildSimpleForLoop(indVar, numGaussPoints)
+        indVar = self.buildGaussIndex().name()
+        gaussLoop = buildSimpleForLoop(indVar, self.numGaussPoints)
 
         # Build a loop nest for each coefficient containing expressions
         # to compute its value
@@ -109,8 +109,8 @@ class Op2FormBackend(FormBackend):
 
         # Build loop over the correct number of dimensions
         for r in range(rank):
-            indVar = DimIndex(r).name()
-            dimLoop = buildSimpleForLoop(indVar, numDimensions)
+            indVar = self.buildDimIndex(r).name()
+            dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
 
@@ -119,8 +119,8 @@ class Op2FormBackend(FormBackend):
         loop.append(initialiser)
 
         # One loop over the basis functions
-        indVar = BasisIndex(0).name()
-        basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
+        indVar = self.buildBasisIndex(0).name()
+        basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
         loop.append(basisLoop)
     
         # Add the expression to compute the value inside the basis loop
@@ -134,21 +134,21 @@ class Op2FormBackend(FormBackend):
         integrand = form.integrals()[0].integrand()
 
         # Build the loop over the first rank, which always exists
-        indVarName = BasisIndex(0).name()
-        loop = buildSimpleForLoop(indVarName, numNodesPerEle)
+        indVarName = self.buildBasisIndex(0).name()
+        loop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
         outerLoop = loop
 
         # Add another loop for each rank of the form (probably no
         # more than one more... )
         for r in range(1,rank):
-            indVarName = BasisIndex(r).name()
-            basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+            indVarName = self.buildBasisIndex(r).name()
+            basisLoop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
             loop.append(basisLoop)
             loop = basisLoop
         
         # Add a loop for the quadrature
-        indVarName = GaussIndex().name()
-        gaussLoop = buildSimpleForLoop(indVarName, numGaussPoints)
+        indVarName = self.buildGaussIndex().name()
+        gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
         loop.append(gaussLoop)
         loop = gaussLoop
 
@@ -159,8 +159,8 @@ class Op2FormBackend(FormBackend):
 
         # Add loops for each dimension as necessary. 
         for d in range(numDimLoops):
-            indVarName = DimIndex(d).name()
-            dimLoop = buildSimpleForLoop(indVarName, numDimensions)
+            indVarName = self.buildDimIndex(d).name()
+            dimLoop = buildSimpleForLoop(indVarName, self.numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
 
@@ -169,7 +169,7 @@ class Op2FormBackend(FormBackend):
         return outerLoop
 
     def buildParameterList(self, tree, form):
-        formalParameters, _ = generateKernelParameters(tree, form)
+        formalParameters, _ = generateKernelParameters(tree, form, self)
         return formalParameters
 
 # vim:sw=4:ts=4:sts=4:et

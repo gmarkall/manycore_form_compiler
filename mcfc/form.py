@@ -31,10 +31,23 @@ from ufl.algorithms.transformations import Transformer
 
 class FormBackend:
 
+    numNodesPerEle = 3
+    numDimensions = 2
+    numGaussPoints = 6
+
     def __init__(self):
         self._expressionBuilder = None
         self._quadratureExpressionBuilder = None
         self._coefficientUseFinder = CoefficientUseFinder()
+
+    def buildBasisIndex(self, count):
+        return BasisIndex(self.numNodesPerEle, count)
+
+    def buildDimIndex(self, count):
+        return DimIndex(self.numDimensions, count)
+
+    def buildGaussIndex(self):
+        return GaussIndex(self.numGaussPoints)
 
     def buildExpression(self, form, tree):
         "Build the expression represented by the subtree tree of form."
@@ -88,7 +101,7 @@ class FormBackend:
         return declarations
 
     def _buildCoeffQuadDeclaration(self, name, rank):
-        length = numGaussPoints * pow(numDimensions, rank)
+        length = self.numGaussPoints * pow(self.numDimensions, rank)
         t = Array(Real(), Literal(length))
         var = Variable(name, t)
         decl = Declaration(var)
@@ -199,29 +212,24 @@ def findPartitions(tree):
 
 class CodeIndex:
 
-    def __init__(self, count=None):
+    def __init__(self, extent, count=None):
+        self._extent = extent
         self._count = count
+
+    def extent(self):
+        return Literal(self._extent)
 
 class BasisIndex(CodeIndex):
     
-    def extent(self):
-        return Literal(numNodesPerEle)
-
     def name(self):
         return "i_r_%d" % (self._count)
 
 class GaussIndex(CodeIndex):
 
-    def extent(self):
-        return Literal(numGaussPoints)
-
     def name(self):
         return "i_g"
 
 class DimIndex(CodeIndex):
-
-    def extent(self):
-        return Literal(numDimensions)
 
     def name(self):
         return "i_d_%d" % (self._count)
@@ -262,12 +270,6 @@ def buildCoefficientQuadName(tree):
     count = tree.count()
     name = 'c_q%d' %(count)
     return name
-
-# Global variables for code generation.
-# Eventually these need to be set by the caller of the code generator
-numNodesPerEle = 3
-numDimensions = 2
-numGaussPoints = 6
 
 # Variables used globally
 
