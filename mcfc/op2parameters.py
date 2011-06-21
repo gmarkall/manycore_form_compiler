@@ -23,35 +23,37 @@ import form
 from codegeneration import Variable, Pointer, Real, Array
 from op2expression import Op2ExpressionBuilder, Op2QuadratureExpressionBuilder
 
-expBuilder = Op2ExpressionBuilder()
-quadExpBuilder = Op2QuadratureExpressionBuilder()
-
 class Op2KernelParameterGenerator(KernelParameterGenerator):
 
+    def __init__(self, form):
+        KernelParameterGenerator.__init__(self)
+        self.expBuilder = Op2ExpressionBuilder(form)
+        self.quadExpBuilder = Op2QuadratureExpressionBuilder(form)
+
     def _buildCoefficientParameter(self,coeff):
-        indices = quadExpBuilder.subscript(coeff)
+        indices = self.quadExpBuilder.subscript(coeff)
         name = form.buildCoefficientName(coeff)
         return _buildArrayParameter(name, indices)
 
     def _buildArgumentParameter(self,arg):
-        indices = quadExpBuilder.subscript_argument(arg)
+        indices = self.quadExpBuilder.subscript_argument(arg)
         name = form.buildArgumentName(arg)
         return _buildArrayParameter(name, indices)
         
     def _buildSpatialDerivativeParameter(self,argDeriv):
-        indices = quadExpBuilder.subscript_spatial_derivative(argDeriv)
+        indices = self.quadExpBuilder.subscript_spatial_derivative(argDeriv)
         name = form.buildSpatialDerivativeName(argDeriv)
         return _buildArrayParameter(name, indices)
 
 def _buildArrayParameter(name, indices):
     return Variable(name, Array(Real(), [i.extent() for i in indices]))
 
-def generateKernelParameters(tree, form):
-    KPG = Op2KernelParameterGenerator()
+def generateKernelParameters(tree, form, op2form):
+    KPG = Op2KernelParameterGenerator(op2form)
 
-    detwei = _buildArrayParameter("detwei", expBuilder.subscript_detwei())
+    detwei = _buildArrayParameter("detwei", KPG.expBuilder.subscript_detwei())
     timestep = Variable("dt", Real() )
-    localTensor = _buildArrayParameter("localTensor", expBuilder.subscript_LocalTensor(form))
+    localTensor = _buildArrayParameter("localTensor", KPG.expBuilder.subscript_LocalTensor(form))
 
     statutoryParameters = [ localTensor, timestep, detwei ]
 

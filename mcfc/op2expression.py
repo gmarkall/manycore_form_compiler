@@ -17,7 +17,7 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from form import *
+from expression import *
 
 def buildSubscript(variable, indices):
     """Given a list of indices, return an AST that subscripts
@@ -47,7 +47,7 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         count = tree.count()
-        indices = [BasisIndex(count), GaussIndex()]
+        indices = [self._form.buildBasisIndex(count), self._form.buildGaussIndex()]
         return indices
 
     def subscript_SpatialDerivative(self,tree,depth):
@@ -57,20 +57,22 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         count = operand.count()
 
         if isinstance(operand, ufl.argument.Argument):
-            indices = [DimIndex(depth), GaussIndex(), BasisIndex(count)]
+            indices = [ self._form.buildDimIndex(depth),
+                        self._form.buildGaussIndex(),
+                        self._form.buildBasisIndex(count) ]
         elif isinstance(operand, ufl.coefficient.Coefficient):
-            indices = [ GaussIndex() ]
+            indices = [ self._form.buildGaussIndex() ]
             # We need to add one, since the differentiation added a 
             # dim index
             depth = operand.rank() + 1
 
             for r in range(depth):
-                indices.append(DimIndex(r))
+                indices.append(self._form.buildDimIndex(r))
 
         return indices
 
     def subscript_detwei(self):
-        indices = [GaussIndex()]
+        indices = [self._form.buildGaussIndex()]
         return indices
 
     def subscript_LocalTensor(self, form):
@@ -80,20 +82,20 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         indices = []
         # One rank index for each rank
         for r in range(rank):
-            indices.append(BasisIndex(r))
+            indices.append(self._form.buildBasisIndex(r))
 
         return indices
 
     def subscript_CoeffQuadrature(self, coeff):
         # Build the subscript based on the rank
-        indices = [GaussIndex()]
+        indices = [self._form.buildGaussIndex()]
         depth = coeff.rank()
         if isinstance(coeff, ufl.differentiation.SpatialDerivative):
             # We need to add one, since the differentiation added a 
             # dim index
             depth = depth + 1
         for r in range(depth):
-            indices.append(DimIndex(r))
+            indices.append(self._form.buildDimIndex(r))
         
         return indices
 
@@ -104,16 +106,16 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def subscript(self, tree):
         rank = tree.rank()
-        indices = [BasisIndex(0)]
+        indices = [self._form.buildBasisIndex(0)]
         for r in range(rank):
-            index = DimIndex(r)
+            index = self._form.buildDimIndex(r)
             indices.insert(0, index)
         return indices
 
     def subscript_argument(self, tree):
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
-        indices = [BasisIndex(0), GaussIndex()]
+        indices = [self._form.buildBasisIndex(0), self._form.buildGaussIndex()]
         return indices
 
     def subscript_spatial_derivative(self, tree):
@@ -121,7 +123,9 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
         argument = tree.operands()[0]
-        indices = [DimIndex(0), GaussIndex(), BasisIndex(0)]
+        indices = [ self._form.buildDimIndex(0),
+                    self._form.buildGaussIndex(),
+                    self._form.buildBasisIndex(0) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et

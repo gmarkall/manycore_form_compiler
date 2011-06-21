@@ -21,7 +21,7 @@
 # MCFC libs
 from form import *
 from cudaparameters import generateKernelParameters, numElements, statutoryParameters
-from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, eleInductionVariable
+from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, ElementIndex
 
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
@@ -36,8 +36,8 @@ class CudaFormBackend(FormBackend):
 
     def __init__(self):
         FormBackend.__init__(self)
-        self._expressionBuilder = CudaExpressionBuilder()
-        self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
+        self._expressionBuilder = CudaExpressionBuilder(self)
+        self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder(self)
         self._indexSumCounter = IndexSumCounter()
 
     def compile(self, name, form):
@@ -99,8 +99,8 @@ class CudaFormBackend(FormBackend):
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         # Outer loop over gauss points
-        indVar = gaussInductionVariable()
-        gaussLoop = buildSimpleForLoop(indVar, numGaussPoints)
+        indVar = self.buildGaussIndex().name()
+        gaussLoop = buildSimpleForLoop(indVar, self.numGaussPoints)
 
         # Build a loop nest for each coefficient containing expressions
         # to compute its value
@@ -122,8 +122,8 @@ class CudaFormBackend(FormBackend):
 
         # Build loop over the correct number of dimensions
         for r in range(rank):
-            indVar = dimInductionVariable(r)
-            dimLoop = buildSimpleForLoop(indVar, numDimensions)
+            indVar = self.buildDimIndex(r).name()
+            dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
 
@@ -132,8 +132,8 @@ class CudaFormBackend(FormBackend):
         loop.append(initialiser)
 
         # One loop over the basis functions
-        indVar = basisInductionVariable(0)
-        basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
+        indVar = self.buildBasisIndex(0).name()
+        basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
         loop.append(basisLoop)
     
         # Add the expression to compute the value inside the basis loop
@@ -151,22 +151,22 @@ class CudaFormBackend(FormBackend):
         outerLoop = loop
 
         # Build the loop over the first rank, which always exists
-        indVarName = basisInductionVariable(0)
-        basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+        indVarName = self.buildBasisIndex(0).name()
+        basisLoop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
         loop.append(basisLoop)
         loop = basisLoop
 
         # Add another loop for each rank of the form (probably no
         # more than one more... )
         for r in range(1,rank):
-            indVarName = basisInductionVariable(r)
-            basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
+            indVarName = self.buildBasisIndex(r).name()
+            basisLoop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
             loop.append(basisLoop)
             loop = basisLoop
         
         # Add a loop for the quadrature
-        indVarName = gaussInductionVariable()
-        gaussLoop = buildSimpleForLoop(indVarName, numGaussPoints)
+        indVarName = self.buildGaussIndex().name()
+        gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
         loop.append(gaussLoop)
         loop = gaussLoop
 
@@ -177,8 +177,8 @@ class CudaFormBackend(FormBackend):
 
         # Add loops for each dimension as necessary. 
         for d in range(numDimLoops):
-            indVarName = dimInductionVariable(d)
-            dimLoop = buildSimpleForLoop(indVarName, numDimensions)
+            indVarName = self.buildDimIndex(d).name()
+            dimLoop = buildSimpleForLoop(indVarName, self.numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
 
@@ -187,7 +187,7 @@ class CudaFormBackend(FormBackend):
         return outerLoop
 
     def buildElementLoop(self):
-        indVarName = eleInductionVariable()
+        indVarName = ElementIndex().name()
         var = Variable(indVarName, Integer())
         init = InitialisationOp(var, threadId)
         test = LessThanOp(var, numElements)
