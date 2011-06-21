@@ -367,7 +367,7 @@ class BasisIndex(CodeIndex):
         return Literal(numNodesPerEle)
 
     def name(self):
-        return basisInductionVariable(self._count)
+        return "i_r_%d" % (self._count)
 
 class GaussIndex(CodeIndex):
 
@@ -375,7 +375,7 @@ class GaussIndex(CodeIndex):
         return Literal(numGaussPoints)
 
     def name(self):
-        return gaussInductionVariable()
+        return "i_g"
 
 class DimIndex(CodeIndex):
 
@@ -383,7 +383,7 @@ class DimIndex(CodeIndex):
         return Literal(numDimensions)
 
     def name(self):
-        return dimInductionVariable(self._count)
+        return "i_d_%d" % (self._count)
 
 # Name builders
 
@@ -420,19 +420,6 @@ def buildCoefficientName(tree):
 def buildCoefficientQuadName(tree):
     count = tree.count()
     name = 'c_q%d' %(count)
-    return name
-
-# Names of induction variables
-
-def gaussInductionVariable():
-    return "i_g"
-
-def basisInductionVariable(count):
-    name = "i_r_%d" % (count)
-    return name
-
-def dimInductionVariable(count):
-    name = "i_d_%d" % (count)
     return name
 
 # Global variables for code generation.

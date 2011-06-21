@@ -87,7 +87,7 @@ class Op2FormBackend(FormBackend):
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         # Outer loop over gauss points
-        indVar = gaussInductionVariable()
+        indVar = GaussIndex().name()
         gaussLoop = buildSimpleForLoop(indVar, numGaussPoints)
 
         # Build a loop nest for each coefficient containing expressions
@@ -109,7 +109,7 @@ class Op2FormBackend(FormBackend):
 
         # Build loop over the correct number of dimensions
         for r in range(rank):
-            indVar = dimInductionVariable(r)
+            indVar = DimIndex(r).name()
             dimLoop = buildSimpleForLoop(indVar, numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
@@ -119,7 +119,7 @@ class Op2FormBackend(FormBackend):
         loop.append(initialiser)
 
         # One loop over the basis functions
-        indVar = basisInductionVariable(0)
+        indVar = BasisIndex(0).name()
         basisLoop = buildSimpleForLoop(indVar, numNodesPerEle)
         loop.append(basisLoop)
     
@@ -134,20 +134,20 @@ class Op2FormBackend(FormBackend):
         integrand = form.integrals()[0].integrand()
 
         # Build the loop over the first rank, which always exists
-        indVarName = basisInductionVariable(0)
+        indVarName = BasisIndex(0).name()
         loop = buildSimpleForLoop(indVarName, numNodesPerEle)
         outerLoop = loop
 
         # Add another loop for each rank of the form (probably no
         # more than one more... )
         for r in range(1,rank):
-            indVarName = basisInductionVariable(r)
+            indVarName = BasisIndex(r).name()
             basisLoop = buildSimpleForLoop(indVarName, numNodesPerEle)
             loop.append(basisLoop)
             loop = basisLoop
         
         # Add a loop for the quadrature
-        indVarName = gaussInductionVariable()
+        indVarName = GaussIndex().name()
         gaussLoop = buildSimpleForLoop(indVarName, numGaussPoints)
         loop.append(gaussLoop)
         loop = gaussLoop
@@ -159,7 +159,7 @@ class Op2FormBackend(FormBackend):
 
         # Add loops for each dimension as necessary. 
         for d in range(numDimLoops):
-            indVarName = dimInductionVariable(d)
+            indVarName = DimIndex(d).name()
             dimLoop = buildSimpleForLoop(indVarName, numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
