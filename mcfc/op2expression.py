@@ -57,7 +57,9 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         count = operand.count()
 
         if isinstance(operand, ufl.argument.Argument):
-            indices = [self._form.buildDimIndex(depth), self._form.buildGaussIndex(), self._form.buildBasisIndex(count)]
+            indices = [ self._form.buildDimIndex(depth),
+                        self._form.buildGaussIndex(),
+                        self._form.buildBasisIndex(count) ]
         elif isinstance(operand, ufl.coefficient.Coefficient):
             indices = [ self._form.buildGaussIndex() ]
             # We need to add one, since the differentiation added a 
@@ -121,7 +123,9 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
         argument = tree.operands()[0]
-        indices = [self._form.buildDimIndex(0), self._form.buildGaussIndex(), self._form.buildBasisIndex(0)]
+        indices = [ self._form.buildDimIndex(0),
+                    self._form.buildGaussIndex(),
+                    self._form.buildBasisIndex(0) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et

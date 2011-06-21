@@ -81,7 +81,10 @@ class CudaExpressionBuilder(ExpressionBuilder):
         count = operand.count()
 
         if isinstance(operand, ufl.argument.Argument):
-            indices = [ElementIndex(), self._form.buildDimIndex(depth), self._form.buildGaussIndex(), self._form.buildBasisIndex(count)]
+            indices = [ ElementIndex(),
+                        self._form.buildDimIndex(depth),
+                        self._form.buildGaussIndex(),
+                        self._form.buildBasisIndex(count) ]
         elif isinstance(operand, ufl.coefficient.Coefficient):
             indices = [ self._form.buildGaussIndex() ]
             depth = operand.rank() + 1
@@ -147,7 +150,10 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # index should be used to subscript the derivative (I think).
         argument = tree.operands()[0]
         count = argument.count()
-        indices = [ElementIndex(), self._form.buildDimIndex(0), self._form.buildGaussIndex(), self._form.buildBasisIndex(0)]
+        indices = [ ElementIndex(),
+                    self._form.buildDimIndex(0),
+                    self._form.buildGaussIndex(),
+                    self._form.buildBasisIndex(0) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et
