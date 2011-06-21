@@ -17,7 +17,7 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from form import *
+from expression import *
 
 def buildSubscript(variable, indices):
     """Given a list of indices, return an AST that subscripts
