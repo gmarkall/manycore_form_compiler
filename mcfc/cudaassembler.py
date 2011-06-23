@@ -31,7 +31,6 @@ from utilities import uniqify
 # FEniCS UFL libs
 import ufl.finiteelement
 from ufl.differentiation import SpatialDerivative
-from ufl.algorithms.transformations import Transformer
 
 # Variables used throughout the code generation
 state            = Variable('state',              Pointer(Class('StateHolder')))

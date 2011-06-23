@@ -23,9 +23,6 @@ from form import *
 from cudaparameters import generateKernelParameters, numElements, statutoryParameters
 from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, ElementIndex
 
-# FEniCS UFL libs
-from ufl.algorithms.transformations import Transformer
-
 # Variables
 
 threadCount = Variable("THREAD_COUNT")

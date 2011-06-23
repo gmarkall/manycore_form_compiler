@@ -22,9 +22,6 @@
 from form import *
 from op2parameters import generateKernelParameters
 from op2expression import Op2ExpressionBuilder, Op2QuadratureExpressionBuilder
-# FEniCS UFL libs
-from ufl.algorithms.transformations import Transformer
-
 
 class Op2FormBackend(FormBackend):
 
