@@ -24,7 +24,6 @@ from op2parameters import generateKernelParameters
 from op2expression import Op2ExpressionBuilder, Op2QuadratureExpressionBuilder
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
-from ufl.algorithms.preprocess import preprocess
 
 
 class Op2FormBackend(FormBackend):
@@ -37,11 +36,9 @@ class Op2FormBackend(FormBackend):
 
     def compile(self, name, form):
 
-        if form.form_data() is None:
-            form = preprocess(form)
-
         integrand = form.integrals()[0].integrand()
         form_data = form.form_data()
+        assert form_data, "Op2FormBackend._compile called with non-preprocessed form."
         rank = form_data.rank
         
         # Things for kernel declaration.

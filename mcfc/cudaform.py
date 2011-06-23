@@ -25,7 +25,6 @@ from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilde
 
 # FEniCS UFL libs
 from ufl.algorithms.transformations import Transformer
-from ufl.algorithms.preprocess import preprocess
 
 # Variables
 
@@ -43,7 +42,8 @@ class CudaFormBackend(FormBackend):
     def compile(self, name, form):
 
         integrand = form.integrals()[0].integrand()
-        form_data = form.compute_form_data()
+        form_data = form.form_data()
+        assert form_data, "Op2FormBackend._compile called with non-preprocessed form."
         rank = form_data.rank
         
         # Things for kernel declaration.
