@@ -43,10 +43,11 @@ class CudaFormBackend(FormBackend):
         assert form_data, "Op2FormBackend._compile called with non-preprocessed form."
         rank = form_data.rank
         
-        # Things for kernel declaration.
+        # Get parameter list for kernel declaration.
         t = Void()
-        params = self.buildParameterList(integrand, form)
-        
+        buildParameterList(integrand, form)
+        params = form.form_data().formalParameters
+
         # Build the loop nest
         loopNest = self.buildLoopNest(form)
 
@@ -192,8 +193,11 @@ class CudaFormBackend(FormBackend):
         ast = ForLoop(init, test, inc)
         return ast
 
-    def buildParameterList(self, tree, form):
-        formalParameters, _ = generateKernelParameters(tree, form)
-        return formalParameters
+def buildParameterList(tree, form):
+    "Generate formal and actual kernel parameters and attach them to form data"
+
+    formalParameters, actualParameters = generateKernelParameters(tree, form)
+    form.form_data().formalParameters = formalParameters
+    form.form_data().actualParameters = actualParameters
 
 # vim:sw=4:ts=4:sts=4:et

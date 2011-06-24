@@ -25,7 +25,6 @@ cudaform.py, and the necessary solves."""
 
 # MCFC libs
 from assembler import *
-from cudaparameters import generateKernelParameters
 from codegeneration import *
 from utilities import uniqify
 # FEniCS UFL libs
@@ -406,7 +405,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         return var
 
     def _makeParameterListAndGetters(self, func, tree, form, staticParameters):
-        _, paramUFL = generateKernelParameters(tree, form)
+        assert form.form_data().actualParameters, "actual kernel parameters have not been attached to form data"
+        paramUFL = form.form_data().actualParameters
         # Figure out which parameters to pass
         params = list(staticParameters)
 
