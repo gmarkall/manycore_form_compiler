@@ -33,19 +33,25 @@ class Driver:
 
     def drive(self, ast, uflObjects, fd):
 
+        # Build forms
+        # needs to happen first, since form_data attached to the forms is changed
+        forms = findForms(uflObjects)
+        for form in forms:
+            o = uflObjects[form]
+            assert o.form_data(), "Form has no form data attached!"
+            name = form
+            o.form_data().code = self._formBackend.compile(name, o)
+
         # Build assembler
         definitions, declarations = self._assemblerBackend.compile(ast, uflObjects)
+
         # Unparse assembler defintions (headers)
         print >>fd, definitions.unparse()
         print >>fd
 
-        # Build forms
-        forms = findForms(uflObjects)
+        # Unparse form kernel declarations
         for form in forms:
-            o = uflObjects[form]
-            name = form
-            code = self._formBackend.compile(name, o)
-            print >>fd, code.unparse()
+            print >>fd, uflObjects[form].form_data().code.unparse()
             print >>fd
 
         # Unparse assembler declarations (body)
