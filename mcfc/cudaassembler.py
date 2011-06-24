@@ -409,27 +409,17 @@ class CudaAssemblerBackend(AssemblerBackend):
         _, paramUFL = generateKernelParameters(tree, form)
         # Figure out which parameters to pass
         params = list(staticParameters)
-        needShape = False
-        needDShape = False
-        
-        for obj in paramUFL:
-            
-            if isinstance(obj, ufl.coefficient.Coefficient):
-                # find which field this coefficient came from, then
-                # extract from that field.
-                field = findFieldFromCoefficient(self._ast, self._uflObjects, obj)
-                var = self.extractCoefficient(func, field)
-                params.append(var)
-            
-            if isinstance(obj, ufl.argument.Argument):
-                needShape = True
-            
-            if isinstance(obj, ufl.differentiation.SpatialDerivative):
-                needDShape = True
 
-        if needShape:
+        for obj in paramUFL['coefficients']:
+            # find which field this coefficient came from, then
+            # extract from that field.
+            field = findFieldFromCoefficient(self._ast, self._uflObjects, obj)
+            var = self.extractCoefficient(func, field)
+            params.append(var)
+
+        if paramUFL['arguments']:
             params.append(shape)
-        if needDShape:
+        if paramUFL['argumentDerivatives']:
             params.append(dShape)
          
         return params

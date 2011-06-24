@@ -38,7 +38,7 @@ class KernelParameterGenerator(Transformer):
 
         # Initialise with parameters common to all kernels
         formalParameters = list(statutoryParameters)
-        actualParameters = []
+        actualParameters = {'coefficients': [], 'arguments': [], 'argumentDerivatives': []}
         
         # We need to map the coefficient and argument counts that
         # we see in the form back to the ones with their original
@@ -90,7 +90,7 @@ class KernelParameterGenerator(Transformer):
             # Actual parameter
             i = formCoefficients.index(coeff)
             originalCoefficient = originalCoefficients[i]
-            actualParameters.append(originalCoefficient)
+            actualParameters['coefficients'].append(originalCoefficient)
 
             # Formal parameter
             parameter = self._buildCoefficientParameter(coeff)
@@ -100,7 +100,7 @@ class KernelParameterGenerator(Transformer):
             # Actual parameter
             i = formArguments.index(arg)
             originalArgument = originalArguments[i]
-            actualParameters.append(originalArgument)
+            actualParameters['arguments'].append(originalArgument)
         
             # Formal parameter
             parameter = self._buildArgumentParameter(arg)
@@ -113,7 +113,8 @@ class KernelParameterGenerator(Transformer):
             # Actual parameter
             i = formArguments.index(subject)
             originalArgument = originalArguments[i]
-            actualParameters.append(ufl.differentiation.SpatialDerivative(originalArgument,indices))
+            actualParam = ufl.differentiation.SpatialDerivative(originalArgument,indices)
+            actualParameters['argumentDerivatives'].append(actualParam)
 
             # Formal parameter
             parameter = self._buildSpatialDerivativeParameter(argDeriv)
