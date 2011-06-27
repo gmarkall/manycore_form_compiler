@@ -40,10 +40,14 @@ def uniqify_rec(seq, idfun=None, seen=None):
             yield item
 
 # From http://ipython.scipy.org/doc/manual/html/interactive/reference.html#embedding-ipython
+#
+# paste these 2 lines at the point you want to drop into the IPython shell:
+# from utilities import embedded_ipython_shell as ipshell
+# ipshell()()
 def embedded_ipython_shell(msg=None):
     "Return an embedded IPython shell. Call to drop into the shell."
     from IPython.Shell import IPShellEmbed
-    ipshell = IPShellEmbed(banner=msg or "Dropping into IPython shell...")
+    ipshell = IPShellEmbed(argv=[], banner=msg or "Dropping into IPython shell...")
     return ipshell
 
 # vim:sw=4:ts=4:sts=4:et
