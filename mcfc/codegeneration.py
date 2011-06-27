@@ -4,12 +4,12 @@
 # modify it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
-# 
+#
 # The Manycore Form Compiler is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # the Manycore Form Compiler.  If not, see <http://www.gnu.org/licenses>
 #
@@ -18,14 +18,14 @@
 # holders.
 
 
-"""codegeneration.py - provides tools to build a C++/CUDA/OpenCL ASTs and 
+"""codegeneration.py - provides tools to build a C++/CUDA/OpenCL ASTs and
 unparse it to a file."""
 
 class BackendASTNode:
     pass
 
 class Subscript(BackendASTNode):
-    
+
     def __init__(self, base, offset):
         self._base = base
         self._offset = offset
@@ -35,6 +35,8 @@ class Subscript(BackendASTNode):
         offset = self._offset.unparse()
         code = '%s[%s]' % (base, offset)
         return code
+
+    __str__ = unparse
 
 class Dereference(BackendASTNode):
 
@@ -46,16 +48,18 @@ class Dereference(BackendASTNode):
         code = '*%s' % (expr)
         return code
 
+    __str__ = unparse
+
 class NullExpression(BackendASTNode):
-    
+
     def unparse(self):
         return ''
 
 class Variable(BackendASTNode):
-    
+
     def __init__(self, name, t=None):
         self._name = name
-        
+
         if t is None:
             self._t = Type()
         else:
@@ -87,6 +91,8 @@ class Variable(BackendASTNode):
         code = '%s %s%s' % (t, name, t_post)
         return code
 
+    __str__ = unparse_declaration
+
 class Literal(BackendASTNode):
 
     def __init__(self, value):
@@ -99,8 +105,10 @@ class Literal(BackendASTNode):
         code = self._value
         return code
 
+    __str__ = unparse
+
 class ForLoop(BackendASTNode):
-    
+
     def __init__(self, init, test, inc, body=None):
         self._init = init
         self._test = test
@@ -128,6 +136,8 @@ class ForLoop(BackendASTNode):
         code = code + body
         return code
 
+    __str__ = unparse
+
 class ParameterList(BackendASTNode):
 
     def __init__(self, params=None):
@@ -144,6 +154,8 @@ class ParameterList(BackendASTNode):
                 code = code + ", " + p.unparse_declaration()
         code = code + ")"
         return code
+
+    __str__ = unparse
 
 class ExpressionList(BackendASTNode):
 
@@ -167,6 +179,8 @@ class ExpressionList(BackendASTNode):
                 code = code + ', ' + e.unparse()
         code = code + ')'
         return code
+
+    __str__ = unparse
 
 class FunctionDefinition(BackendASTNode):
 
@@ -207,6 +221,8 @@ class FunctionDefinition(BackendASTNode):
         code = '%s%s %s%s\n%s' % (mod, t, self._name, params, body)
         return code
 
+    __str__ = unparse
+
 class FunctionCall(BackendASTNode):
 
     def __init__(self, name, params=None):
@@ -224,6 +240,8 @@ class FunctionCall(BackendASTNode):
         code = '%s%s' % (name, params)
         return code
 
+    __str__ = unparse
+
 class CudaKernelCall(FunctionCall):
 
     def __init__(self, name, params, gridDim, blockDim, shMemSize=None, stream=None):
@@ -236,20 +254,22 @@ class CudaKernelCall(FunctionCall):
     def unparse(self):
         name = self._name
         params = self._params.unparse()
-        
+
         gridDim = self._gridDim.unparse()
         blockDim = self._blockDim.unparse()
         config = '%s,%s' % (gridDim, blockDim)
-        
+
         if self._shMemSize is not None:
             shMemSize = self._shMemSize.unparse()
             config = config + ',' + shMemSize
             if self._stream is not None:
                 stream = self._stream.unparse()
                 config = config + ',' + stream
-        
+
         code = '%s<<<%s>>>%s' % (name, config, params)
         return code
+
+    __str__ = unparse
 
 class Scope(BackendASTNode):
 
@@ -284,6 +304,8 @@ class Scope(BackendASTNode):
         code = code + '\n' + indent + '}'
         return code
 
+    __str__ = unparse
+
 class GlobalScope(Scope):
 
     def __init__(self, statements=None):
@@ -300,6 +322,8 @@ class GlobalScope(Scope):
                 code = code + s.unparse() + ';\n'
         return code
 
+    __str__ = unparse
+
 class New(BackendASTNode):
 
     def __init__(self, t, params=None):
@@ -315,6 +339,8 @@ class New(BackendASTNode):
         code = 'new %s%s' % (t, params)
         return code
 
+    __str__ = unparse
+
 class Delete(BackendASTNode):
 
     def __init__(self, var):
@@ -324,6 +350,8 @@ class Delete(BackendASTNode):
         var = self._var.unparse()
         code = 'delete %s' % (var)
         return code
+
+    __str__ = unparse
 
 class BinaryOp(BackendASTNode):
 
@@ -339,6 +367,8 @@ class BinaryOp(BackendASTNode):
         if bracketed:
             code = '(' + code + ')'
         return code
+
+    __str__ = unparse
 
 class MultiplyOp(BinaryOp):
 
@@ -371,13 +401,15 @@ class InitialisationOp(AssignmentOp):
         code = '%s %s' % (t, assignment)
         return code
 
+    __str__ = unparse
+
 class LessThanOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
         BinaryOp.__init__(self, lhs, rhs, '<')
 
 class ArrowOp(BinaryOp):
-    
+
     def __init__(self, lhs, rhs):
         BinaryOp.__init__(self, lhs, rhs, '->')
 
@@ -391,8 +423,10 @@ class PlusPlusOp(BackendASTNode):
         code = '%s++' % (expr)
         return code
 
+    __str__ = unparse
+
 class Declaration(BackendASTNode):
-    
+
     def __init__(self, var):
         self._var = var
 
@@ -401,6 +435,8 @@ class Declaration(BackendASTNode):
 
     def unparse(self):
         return self._var.unparse_declaration()
+
+    __str__ = unparse
 
 class Cast(BackendASTNode):
 
@@ -414,6 +450,8 @@ class Cast(BackendASTNode):
         code = '%s%s' % (t, var)
         return code
 
+    __str__ = unparse
+
 class AddressOfOp(BackendASTNode):
 
     def __init__(self, var):
@@ -424,6 +462,8 @@ class AddressOfOp(BackendASTNode):
         code = '&%s' % (var)
         return code
 
+    __str__ = unparse
+
 class SizeOf(BackendASTNode):
 
     def __init__(self, t):
@@ -433,6 +473,8 @@ class SizeOf(BackendASTNode):
         t = self._t.unparse()
         code = 'sizeof(%s)' % (t)
         return code
+
+    __str__ = unparse
 
 class Include(BackendASTNode):
 
@@ -449,10 +491,12 @@ class Include(BackendASTNode):
         code = '#include %s%s%s' % (marks[0], self._header, marks[1])
         return code
 
+    __str__ = unparse
+
 # Types
 
 class Type:
-    
+
     def __init__(self):
         self._modifier = ''
 
@@ -474,8 +518,10 @@ class Type:
     def unparse_post(self):
         return ''
 
+    __str__ = unparse
+
 class Void(Type):
-    
+
     def unparse_internal(self):
         return 'void'
 
@@ -563,5 +609,5 @@ def decIndent():
     global indentLevel
     indentLevel = indentLevel - indentSize
     return getIndent()
-    
+
 # vim:sw=4:ts=4:sts=4:et
