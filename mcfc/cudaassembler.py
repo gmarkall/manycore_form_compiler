@@ -331,22 +331,21 @@ class CudaAssemblerBackend(AssemblerBackend):
         for solve in solves:
             # Unpack the bits of information we want
             result = solve.targets[0].id
-            solveArgs = solve.value.args
-            matrix = solveArgs[0].id
-            vector = solveArgs[1].id
-            
+            matrix = str(solve.value.args[0].id)
+            vector = str(solve.value.args[1].id)
+
             # Call the matrix assembly
-            form = self._uflObjects[str(matrix)]
+            form = self._uflObjects[matrix]
             tree = form.integrals()[0].integrand()
             params = self._makeParameterListAndGetters(func, tree, form, matrixParameters)
-            matrixAssembly = CudaKernelCall(str(matrix), params, gridXDim, blockXDim)
+            matrixAssembly = CudaKernelCall(matrix, params, gridXDim, blockXDim)
             func.append(matrixAssembly)
 
             # Then call the rhs assembly
-            form = self._uflObjects[str(vector)]
+            form = self._uflObjects[vector]
             tree = form.integrals()[0].integrand()
             params = self._makeParameterListAndGetters(func, tree, form, vectorParameters)
-            vectorAssembly = CudaKernelCall(str(vector), params, gridXDim, blockXDim)
+            vectorAssembly = CudaKernelCall(vector, params, gridXDim, blockXDim)
             func.append(vectorAssembly)
 
             # Zero the global matrix and vector
