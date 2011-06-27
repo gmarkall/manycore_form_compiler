@@ -35,7 +35,7 @@ class Op2FormBackend(FormBackend):
 
         integrand = form.integrals()[0].integrand()
         form_data = form.form_data()
-        assert form_data, "Op2FormBackend._compile called with non-preprocessed form."
+        assert form_data, "Form has no form data attached!"
         rank = form_data.rank
         
         # Things for kernel declaration.

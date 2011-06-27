@@ -44,7 +44,7 @@ class KernelParameterGenerator(Transformer):
         # we see in the form back to the ones with their original
         # counts that are used earlier in the AST
         form_data = rootForm.form_data()
-        assert form_data, "Form has no attached form data"
+        assert form_data, "Form has no form data attached!"
         formCoefficients = form_data.coefficients
         originalCoefficients = form_data.original_coefficients
         formArguments = form_data.arguments
