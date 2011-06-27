@@ -25,7 +25,7 @@ def findForms(uflObjects):
     forms = []
     for key, value in uflObjects.items():
         if isinstance(value, ufl.form.Form):
-            forms.append(key)
+            forms.append((key,value))
 
     return forms
 
@@ -36,11 +36,9 @@ class Driver:
         # Build forms
         # needs to happen first, since form_data attached to the forms is changed
         forms = findForms(uflObjects)
-        for form in forms:
-            o = uflObjects[form]
-            assert o.form_data(), "Form has no form data attached!"
-            name = form
-            o.form_data().code = self._formBackend.compile(name, o)
+        for name, form in forms:
+            assert form.form_data(), "Form has no form data attached!"
+            form.form_data().code = self._formBackend.compile(name, form)
 
         # Build assembler
         definitions, declarations = self._assemblerBackend.compile(ast, uflObjects)
@@ -50,8 +48,8 @@ class Driver:
         print >>fd
 
         # Unparse form kernel declarations
-        for form in forms:
-            print >>fd, uflObjects[form].form_data().code.unparse()
+        for _, form in forms:
+            print >>fd, form.form_data().code.unparse()
             print >>fd
 
         # Unparse assembler declarations (body)
