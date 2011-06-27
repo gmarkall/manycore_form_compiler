@@ -45,9 +45,10 @@ class CudaFormBackend(FormBackend):
         rank = form_data.rank
         
         # Get parameter list for kernel declaration.
-        t = Void()
-        buildParameterList(integrand, form)
-        params = form.form_data().formalParameters
+        formalParameters, actualParameters = generateKernelParameters(integrand, form)
+        # Attach list of formal and actual kernel parameters to form data
+        form.form_data().formalParameters = formalParameters
+        form.form_data().actualParameters = actualParameters
 
         # Build the loop nest
         loopNest = self.buildLoopNest(form)
@@ -69,7 +70,7 @@ class CudaFormBackend(FormBackend):
         # Build the function with the loop nest inside
         statements = [loopNest]
         body = Scope(statements)
-        kernel = FunctionDefinition(Void(), name, params, body)
+        kernel = FunctionDefinition(Void(), name, formalParameters, body)
         
         # If there's any coefficients, we need to build a loop nest
         # that calculates their values at the quadrature points
@@ -194,12 +195,5 @@ class CudaFormBackend(FormBackend):
         inc = PlusAssignmentOp(var, threadCount)
         ast = ForLoop(init, test, inc)
         return ast
-
-def buildParameterList(tree, form):
-    "Generate formal and actual kernel parameters and attach them to form data"
-
-    formalParameters, actualParameters = generateKernelParameters(tree, form)
-    form.form_data().formalParameters = formalParameters
-    form.form_data().actualParameters = actualParameters
 
 # vim:sw=4:ts=4:sts=4:et
