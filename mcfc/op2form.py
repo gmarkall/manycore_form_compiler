@@ -33,6 +33,7 @@ class Op2FormBackend(FormBackend):
 
     def compile(self, name, form):
 
+        # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
         form_data = form.form_data()
         assert form_data, "Form has no form data attached!"
@@ -77,6 +78,7 @@ class Op2FormBackend(FormBackend):
 
     def buildQuadratureLoopNest(self, form):
         
+        # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
@@ -125,6 +127,7 @@ class Op2FormBackend(FormBackend):
     def buildLoopNest(self, form):
         form_data = form.form_data()
         rank = form_data.rank
+        # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
         # Build the loop over the first rank, which always exists

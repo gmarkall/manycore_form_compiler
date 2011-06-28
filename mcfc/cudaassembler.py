@@ -336,6 +336,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
             # Call the matrix assembly
             form = self._uflObjects[matrix]
+            # FIXME what if we have multiple integrals?
             tree = form.integrals()[0].integrand()
             params = self._makeParameterListAndGetters(func, tree, form, matrixParameters)
             matrixAssembly = CudaKernelCall(matrix, params, gridXDim, blockXDim)
@@ -343,6 +344,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
             # Then call the rhs assembly
             form = self._uflObjects[vector]
+            # FIXME what if we have multiple integrals?
             tree = form.integrals()[0].integrand()
             params = self._makeParameterListAndGetters(func, tree, form, vectorParameters)
             vectorAssembly = CudaKernelCall(vector, params, gridXDim, blockXDim)

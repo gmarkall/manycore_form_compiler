@@ -38,6 +38,7 @@ class CudaFormBackend(FormBackend):
 
     def compile(self, name, form):
 
+        # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
         form_data = form.form_data()
         assert form_data, "Form has no form data attached!"
@@ -68,7 +69,7 @@ class CudaFormBackend(FormBackend):
         # Build the function with the loop nest inside
         statements = [loopNest]
         body = Scope(statements)
-        kernel = FunctionDefinition(t, name, params, body)
+        kernel = FunctionDefinition(Void(), name, params, body)
         
         # If there's any coefficients, we need to build a loop nest
         # that calculates their values at the quadrature points
@@ -93,6 +94,7 @@ class CudaFormBackend(FormBackend):
 
     def buildQuadratureLoopNest(self, form):
         
+        # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
@@ -104,7 +106,6 @@ class CudaFormBackend(FormBackend):
         # to compute its value
         for coeff in coefficients:
             rank = coeff.rank()
-            #loop = gaussLoop
             self.buildCoefficientLoopNest(coeff, rank, gaussLoop)
 
         for spatialDerivative in spatialDerivatives:
@@ -142,6 +143,7 @@ class CudaFormBackend(FormBackend):
     def buildLoopNest(self, form):
         form_data = form.form_data()
         rank = form_data.rank
+        # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
         # The element loop is the outermost loop

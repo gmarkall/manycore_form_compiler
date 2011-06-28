@@ -80,6 +80,7 @@ class FormBackend:
         return initialiser
 
     def buildCoeffQuadDeclarations(self, form):
+        # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
         
