@@ -20,7 +20,7 @@
 
 # MCFC libs
 from form import *
-from cudaparameters import generateKernelParameters, numElements, statutoryParameters
+from cudaparameters import CudaKernelParameterGenerator, numElements, statutoryParameters
 from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, ElementIndex
 
 # Variables
@@ -45,7 +45,7 @@ class CudaFormBackend(FormBackend):
         rank = form_data.rank
         
         # Get parameter list for kernel declaration.
-        formalParameters, actualParameters = generateKernelParameters(integrand, form)
+        formalParameters, actualParameters = self._buildKernelParameters(integrand, form)
         # Attach list of formal and actual kernel parameters to form data
         form.form_data().formalParameters = formalParameters
         form.form_data().actualParameters = actualParameters
@@ -84,6 +84,10 @@ class CudaFormBackend(FormBackend):
         # Make this a Cuda kernel.
         kernel.setCudaKernel(True)
         return kernel
+
+    def _buildKernelParameters(self, tree, form):
+        KPG = CudaKernelParameterGenerator()
+        return KPG.generate(tree, form, statutoryParameters)
 
     def buildCoeffQuadDeclarations(self, form):
         # The FormBackend's list of variables to declare is

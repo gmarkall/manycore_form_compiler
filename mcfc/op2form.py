@@ -20,7 +20,7 @@
 
 # MCFC libs
 from form import *
-from op2parameters import generateKernelParameters
+from op2parameters import Op2KernelParameterGenerator, _buildArrayParameter
 from op2expression import Op2ExpressionBuilder, Op2QuadratureExpressionBuilder
 
 class Op2FormBackend(FormBackend):
@@ -75,6 +75,17 @@ class Op2FormBackend(FormBackend):
                 loopNest.prepend(decl)
         
         return kernel
+
+    def _buildKernelParameters(self, tree, form):
+        KPG = Op2KernelParameterGenerator(self)
+
+        detwei = _buildArrayParameter("detwei", KPG.expBuilder.subscript_detwei())
+        timestep = Variable("dt", Real() )
+        localTensor = _buildArrayParameter("localTensor", KPG.expBuilder.subscript_LocalTensor(form))
+
+        statutoryParameters = [ localTensor, timestep, detwei ]
+
+        return KPG.generate(tree, form, statutoryParameters)
 
     def buildQuadratureLoopNest(self, form):
         
@@ -166,7 +177,7 @@ class Op2FormBackend(FormBackend):
         return outerLoop
 
     def buildParameterList(self, tree, form):
-        formalParameters, _ = generateKernelParameters(tree, form, self)
+        formalParameters, _ = self._buildKernelParameters(tree, form)
         return formalParameters
 
 # vim:sw=4:ts=4:sts=4:et

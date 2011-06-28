@@ -48,15 +48,4 @@ class Op2KernelParameterGenerator(KernelParameterGenerator):
 def _buildArrayParameter(name, indices):
     return Variable(name, Array(Real(), [i.extent() for i in indices]))
 
-def generateKernelParameters(tree, form, op2form):
-    KPG = Op2KernelParameterGenerator(op2form)
-
-    detwei = _buildArrayParameter("detwei", KPG.expBuilder.subscript_detwei())
-    timestep = Variable("dt", Real() )
-    localTensor = _buildArrayParameter("localTensor", KPG.expBuilder.subscript_LocalTensor(form))
-
-    statutoryParameters = [ localTensor, timestep, detwei ]
-
-    return KPG.generate(tree, form, statutoryParameters)
-
 # vim:sw=4:ts=4:sts=4:et
