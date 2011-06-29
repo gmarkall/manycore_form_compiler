@@ -392,14 +392,10 @@ class PlusAssignmentOp(BinaryOp):
 
 class InitialisationOp(AssignmentOp):
 
-    def __init__(self, lhs, rhs):
-        AssignmentOp.__init__(self, lhs, rhs)
-
     def unparse(self):
-        t = self._lhs._t.unparse()
-        assignment = AssignmentOp.unparse(self, False)
-        code = '%s %s' % (t, assignment)
-        return code
+        lhs = self._lhs.unparse_declaration()
+        rhs = self._rhs.unparse()
+        return '%s %s %s' % (lhs, self._op, rhs)
 
     __str__ = unparse
 
