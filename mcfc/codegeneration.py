@@ -498,7 +498,8 @@ class Include(BackendASTNode):
 class Type:
 
     def __init__(self):
-        self._modifier = ''
+        # FIXME need the order of modifiers be enforced / preserved?
+        self._modifier = set()
 
     def unparse(self):
         modifier = self.unparse_modifier()
@@ -506,14 +507,20 @@ class Type:
         code = '%s%s' % (modifier, internal)
         return code
 
-    def setCudaShared(self, isCudaShared):
-        if isCudaShared:
-            self._modifier = '__shared__ '
+    def _setModifier(self, setModifier, modifier):
+        if setModifier:
+            self._modifier.add(modifier)
         else:
-            self._modifier = ''
+            self._modifier.discard(modifier)
+
+    def setConst(self, isConst):
+        self._setModifier(isConst, 'const ')
+
+    def setCudaShared(self, isCudaShared):
+        self._setModifier(isCudaShared, '__shared__ ')
 
     def unparse_modifier(self):
-        return self._modifier
+        return ''.join(self._modifier)
 
     def unparse_post(self):
         return ''
