@@ -559,10 +559,13 @@ class Array(Type):
     def __init__(self, base, extents):
         Type.__init__(self)
         self._base = base
-        self._extents = extents if isinstance(extents,list) else [extents]
+        try:
+            self._extents = list(extents)
+        except TypeError:
+            self._extents = [extents]
 
     def unparse_internal(self):
-        return self._base.unparse_internal()
+        return self._base.unparse()
 
     def unparse_post(self):
         code = ''
