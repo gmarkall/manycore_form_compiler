@@ -21,6 +21,8 @@
 """codegeneration.py - provides tools to build a C++/CUDA/OpenCL ASTs and
 unparse it to a file."""
 
+import numpy
+
 class BackendASTNode:
     pass
 
@@ -599,6 +601,19 @@ def getScopeFromNest(nest, depth):
         loop = body.find(lambda x: isinstance(x, ForLoop))
         body = loop.body()
     return body
+
+def buildConstArrayInitializer(arrayName, values):
+    "Build an initializer for a constant array from a given NumPy array."
+
+    # Make input a NumPy array (and fail it it doesn't work)
+    values = numpy.asarray(values, numpy.float)
+
+    # Create a const array of appropriate shape
+    var = Variable(arrayName, Array(Real(isConst=True), map(Literal, values.shape)))
+    # Replace all [ delimiters by { in string representation of the array
+    arrStr = numpy.array2string(values, separator=',')
+    data = UnparsedCode(arrStr.replace('[','{ ').replace(']',' }'))
+    return InitialisationOp(var, data)
 
 # Unparser-specific functions
 
