@@ -497,9 +497,11 @@ class Include(BackendASTNode):
 
 class Type:
 
-    def __init__(self):
+    def __init__(self, isConst = False, isCudaShared = False):
         # FIXME need the order of modifiers be enforced / preserved?
         self._modifier = set()
+        self.setConst(isConst)
+        self.setCudaShared(isCudaShared)
 
     def unparse(self):
         modifier = self.unparse_modifier()
