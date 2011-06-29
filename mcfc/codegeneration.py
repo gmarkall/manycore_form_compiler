@@ -109,6 +109,17 @@ class Literal(BackendASTNode):
 
     __str__ = unparse
 
+class InitialiserList(BackendASTNode):
+
+    def __init__(self, array):
+        # Make input a NumPy array (and fail it it doesn't work)
+        self._array = numpy.asarray(array, numpy.float)
+
+    def unparse(self):
+        arrStr = numpy.array2string(self._array, separator=',')
+        # Replace all [ delimiters by { in string representation of the array
+        return arrStr.replace('[','{ ').replace(']',' }')
+
 class ForLoop(BackendASTNode):
 
     def __init__(self, init, test, inc, body=None):
@@ -610,10 +621,7 @@ def buildConstArrayInitializer(arrayName, values):
 
     # Create a const array of appropriate shape
     var = Variable(arrayName, Array(Real(isConst=True), map(Literal, values.shape)))
-    # Replace all [ delimiters by { in string representation of the array
-    arrStr = numpy.array2string(values, separator=',')
-    data = UnparsedCode(arrStr.replace('[','{ ').replace(']',' }'))
-    return InitialisationOp(var, data)
+    return InitialisationOp(var, InitialiserList(values))
 
 # Unparser-specific functions
 
