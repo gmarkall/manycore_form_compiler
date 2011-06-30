@@ -21,12 +21,7 @@
 # MCFC libs
 from form import *
 from cudaparameters import CudaKernelParameterGenerator, numElements, statutoryParameters
-from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, ElementIndex
-
-# Variables
-
-threadCount = Variable("THREAD_COUNT")
-threadId = Variable("THREAD_ID")
+from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop
 
 class CudaFormBackend(FormBackend):
 
@@ -152,7 +147,7 @@ class CudaFormBackend(FormBackend):
         integrand = form.integrals()[0].integrand()
 
         # The element loop is the outermost loop
-        loop = self.buildElementLoop()
+        loop = buildElementLoop()
         outerLoop = loop
 
         # Build the loop over the first rank, which always exists
@@ -190,14 +185,5 @@ class CudaFormBackend(FormBackend):
         # Hand back the outer loop, so it can be inserted into some
         # scope.
         return outerLoop
-
-    def buildElementLoop(self):
-        indVarName = ElementIndex().name()
-        var = Variable(indVarName, Integer())
-        init = InitialisationOp(var, threadId)
-        test = LessThanOp(var, numElements)
-        inc = PlusAssignmentOp(var, threadCount)
-        ast = ForLoop(init, test, inc)
-        return ast
 
 # vim:sw=4:ts=4:sts=4:et
