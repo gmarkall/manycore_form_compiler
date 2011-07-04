@@ -42,6 +42,7 @@ class AccessedFieldFinder(NodeVisitor):
                 objname = rhs.value.value.id
                 # subscript -> attribute -> string
                 objmember = rhs.value.attr
+                # Proceed to checking members - no need to check name of state
                 if objname == "state":
                     if objmember == "scalar_fields":
                         rank = 0
