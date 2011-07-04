@@ -571,10 +571,14 @@ class Array(Type):
     def __init__(self, base, extents):
         Type.__init__(self)
         self._base = base
+        # Assuming extents is an iterable
         try:
             self._extents = list(extents)
+        # Otherwise it is a scalar
         except TypeError:
             self._extents = [extents]
+        # Convert ints to literals
+        self._extents = [Literal(x) if isinstance(x,int) else x for x in self._extents]
 
     def unparse_internal(self):
         return self._base.unparse()
