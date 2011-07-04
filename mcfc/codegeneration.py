@@ -129,10 +129,7 @@ class ForLoop(BackendASTNode):
         self._init = init
         self._test = test
         self._inc = inc
-        if body is None:
-            self._body = Scope()
-        else:
-            self._body = body
+        self._body = body or Scope()
 
     def append(self, statement):
         self._body.append(statement)
@@ -147,10 +144,9 @@ class ForLoop(BackendASTNode):
         init = self._init.unparse()
         test = self._test.unparse(False)
         inc = self._inc.unparse()
+        header = 'for(%s; %s; %s)\n' % (init, test, inc)
         body = self._body.unparse()
-        code = 'for(%s; %s; %s)\n' % (init, test, inc)
-        code = code + body
-        return code
+        return header + body
 
     __str__ = unparse
 
@@ -408,7 +404,7 @@ class PlusAssignmentOp(BinaryOp):
 
 class InitialisationOp(AssignmentOp):
 
-    def unparse(self):
+    def unparse(self, bracketed=False):
         lhs = self._lhs.unparse_declaration()
         rhs = self._rhs.unparse()
         return '%s %s %s' % (lhs, self._op, rhs)
