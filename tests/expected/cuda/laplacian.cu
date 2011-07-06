@@ -103,8 +103,8 @@ extern "C" void run_model_(double* dt_pointer)
   int nodesPerEle = (state -> getNodesPerEle("Coordinate"));
   double* shape = (state -> getBasisFunction("Coordinate"));
   double* dShape = (state -> getBasisFunctionDerivative("Coordinate"));
-  int blockXDim = 16;
-  int gridXDim = 16;
+  int blockXDim = 1;
+  int gridXDim = 1;
   int shMemSize = t2p_shmemsize(blockXDim, nDim, nodesPerEle);
   transform_to_physical<<<gridXDim,blockXDim,shMemSize>>>(coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle);
   A<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt, detwei, dShape);
