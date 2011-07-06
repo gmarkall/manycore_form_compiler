@@ -6,7 +6,7 @@
 // Utility functions for calculating locations when using 
 // expanded data layout.
 
-#include <cudastatic.hpp>
+#include "cudastatic.hpp"
 
 #include <unistd.h> // For debugging only
 #include <cstdio> // likewise
