@@ -20,6 +20,11 @@
 from expression import *
 from cudaparameters import numElements
 
+# Variables
+
+threadCount = Variable("THREAD_COUNT")
+threadId = Variable("THREAD_ID")
+
 # The ElementIndex is here and not form.py because not all backends need
 # an element index (e.g. OP2).
 
@@ -30,6 +35,15 @@ class ElementIndex:
 
     def name(self):
         return "i_ele"
+
+def buildElementLoop():
+    indVarName = ElementIndex().name()
+    var = Variable(indVarName, Integer())
+    init = InitialisationOp(var, threadId)
+    test = LessThanOp(var, numElements)
+    inc = PlusAssignmentOp(var, threadCount)
+    ast = ForLoop(init, test, inc)
+    return ast
 
 def buildSubscript(variable, indices):
     """Given a list of indices, return an AST that computes

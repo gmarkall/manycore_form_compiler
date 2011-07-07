@@ -111,6 +111,9 @@ class FormBackend:
     def compile(self, form):
         raise NotImplementedError("You're supposed to implement compile()!")
 
+    def _buildKernelParameters(self, tree, form):
+        raise NotImplementedError("You're supposed to implement _buildKernelParameters()!")
+
 class CoefficientUseFinder(Transformer):
     """Finds the nodes that 'use' a coefficient. This is either a Coefficient
     itself, or a SpatialDerivative that has a Coefficient as its operand"""
@@ -237,6 +240,9 @@ class DimIndex(CodeIndex):
 
 # Name builders
 
+def safe_shortstr(name):
+    return name[:name.find('(')]
+
 def buildArgumentName(tree):
     element = tree.element()
     if element.num_sub_elements() is not 0:
@@ -247,8 +253,7 @@ def buildArgumentName(tree):
             sub_elements = element.sub_elements()
             element = sub_elements[0]
         
-    name = element.shortstr()
-    return name[:name.find('(')]
+    return safe_shortstr(element.shortstr())
 
 def buildSpatialDerivativeName(tree):
     operand = tree.operands()[0]

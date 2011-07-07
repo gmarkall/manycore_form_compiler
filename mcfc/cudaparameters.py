@@ -39,8 +39,4 @@ class CudaKernelParameterGenerator(KernelParameterGenerator):
         name = form.buildSpatialDerivativeName(argDeriv)
         return Variable(name, Pointer(Real()))
 
-def generateKernelParameters(tree, form):
-    KPG = CudaKernelParameterGenerator()
-    return KPG.generate(tree, form, statutoryParameters)
-
 # vim:sw=4:ts=4:sts=4:et

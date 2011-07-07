@@ -20,13 +20,8 @@
 
 # MCFC libs
 from form import *
-from cudaparameters import generateKernelParameters, numElements, statutoryParameters
-from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, ElementIndex
-
-# Variables
-
-threadCount = Variable("THREAD_COUNT")
-threadId = Variable("THREAD_ID")
+from cudaparameters import CudaKernelParameterGenerator, numElements, statutoryParameters
+from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop
 
 class CudaFormBackend(FormBackend):
 
@@ -45,9 +40,10 @@ class CudaFormBackend(FormBackend):
         rank = form_data.rank
         
         # Get parameter list for kernel declaration.
-        t = Void()
-        buildParameterList(integrand, form)
-        params = form.form_data().formalParameters
+        formalParameters, actualParameters = self._buildKernelParameters(integrand, form)
+        # Attach list of formal and actual kernel parameters to form data
+        form.form_data().formalParameters = formalParameters
+        form.form_data().actualParameters = actualParameters
 
         # Build the loop nest
         loopNest = self.buildLoopNest(form)
@@ -69,7 +65,7 @@ class CudaFormBackend(FormBackend):
         # Build the function with the loop nest inside
         statements = [loopNest]
         body = Scope(statements)
-        kernel = FunctionDefinition(Void(), name, params, body)
+        kernel = FunctionDefinition(Void(), name, formalParameters, body)
         
         # If there's any coefficients, we need to build a loop nest
         # that calculates their values at the quadrature points
@@ -83,6 +79,10 @@ class CudaFormBackend(FormBackend):
         # Make this a Cuda kernel.
         kernel.setCudaKernel(True)
         return kernel
+
+    def _buildKernelParameters(self, tree, form):
+        KPG = CudaKernelParameterGenerator()
+        return KPG.generate(tree, form, statutoryParameters)
 
     def buildCoeffQuadDeclarations(self, form):
         # The FormBackend's list of variables to declare is
@@ -147,7 +147,7 @@ class CudaFormBackend(FormBackend):
         integrand = form.integrals()[0].integrand()
 
         # The element loop is the outermost loop
-        loop = self.buildElementLoop()
+        loop = buildElementLoop()
         outerLoop = loop
 
         # Build the loop over the first rank, which always exists
@@ -185,21 +185,5 @@ class CudaFormBackend(FormBackend):
         # Hand back the outer loop, so it can be inserted into some
         # scope.
         return outerLoop
-
-    def buildElementLoop(self):
-        indVarName = ElementIndex().name()
-        var = Variable(indVarName, Integer())
-        init = InitialisationOp(var, threadId)
-        test = LessThanOp(var, numElements)
-        inc = PlusAssignmentOp(var, threadCount)
-        ast = ForLoop(init, test, inc)
-        return ast
-
-def buildParameterList(tree, form):
-    "Generate formal and actual kernel parameters and attach them to form data"
-
-    formalParameters, actualParameters = generateKernelParameters(tree, form)
-    form.form_data().formalParameters = formalParameters
-    form.form_data().actualParameters = actualParameters
 
 # vim:sw=4:ts=4:sts=4:et
