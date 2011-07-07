@@ -301,7 +301,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         # Build the block dimension declaration. Eventually this needs to be configurable
         # (e.g. for autotuning, performance experiments.)
         blockXDim = Variable('blockXDim', Integer())
-        assignment = AssignmentOp(Declaration(blockXDim), Literal(2))
+        assignment = AssignmentOp(Declaration(blockXDim), Literal(1))
         func.append(assignment)
         gridXDim = Variable('gridXDim', Integer())
         assignment = AssignmentOp(Declaration(gridXDim), Literal(16))
