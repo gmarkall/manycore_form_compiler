@@ -237,6 +237,9 @@ class DimIndex(CodeIndex):
 
 # Name builders
 
+def safe_shortstr(name):
+    return name[:name.find('(')]
+
 def buildArgumentName(tree):
     element = tree.element()
     if element.num_sub_elements() is not 0:
@@ -247,8 +250,7 @@ def buildArgumentName(tree):
             sub_elements = element.sub_elements()
             element = sub_elements[0]
         
-    name = element.shortstr()
-    return name[:name.find('(')]
+    return safe_shortstr(element.shortstr())
 
 def buildSpatialDerivativeName(tree):
     operand = tree.operands()[0]
