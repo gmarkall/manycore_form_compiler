@@ -21,6 +21,8 @@
 """codegeneration.py - provides tools to build a C++/CUDA/OpenCL ASTs and
 unparse it to a file."""
 
+import numpy
+
 class BackendASTNode:
     pass
 
@@ -107,16 +109,27 @@ class Literal(BackendASTNode):
 
     __str__ = unparse
 
+class InitialiserList(BackendASTNode):
+
+    def __init__(self, array, newlines = False, indentation = ''):
+        # Make input a NumPy array (and fail it it doesn't work)
+        self._array = numpy.asarray(array, numpy.float)
+        self.arrStr = numpy.array2string(self._array, separator=',', prefix=indentation)
+        if not newlines:
+            self.arrStr = self.arrStr.replace('\n','')
+        # Replace all [ delimiters by { in string representation of the array
+        self.arrStr = self.arrStr.replace('[','{ ').replace(']',' }')
+
+    def unparse(self):
+        return self.arrStr
+
 class ForLoop(BackendASTNode):
 
     def __init__(self, init, test, inc, body=None):
         self._init = init
         self._test = test
         self._inc = inc
-        if body is None:
-            self._body = Scope()
-        else:
-            self._body = body
+        self._body = body or Scope()
 
     def append(self, statement):
         self._body.append(statement)
@@ -131,10 +144,9 @@ class ForLoop(BackendASTNode):
         init = self._init.unparse()
         test = self._test.unparse(False)
         inc = self._inc.unparse()
+        header = 'for(%s; %s; %s)\n' % (init, test, inc)
         body = self._body.unparse()
-        code = 'for(%s; %s; %s)\n' % (init, test, inc)
-        code = code + body
-        return code
+        return header + body
 
     __str__ = unparse
 
@@ -392,14 +404,10 @@ class PlusAssignmentOp(BinaryOp):
 
 class InitialisationOp(AssignmentOp):
 
-    def __init__(self, lhs, rhs):
-        AssignmentOp.__init__(self, lhs, rhs)
-
-    def unparse(self):
-        t = self._lhs._t.unparse()
-        assignment = AssignmentOp.unparse(self, False)
-        code = '%s %s' % (t, assignment)
-        return code
+    def unparse(self, bracketed=False):
+        lhs = self._lhs.unparse_declaration()
+        rhs = self._rhs.unparse()
+        return '%s %s %s' % (lhs, self._op, rhs)
 
     __str__ = unparse
 
@@ -497,8 +505,11 @@ class Include(BackendASTNode):
 
 class Type:
 
-    def __init__(self):
-        self._modifier = ''
+    def __init__(self, isConst = False, isCudaShared = False):
+        # FIXME need the order of modifiers be enforced / preserved?
+        self._modifier = set()
+        self.setConst(isConst)
+        self.setCudaShared(isCudaShared)
 
     def unparse(self):
         modifier = self.unparse_modifier()
@@ -506,14 +517,20 @@ class Type:
         code = '%s%s' % (modifier, internal)
         return code
 
-    def setCudaShared(self, isCudaShared):
-        if isCudaShared:
-            self._modifier = '__shared__ '
+    def _setModifier(self, setModifier, modifier):
+        if setModifier:
+            self._modifier.add(modifier)
         else:
-            self._modifier = ''
+            self._modifier.discard(modifier)
+
+    def setConst(self, isConst):
+        self._setModifier(isConst, 'const ')
+
+    def setCudaShared(self, isCudaShared):
+        self._setModifier(isCudaShared, '__shared__ ')
 
     def unparse_modifier(self):
-        return self._modifier
+        return ''.join(self._modifier)
 
     def unparse_post(self):
         return ''
@@ -554,10 +571,17 @@ class Array(Type):
     def __init__(self, base, extents):
         Type.__init__(self)
         self._base = base
-        self._extents = extents if isinstance(extents,list) else [extents]
+        # Assuming extents is an iterable
+        try:
+            self._extents = list(extents)
+        # Otherwise it is a scalar
+        except TypeError:
+            self._extents = [extents]
+        # Convert ints to literals
+        self._extents = [Literal(x) if isinstance(x,int) else x for x in self._extents]
 
     def unparse_internal(self):
-        return self._base.unparse_internal()
+        return self._base.unparse()
 
     def unparse_post(self):
         code = ''
@@ -591,6 +615,17 @@ def getScopeFromNest(nest, depth):
         loop = body.find(lambda x: isinstance(x, ForLoop))
         body = loop.body()
     return body
+
+def buildConstArrayInitializer(arrayName, values):
+    "Build an initializer for a constant array from a given NumPy array."
+
+    # Make input a NumPy array (and fail it it doesn't work)
+    values = numpy.asarray(values, numpy.float)
+
+    # Create a const array of appropriate shape
+    var = Variable(arrayName, Array(Real(isConst=True), [Literal(x) for x in values.shape]))
+
+    return InitialisationOp(var, InitialiserList(values, newlines=True, indentation=var.unparse_declaration()))
 
 # Unparser-specific functions
 
