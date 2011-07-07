@@ -304,7 +304,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         assignment = AssignmentOp(Declaration(blockXDim), Literal(1))
         func.append(assignment)
         gridXDim = Variable('gridXDim', Integer())
-        assignment = AssignmentOp(Declaration(gridXDim), Literal(1))
+        assignment = AssignmentOp(Declaration(gridXDim), Literal(16))
         func.append(assignment)
 
         # Call the function that computes the amount of shared memory we need for
