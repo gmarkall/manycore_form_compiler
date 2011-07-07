@@ -14,7 +14,7 @@ double* scratchpad;
 #define NUM_BLOCKS 128
 
 // Solver parameters - relative tolerance and maximum iterations
-#define epsilon2 1e-7
+#define epsilon2 1e-9
 #define IMAX 180
 
 // For timing solver
