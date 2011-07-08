@@ -186,8 +186,6 @@ int t2p_shmemsize(int block_x_dim, int n_dim, int nodes_per_ele)
   int shmemsize = (jac_size+local_dn_size+invJ_size+local_coords_size+shape_dn_size+local_dshape_size) 
                   * sizeof(double);
 
-  printf("T2P shmemsize: %d\n", shmemsize);
-
   return shmemsize;
 }
 
@@ -221,10 +219,6 @@ __global__ void transform_to_physical(double *node_coords, double *dn, double *q
     const int shape_dn_size = n_dim;
     const int shape_dn_in_a_block_size = blockDim.x*shape_dn_size;
     const int local_dshape_size = n_dim;
-    // Unused for now - uncomment it when you want it later
-    // (might as well leave it in rather than risk messing up
-    // when you rewrite it
-    //const int local_dshape_in_a_block_size = blockDim.x*local_dshape_size;
 
     // Pointers to shared mem for the local data
     double *J_local_T    = shmem + (threadIdx.x*jac_size);
@@ -233,13 +227,6 @@ __global__ void transform_to_physical(double *node_coords, double *dn, double *q
     double *local_coords = shmem + jacs_in_a_block_size + local_dn_in_a_block_size + jacs_in_a_block_size + threadIdx.x*local_dn_size;
     double *shape_dn     = shmem + jacs_in_a_block_size + local_dn_in_a_block_size + jacs_in_a_block_size + local_dn_in_a_block_size + threadIdx.x*shape_dn_size;
     double *dshape_local = shmem + jacs_in_a_block_size + local_dn_in_a_block_size + jacs_in_a_block_size + local_dn_in_a_block_size + shape_dn_in_a_block_size + threadIdx.x*local_dshape_size;
-
-//    printf("Offsets:\n %d\n %d\n %d\n %d\n %d\n %d\n \n", J_local_T-shmem,
-//                                                          local_dn-shmem,
-//                                                          invJ_local-shmem,
-//                                                          local_coords-shmem,
-//                                                          shape_dn-shmem,
-//                                                          dshape_local-shmem);
 
     // Other local variables
     double detJ_local;
@@ -309,9 +296,7 @@ __global__ void transform_to_physical(double *node_coords, double *dn, double *q
         for (int j=0; j<n_dim; ++j)
 	{
 	  const int localIdx = j;
-  //        printf("localIdx: %d, shmem: %x, shape_dn: %x\n", localIdx, shmem, shape_dn);
-	  double temp = dn[j*(n_quad*nodes_per_ele) + q*(n_dim) + i];
-	  shape_dn[localIdx] = temp;
+	  shape_dn[localIdx] = dn[j*(n_quad*nodes_per_ele) + q*(n_dim) + i];
 	}
         
 	// Transform to physical space
@@ -329,23 +314,6 @@ __global__ void transform_to_physical(double *node_coords, double *dn, double *q
       detwei[detweiIdx] = fabs(detJ_local)*quad_weights[q];
 
     }
-
   }
-
-  /* For debugging - delete evenutally.
-  for (int ele=0; ele<n_ele; ele++)
-  {
-    for (int dim=0; dim<n_dim; dim++)
-    {
-      for (int q=0; q<n_quad; q++)
-      {
-        for (int loc=0; loc<nodes_per_ele; loc++)
-	{
-	  const int dshapeIdx = ele + dim*n_ele + q*n_dim*n_ele + loc*n_quad*n_dim*n_ele;
-          printf("dshape[%d,%d,%d,%d]=%f\n",ele,loc,q,dim,dshape[dshapeIdx]);
-	}
-      }
-    }
-  }*/
 }
 
