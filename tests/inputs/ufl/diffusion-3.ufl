@@ -4,7 +4,7 @@ t=Coefficient(T)
 p=TrialFunction(T)
 q=TestFunction(T)
 
-diffusivity = 0.001
+diffusivity = 0.1
 
 M=p*q*dx
 d=-dt*diffusivity*dot(grad(q),grad(p))*dx
