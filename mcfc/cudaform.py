@@ -84,13 +84,16 @@ class CudaFormBackend(FormBackend):
         KPG = CudaKernelParameterGenerator()
         return KPG.generate(tree, form, statutoryParameters)
 
-    def buildCoeffQuadDeclarations(self, form):
-        # The FormBackend's list of variables to declare is
-        # fine, but we want them to be __shared__
-        declarations = FormBackend.buildCoeffQuadDeclarations(self, form)
-        for decl in declarations:
-            decl.setCudaShared(True)
-        return declarations
+    # We don't want these variables shared unless we do some extra legwork
+    # to sort out the offset needed by each thread. 
+
+    #def buildCoeffQuadDeclarations(self, form):
+    #    # The FormBackend's list of variables to declare is
+    #    # fine, but we want them to be __shared__
+    #    declarations = FormBackend.buildCoeffQuadDeclarations(self, form)
+    #    for decl in declarations:
+    #        decl.setCudaShared(True)
+    #    return declarations
 
     def buildQuadratureLoopNest(self, form):
         

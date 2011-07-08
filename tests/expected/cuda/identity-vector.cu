@@ -36,7 +36,7 @@ __global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, d
 {
   for(int i_ele = THREAD_ID; i_ele < n_ele; (i_ele += THREAD_COUNT))
   {
-    __shared__ double c_q0[12];
+    double c_q0[12];
     for(int i_g = 0; i_g < 6; i_g++)
     {
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
