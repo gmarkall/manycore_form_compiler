@@ -27,24 +27,24 @@ class field_dict(dict):
 
     def __init__(self):
         self._run = False
-	self._accessedFields = set()
-	self._returnedFields = set()
-	dict.__init__(self)
+        self._accessedFields = set()
+        self._returnedFields = set()
+        dict.__init__(self)
 
     def readyToRun(self):
         """Call this when the dict has been set up with the fields, before
-	   the ufl input runs"""
-	self._run = True
+           the ufl input runs"""
+        self._run = True
 
     def __getitem__(self, key):
         if self._run:
             self._accessedFields.add(key)
-	return dict.__getitem__(self, key)
+        return dict.__getitem__(self, key)
 
     def __setitem__(self, key, data):
         if self._run:
-	    self._returnedFields.add(key)
-	dict.__setitem__(self, key, data)
+            self._returnedFields.add(key)
+        dict.__setitem__(self, key, data)
 
 class UflState:
 
