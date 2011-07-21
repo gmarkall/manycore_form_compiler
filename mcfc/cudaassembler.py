@@ -125,8 +125,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.append(arrow)
 
         # Extract accessed fields
-        accessedFields = findAccessedFields(self._ast)
-        for rank, field in accessedFields:
+        for rank, field in self._uflObjects['state'].accessedFields():
             params = [ Literal(field), Literal(rank) ]
             call = FunctionCall('extractField',params)
             arrow = ArrowOp(state, call)

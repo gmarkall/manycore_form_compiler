@@ -36,7 +36,6 @@ from symbolicvalue import SymbolicValue
 
 def canonicalise(code, _state, _states):
 
-    _state.readyToRun()
     for key in _states:
         _states[key].readyToRun()
 
@@ -49,15 +48,18 @@ def canonicalise(code, _state, _states):
            "" + code
     exec code in namespace
 
-    uflObjects = {}
+    # Pre-populate with state and states
+    uflObjects = {"state": _state, "states": _states}
 
     for name, value in namespace.iteritems():
+        # UFL Forms
         if isinstance(value, (ufl.form.Form, tuple)):
             form = as_form(value)
             form_data = form.compute_form_data()
             form = form_data.preprocessed_form
             form._form_data = form_data
             uflObjects[name] = form
+        # UFL Coefficients and Arguments
         elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
             uflObjects[name] = value
 

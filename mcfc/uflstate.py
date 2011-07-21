@@ -71,6 +71,12 @@ class UflState:
     def __repr__(self):
         return str(self.scalar_fields)+', '+str(self.vector_fields)+', '+str(self.tensor_fields)
 
+    def accessedFields(self):
+        for rank in [0, 1, 2]:
+            accessedFields = self[rank]._accessedFields
+            for field in zip([rank]*len(accessedFields),accessedFields):
+                yield field
+
     def insert_field(self, field, rank, shape = 'CG', degree = 1):
         self[rank][field] = ufl_elements[rank](shape, "triangle", degree)
 

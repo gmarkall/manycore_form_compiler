@@ -27,41 +27,6 @@ class AssemblerBackend:
     def compile(self, ast, uflObjects):
         raise NotImplementedError("You're supposed to implement compile()!")
 
-class AccessedFieldFinder(NodeVisitor):
-
-    def find(self, tree):
-        self._fields = []
-        self.visit(tree)
-        return self._fields
-
-    def visit_Assign(self, tree):
-        rhs = tree.value
-        if len(tree.targets)==1:
-            try:
-                # subscript -> attribute -> name
-                objname = rhs.value.value.id
-                # subscript -> attribute -> string
-                objmember = rhs.value.attr
-                # Proceed to checking members - no need to check name of state
-                if objname == "state":
-                    if objmember == "scalar_fields":
-                        rank = 0
-                    if objmember == "vector_fields":
-                        rank = 1
-                    if objmember == "tensor_fields":
-                        rank = 2
-                    fieldname = rhs.slice.value.s
-                    self._fields.append((rank, fieldname))
-            except AttributeError:
-                # This is not a field access, so no action necessary.
-                pass
-        else:
-            raise NotImplementedError("Tuple assignment needs implementing.")
-
-def findAccessedFields(tree):
-    AFF = AccessedFieldFinder()
-    return AFF.find(tree)
-
 class SolveResultFinder(NodeVisitor):
 
     def find(self, tree):
