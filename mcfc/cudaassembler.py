@@ -155,7 +155,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         # Get sparsity of the field we're solving for
         sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
-        # We can use the similarField from earlier, since its
+        # FIXME: We can use the similarField from earlier, since its
         # the only field we're solving on for now. When we start working
         # with solving multiple fields, this logic will need re-working.
         # (For each solve field, we should use the similar field and
@@ -167,7 +167,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.append(assignment)
 
         # Initialise matrix_colm, findrm, etc.
-        # When you tidy this up, put these in a dict???
+        # FIXME: When you tidy this up, put these in a dict???
         matrixVars = [ matrixColm,    matrixFindrm,    matrixColmSize, matrixFindrmSize ]
         sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm',  'getSizeFindrm'   ]
 
@@ -178,7 +178,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             func.append(assignment)
 
         # Get the number of values per node and use it to calculate the
-        # size of all the local vector entries. For now we'll use the same
+        # size of all the local vector entries. FIXME: For now we'll use the same
         # logic as before, that we're only solving on one field, so we can
         # get these things from the last similar field that we found.
         self.simpleAppend(func, numValsPerNode, param=similarField)
