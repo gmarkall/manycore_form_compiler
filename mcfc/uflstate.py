@@ -18,6 +18,7 @@
 # holders.
 
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from ufl.coefficient import Coefficient
 
 ufl_elements = [FiniteElement, VectorElement, TensorElement]
 
@@ -41,10 +42,12 @@ class field_dict(dict):
             self._accessedFields.add(key)
         return dict.__getitem__(self, key)
 
-    def __setitem__(self, key, data):
+    def __setitem__(self, key, field):
         if self._run:
-            self._returnedFields.add(key)
-        dict.__setitem__(self, key, data)
+            # Sanity check: only Coefficients can be written back to state
+            assert isinstance(field, Coefficient), "Only Coefficients can be written back to state"
+            self._returnedFields.add((key, field.count()))
+        dict.__setitem__(self, key, field)
 
 class UflState:
 
@@ -72,9 +75,17 @@ class UflState:
         return str(self.scalar_fields)+', '+str(self.vector_fields)+', '+str(self.tensor_fields)
 
     def accessedFields(self):
+        "A generator yielding all fields which have been retrieved from state"
         for rank in [0, 1, 2]:
             accessedFields = self[rank]._accessedFields
             for field in zip([rank]*len(accessedFields),accessedFields):
+                yield field
+
+    def returnedFields(self):
+        "A generator yielding all fields which have been written back to state"
+        for rank in [0, 1, 2]:
+            returnedFields = self[rank]._returnedFields
+            for field in returnedFields:
                 yield field
 
     def insert_field(self, field, rank, shape = 'CG', degree = 1):
