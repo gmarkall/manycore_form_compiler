@@ -110,7 +110,10 @@ def parse_input(inputFile):
 def visualise(st, uflObjects, filename, obj=False):
     basename = filename[:-4]
     ASTVisualiser(st, basename + ".pdf")
-    for i in uflObjects.keys():
+    for i in uflObjects:
+        # Do not try to visualise state
+        if i in ['state','states']:
+            continue
         objectfile = "%s_%s.pdf" % (basename, i)
         if obj:
             ObjectVisualiser(uflObjects[i], objectfile)
