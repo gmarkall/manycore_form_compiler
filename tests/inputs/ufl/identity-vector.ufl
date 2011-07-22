@@ -1,8 +1,7 @@
-T = state.vector_fields["Velocity"]
+f = state.vector_fields["Velocity"]
 
-v=TestFunction(T)
-u=TrialFunction(T)
-f=Coefficient(T)
+v=TestFunction(f.element())
+u=TrialFunction(f.element())
 
 A = inner(v,u)*dx
 RHS = inner(v,f)*dx

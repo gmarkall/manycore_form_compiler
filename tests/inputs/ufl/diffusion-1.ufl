@@ -1,10 +1,8 @@
-T=state.scalar_fields["Tracer"]
-mu=state.tensor_fields["TracerDiffusivity"]
+t=state.scalar_fields["Tracer"]
+z=state.tensor_fields["TracerDiffusivity"]
 
-t=Coefficient(T)
-p=TrialFunction(T)
-q=TestFunction(T)
-z=Coefficient(mu)
+p=TrialFunction(t.element())
+q=TestFunction(t.element())
 
 M=p*q*dx
 d=-grad(q)[i]*z[i,j]*grad(p)[j]*dx

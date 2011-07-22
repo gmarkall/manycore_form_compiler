@@ -29,25 +29,25 @@ __global__ void Mass(double* localTensor, int n_ele, double dt, double* detwei, 
   };
 }
 
-__global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, double* c1, double* c0, double* CG1, double* d_CG1)
+__global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* c1, double* CG1, double* d_CG1)
 {
   for(int i_ele = THREAD_ID; i_ele < n_ele; (i_ele += THREAD_COUNT))
   {
-    double c_q0[12];
-    double c_q1[6];
+    double c_q1[12];
+    double c_q0[6];
     for(int i_g = 0; i_g < 6; i_g++)
     {
-      c_q1[i_g] = 0.0;
+      c_q0[i_g] = 0.0;
       for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
       {
-        c_q1[i_g] += (c1[(i_ele + (n_ele * i_r_0))] * CG1[(i_r_0 + (3 * i_g))]);
+        c_q0[i_g] += (c0[(i_ele + (n_ele * i_r_0))] * CG1[(i_r_0 + (3 * i_g))]);
       };
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
-        c_q0[(i_g + (6 * i_d_0))] = 0.0;
+        c_q1[(i_g + (6 * i_d_0))] = 0.0;
         for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
         {
-          c_q0[(i_g + (6 * i_d_0))] += (c0[((i_ele + (n_ele * i_d_0)) + (2 * (n_ele * i_r_0)))] * CG1[(i_r_0 + (3 * i_g))]);
+          c_q1[(i_g + (6 * i_d_0))] += (c1[((i_ele + (n_ele * i_d_0)) + (2 * (n_ele * i_r_0)))] * CG1[(i_r_0 + (3 * i_g))]);
         };
       };
     };
@@ -56,10 +56,10 @@ __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, d
       localTensor[(i_ele + (n_ele * i_r_0))] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
-        localTensor[(i_ele + (n_ele * i_r_0))] += ((CG1[(i_r_0 + (3 * i_g))] * c_q1[i_g]) * detwei[(i_ele + (n_ele * i_g))]);
+        localTensor[(i_ele + (n_ele * i_r_0))] += ((CG1[(i_r_0 + (3 * i_g))] * c_q0[i_g]) * detwei[(i_ele + (n_ele * i_g))]);
         for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
         {
-          localTensor[(i_ele + (n_ele * i_r_0))] += ((c_q1[i_g] * (dt * (c_q0[(i_g + (6 * i_d_0))] * d_CG1[(((i_ele + (n_ele * i_d_0)) + (2 * (n_ele * i_g))) + (6 * (2 * (n_ele * i_r_0))))]))) * detwei[(i_ele + (n_ele * i_g))]);
+          localTensor[(i_ele + (n_ele * i_r_0))] += ((c_q0[i_g] * (dt * (c_q1[(i_g + (6 * i_d_0))] * d_CG1[(((i_ele + (n_ele * i_d_0)) + (2 * (n_ele * i_g))) + (6 * (2 * (n_ele * i_r_0))))]))) * detwei[(i_ele + (n_ele * i_g))]);
         };
       };
     };

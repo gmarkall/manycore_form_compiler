@@ -1,8 +1,7 @@
-T=state.scalar_fields["Tracer"]
+t=state.scalar_fields["Tracer"]
 
-t=Coefficient(T)
-p=TrialFunction(T)
-q=TestFunction(T)
+p=TrialFunction(t.element())
+q=TestFunction(t.element())
 
 diffusivity = 0.1
 
