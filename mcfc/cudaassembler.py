@@ -410,10 +410,10 @@ class CudaAssemblerBackend(AssemblerBackend):
         # Figure out which parameters to pass
         params = list(staticParameters)
 
-        for obj in paramUFL['coefficients']:
+        for coeff in paramUFL['coefficients']:
             # find which field this coefficient came from, then
             # extract from that field.
-            field = findFieldFromCoefficient(self._ast, self._uflObjects, obj)
+            field = self._uflObjects['state'].accessedFields()[coeff.count()][1]
             var = self.extractCoefficient(func, field)
             params.append(var)
 
