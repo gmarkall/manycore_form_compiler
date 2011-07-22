@@ -88,8 +88,10 @@ class UflState:
             for field in returnedFields:
                 yield field
 
+    # FIXME hard coded for triangles
     def insert_field(self, field, rank, shape = 'CG', degree = 1):
-        self[rank][field] = ufl_elements[rank](shape, "triangle", degree)
+        "Insert field as a coefficient of the element type given by rank, shape and degree"
+        self[rank][field] = Coefficient(ufl_elements[rank](shape, "triangle", degree))
 
     def readyToRun(self):
         self.scalar_fields.readyToRun()
