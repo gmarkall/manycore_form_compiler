@@ -26,10 +26,11 @@ class field_dict(dict):
     """Used for the state.xxx_fields dicts. It functions like a regular dict,
        but remembers which keys are set and get when in the 'run' mode."""
 
-    def __init__(self):
+    def __init__(self, rank = 0):
+        self._rank = rank
         self._run = False
-        self._accessedFields = set()
-        self._returnedFields = set()
+        self._accessedFields = {}
+        self._returnedFields = {}
         dict.__init__(self)
 
     def readyToRun(self):
@@ -37,25 +38,25 @@ class field_dict(dict):
            the ufl input runs"""
         self._run = True
 
-    def __getitem__(self, key):
-        field = dict.__getitem__(self, key)
+    def __getitem__(self, field):
+        coeff = dict.__getitem__(self, field)
         if self._run:
-            self._accessedFields.add((key, field.count()))
-        return field
+            self._accessedFields[coeff.count()] = (self._rank, field)
+        return coeff
 
-    def __setitem__(self, key, field):
+    def __setitem__(self, field, coeff):
         # Sanity check: only Coefficients can be written back to state
-        assert isinstance(field, Coefficient), "Only Coefficients can be written back to state"
+        assert isinstance(coeff, Coefficient), "Only Coefficients can be written back to state"
         if self._run:
-            self._returnedFields.add((key, field.count()))
-        dict.__setitem__(self, key, field)
+            self._returnedFields[coeff.count()] = field
+        dict.__setitem__(self, field, coeff)
 
 class UflState:
 
     def __init__(self):
-        self.scalar_fields = field_dict()
-        self.vector_fields = field_dict()
-        self.tensor_fields = field_dict()
+        self.scalar_fields = field_dict(0)
+        self.vector_fields = field_dict(1)
+        self.tensor_fields = field_dict(2)
 
     def __getitem__(self,key):
 
@@ -76,18 +77,18 @@ class UflState:
         return str(self.scalar_fields)+', '+str(self.vector_fields)+', '+str(self.tensor_fields)
 
     def accessedFields(self):
-        "A generator yielding all fields which have been retrieved from state"
+        "A dict of all fields which have been retrieved from state"
+        accessedFields = {}
         for rank in [0, 1, 2]:
-            accessedFields = self[rank]._accessedFields
-            for field, count in accessedFields:
-                yield (rank, field, count)
+            accessedFields.update(self[rank]._accessedFields)
+        return accessedFields
 
     def returnedFields(self):
-        "A generator yielding all fields which have been written back to state"
+        "A dict of all fields which have been written back to state"
+        returnedFields = {}
         for rank in [0, 1, 2]:
-            returnedFields = self[rank]._returnedFields
-            for field in returnedFields:
-                yield field
+            returnedFields.update(self[rank]._returnedFields)
+        return returnedFields
 
     # FIXME hard coded for triangles
     def insert_field(self, field, rank, shape = 'CG', degree = 1):
