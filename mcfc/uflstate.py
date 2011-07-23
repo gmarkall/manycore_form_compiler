@@ -18,15 +18,45 @@
 # holders.
 
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from ufl.coefficient import Coefficient
 
 ufl_elements = [FiniteElement, VectorElement, TensorElement]
+
+class field_dict(dict):
+    """Used for the state.xxx_fields dicts. It functions like a regular dict,
+       but remembers which keys are set and get when in the 'run' mode."""
+
+    def __init__(self, rank = 0):
+        self._rank = rank
+        self._run = False
+        self._accessedFields = {}
+        self._returnedFields = {}
+        dict.__init__(self)
+
+    def readyToRun(self):
+        """Call this when the dict has been set up with the fields, before
+           the ufl input runs"""
+        self._run = True
+
+    def __getitem__(self, field):
+        coeff = dict.__getitem__(self, field)
+        if self._run:
+            self._accessedFields[coeff.count()] = (self._rank, field)
+        return coeff
+
+    def __setitem__(self, field, coeff):
+        # Sanity check: only Coefficients can be written back to state
+        assert isinstance(coeff, Coefficient), "Only Coefficients can be written back to state"
+        if self._run:
+            self._returnedFields[coeff.count()] = field
+        dict.__setitem__(self, field, coeff)
 
 class UflState:
 
     def __init__(self):
-        self.scalar_fields = {}
-        self.vector_fields = {}
-        self.tensor_fields = {}
+        self.scalar_fields = field_dict(0)
+        self.vector_fields = field_dict(1)
+        self.tensor_fields = field_dict(2)
 
     def __getitem__(self,key):
 
@@ -46,7 +76,28 @@ class UflState:
     def __repr__(self):
         return str(self.scalar_fields)+', '+str(self.vector_fields)+', '+str(self.tensor_fields)
 
+    def accessedFields(self):
+        "A dict of all fields which have been retrieved from state"
+        accessedFields = {}
+        for rank in [0, 1, 2]:
+            accessedFields.update(self[rank]._accessedFields)
+        return accessedFields
+
+    def returnedFields(self):
+        "A dict of all fields which have been written back to state"
+        returnedFields = {}
+        for rank in [0, 1, 2]:
+            returnedFields.update(self[rank]._returnedFields)
+        return returnedFields
+
+    # FIXME hard coded for triangles
     def insert_field(self, field, rank, shape = 'CG', degree = 1):
-        self[rank][field] = ufl_elements[rank](shape, "triangle", degree)
+        "Insert field as a coefficient of the element type given by rank, shape and degree"
+        self[rank][field] = Coefficient(ufl_elements[rank](shape, "triangle", degree))
+
+    def readyToRun(self):
+        self.scalar_fields.readyToRun()
+        self.vector_fields.readyToRun()
+        self.tensor_fields.readyToRun()
 
 # vim:sw=4:ts=4:sts=4:et

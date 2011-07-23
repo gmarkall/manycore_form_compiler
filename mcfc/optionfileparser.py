@@ -67,6 +67,11 @@ class OptionFileParser:
             self.uflinput[key] = ufl, self.states[phase]
 
 def testHook(inputFile, outputFile = None):
+    # FIXME: this is an evil hack to reset coefficient numbers to 0 before
+    # running the tests (necessary to make tests invariant of the order they
+    # are executed in)
+    from ufl.coefficient import Coefficient
+    Coefficient._globalcount = 0
     p = OptionFileParser(inputFile)
     # Print to output file if given, stdout otherwise
     with open(outputFile, 'w') if outputFile else sys.stdout as fd:

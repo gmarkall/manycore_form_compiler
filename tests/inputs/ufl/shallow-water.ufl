@@ -1,3 +1,4 @@
+# FIXME: this isn't updated for coefficients in state yet
 V = state.vector_fields["Velocity"] # Velocity space
 H = state.scalar_fields["Height"] # Height space
 W = V*H                                # Mixed space of both.

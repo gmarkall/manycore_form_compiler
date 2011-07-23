@@ -169,7 +169,7 @@ extern "C" void initialise_gpu_()
   state -> extractField("TracerDiffusivity", 2);
   state -> allocateAllGPUMemory();
   state -> transferAllFields();
-  state -> insertTemporaryField("tnew", "Tracer");
+  state -> insertTemporaryField("dTracer", "Tracer");
   int numEle = (state -> getNumEle());
   int numNodes = (state -> getNumNodes());
   CsrSparsity* sparsity = (state -> getSparsity("Tracer"));
@@ -222,9 +222,9 @@ extern "C" void run_model_(double* dt_pointer)
   matrix_addto<<<gridXDim,blockXDim>>>(matrix_findrm, matrix_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
   cg_solve(matrix_findrm, matrix_findrm_size, matrix_colm, matrix_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
-  double* tnewCoeff = (state -> getElementValue("tnew"));
-  expand_data<<<gridXDim,blockXDim>>>(tnewCoeff, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle);
-  state -> returnFieldToHost("Tracer", "tnew");
+  double* dTracerCoeff = (state -> getElementValue("dTracer"));
+  expand_data<<<gridXDim,blockXDim>>>(dTracerCoeff, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle);
+  state -> returnFieldToHost("Tracer", "dTracer");
 }
 
 

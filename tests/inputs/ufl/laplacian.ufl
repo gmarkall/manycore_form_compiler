@@ -1,8 +1,7 @@
-T = state.scalar_fields["Tracer"]
+f = state.scalar_fields["Tracer"]
 
-v=TestFunction(T)
-u=TrialFunction(T)
-f=Coefficient(T)
+v=TestFunction(f.element())
+u=TrialFunction(f.element())
 
 A = dot(grad(v),grad(u))*dx
 

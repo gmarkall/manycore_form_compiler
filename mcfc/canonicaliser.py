@@ -25,18 +25,43 @@ the input and write it out.
 # The UFL packages are required so that the sources execute correctly
 # when they are read in
 import ufl
+from ufl.algorithms import extract_arguments
 from ufl.algorithms.tuplenotation import as_form
 # Regular python modules
 import getopt, sys, ast
 # The remaining modules are part of the form compiler
 from symbolicvalue import SymbolicValue
 
+# Solve needs to return an appropriate function in order for the interpretation
+# to continue
+
+class solveFunctor:
+
+    def __init__(self):
+        # Dictionary to remember all solves with result coefficient count as
+        # the index and the operarands (forms for matrix and rhs) as data
+        self._solves = {}
+
+    def __call__(self,M,b):
+        # FIXME we currently lose the variable names of the forms
+        # FIXME what if we have multiple integrals?
+        # FIXME is that the proper way of getting the element? (issue #23)
+        element = extract_arguments(b)[0].element()
+        coeff = ufl.coefficient.Coefficient(element)
+        self._solves[coeff.count()] = (M,b)
+
+        return coeff
+
 # Intended as the front-end interface to the parser. e.g. to use,
 # call canonicalise(filename).
 
 def canonicalise(code, _state, _states):
- 
+
+    for key in _states:
+        _states[key].readyToRun()
+
     dt = SymbolicValue("dt")
+    solve = solveFunctor()
     namespace = { "dt": dt, "solve": solve, "state": _state, "states": _states }
 
     st = ast.parse(code)
@@ -44,28 +69,27 @@ def canonicalise(code, _state, _states):
     code = "from ufl import *\n" + \
            "" + code
     exec code in namespace
-    
-    uflObjects = {}
+
+    # Pre-populate with state, states and solve
+    uflObjects = {"state": _state, "states": _states, "solve": solve}
 
     for name, value in namespace.iteritems():
+        # UFL Forms
         if isinstance(value, (ufl.form.Form, tuple)):
+            # Swap form for its preprocessed equivalent and re-attach form data
             form = as_form(value)
             form_data = form.compute_form_data()
+            # We keep the original (not preprocessed form for name lookup in
+            # the uflObjects dictionary
+            form_data.original_form = form
             form = form_data.preprocessed_form
             form._form_data = form_data
             uflObjects[name] = form
+        # UFL Coefficients and Arguments
         elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
             uflObjects[name] = value
 
     return st, uflObjects
-
-# Solve needs to return an appropriate function in order for the interpretation
-# to continue
-
-def solve(M,b):
-    form_data = b.compute_form_data()
-    element = form_data.arguments[0].element()
-    return ufl.coefficient.Coefficient(element)
 
 def main():
     
