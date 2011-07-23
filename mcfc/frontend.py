@@ -111,8 +111,8 @@ def visualise(st, uflObjects, filename, obj=False):
     basename = filename[:-4]
     ASTVisualiser(st, basename + ".pdf")
     for i in uflObjects:
-        # Do not try to visualise state
-        if i in ['state','states']:
+        # Do not try to visualise state or solve
+        if i in ['state','states', 'solve']:
             continue
         objectfile = "%s_%s.pdf" % (basename, i)
         if obj:
