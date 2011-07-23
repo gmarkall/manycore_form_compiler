@@ -70,7 +70,7 @@ extern "C" void initialise_gpu_()
   state -> extractField("Velocity", 1);
   state -> allocateAllGPUMemory();
   state -> transferAllFields();
-  state -> insertTemporaryField("p", "Velocity");
+  state -> insertTemporaryField("dVelocity", "Velocity");
   int numEle = (state -> getNumEle());
   int numNodes = (state -> getNumNodes());
   CsrSparsity* sparsity = (state -> getSparsity("Velocity"));
@@ -122,9 +122,9 @@ extern "C" void run_model_(double* dt_pointer)
   matrix_addto<<<gridXDim,blockXDim>>>(matrix_findrm, matrix_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
   cg_solve(matrix_findrm, matrix_findrm_size, matrix_colm, matrix_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
-  double* pCoeff = (state -> getElementValue("p"));
-  expand_data<<<gridXDim,blockXDim>>>(pCoeff, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle);
-  state -> returnFieldToHost("Velocity", "p");
+  double* dVelocityCoeff = (state -> getElementValue("dVelocity"));
+  expand_data<<<gridXDim,blockXDim>>>(dVelocityCoeff, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle);
+  state -> returnFieldToHost("Velocity", "dVelocity");
 }
 
 

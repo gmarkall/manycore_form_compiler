@@ -30,6 +30,7 @@ from utilities import uniqify
 # FEniCS UFL libs
 import ufl.finiteelement
 from ufl.differentiation import SpatialDerivative
+from ufl.form import Form
 
 # Variables used throughout the code generation
 state            = Variable('state',              Pointer(Class('StateHolder')))
@@ -82,7 +83,33 @@ getters = { numEle:           ('getNumEle',                  None,        ), \
             numValsPerNode:   ('getValsPerNode',             None         ), \
             numVectorEntries: ('getNodesPerEle',             None         )  }
 
+def _getTmpField(field):
+    "Get the name of the temporary field on the GPU"
+    return 'd'+field
+
 class CudaAssemblerBackend(AssemblerBackend):
+
+    def getSolveResultFields(self):
+        "Get a list of field names of all the fields solved for"
+        return [self.getResultFieldName(count) for count in self._uflObjects['solve']._solves]
+
+    def getResultFieldName(self, count):
+        "Get the field name of a returned field from the coefficient count"
+        return self._uflObjects['state'].returnedFields()[count]
+
+    def getInputFieldName(self, count):
+        "Get the field name of an extracted field from the coefficient count"
+        return self._uflObjects['state'].accessedFields()[count][1]
+
+    def _getFormName(self, form):
+        "Look up the name of a given form in uflObjects"
+        # Sanity check: we only accept forms
+        assert isinstance(form, Form)
+        for name, obj in self._uflObjects.items():
+            if isinstance(obj, Form) and obj.form_data().original_form == form:
+                return name
+        # We went through all UFL objects and found nothing
+        raise RuntimeError("Given form was not found.")
 
     def compile(self, ast, uflObjects):
 
@@ -141,10 +168,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.append(arrow)
         
         # Insert temporary fields into state
-        solveResultFields = findSolveResults(self._ast)
-        for field in solveResultFields:
-            similarField = self.findSimilarField(field)
-            params = [ Literal(field), Literal(similarField) ]
+        for field in self.getSolveResultFields():
+            params = [ Literal(_getTmpField(field)), Literal(field) ]
             call = FunctionCall('insertTemporaryField',params)
             arrow = ArrowOp(state, call)
             func.append(arrow)
@@ -155,12 +180,12 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         # Get sparsity of the field we're solving for
         sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
-        # FIXME: We can use the similarField from earlier, since its
+        # FIXME: We can use the field from earlier, since its
         # the only field we're solving on for now. When we start working
         # with solving multiple fields, this logic will need re-working.
         # (For each solve field, we should use the similar field and
         # generate a new sparsity from that)
-        params = [ Literal(similarField) ]
+        params = [ Literal(field) ]
         call = FunctionCall('getSparsity', params)
         arrow = ArrowOp(state, call)
         assignment = AssignmentOp(Declaration(sparsity), arrow)
@@ -181,8 +206,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         # size of all the local vector entries. FIXME: For now we'll use the same
         # logic as before, that we're only solving on one field, so we can
         # get these things from the last similar field that we found.
-        self.simpleAppend(func, numValsPerNode, param=similarField)
-        self.simpleAppend(func, numVectorEntries, param=similarField)
+        self.simpleAppend(func, numValsPerNode, param=field)
+        self.simpleAppend(func, numVectorEntries, param=field)
         
         # Now multiply numVectorEntries by numValsPerNode to get the correct
         # size of the storage required
@@ -221,14 +246,6 @@ class CudaAssemblerBackend(AssemblerBackend):
         params = [ base, Literal(0), size ]
         memset = FunctionCall('cudaMemset', params)
         func.append(memset)
-
-    def findSimilarField(self, field):
-        """Find a field with the same basis as the named field. You should
-        always be able to find a similar field."""
-
-        returnedFields = findReturnedFields(self._ast)
-        similarField = [f[0] for f in returnedFields if f[1] == field][0]
-        return similarField
 
     def _buildFinaliser(self):
         func = FunctionDefinition(Void(), 'finalise_gpu_')
@@ -324,35 +341,29 @@ class CudaAssemblerBackend(AssemblerBackend):
         matrixParameters = [localMatrix, numEle, dt, detwei]
         vectorParameters = [localVector, numEle, dt, detwei]
 
-        # Traverse the AST looking for solves
-        solves = findSolves(self._ast)
-        
-        for solve in solves:
+        for count, forms in self._uflObjects['solve']._solves.items():
             # Unpack the bits of information we want
-            result = solve.targets[0].id
-            matrix = str(solve.value.args[0].id)
-            vector = str(solve.value.args[1].id)
+            result = self.getResultFieldName(count)
+            matrix = forms[0]
+            vector = forms[1]
 
             # Call the matrix assembly
-            form = self._uflObjects[matrix]
             # FIXME what if we have multiple integrals?
-            tree = form.integrals()[0].integrand()
-            params = self._makeParameterListAndGetters(func, tree, form, matrixParameters)
-            matrixAssembly = CudaKernelCall(matrix, params, gridXDim, blockXDim)
+            tree = matrix.integrals()[0].integrand()
+            params = self._makeParameterListAndGetters(func, tree, matrix, matrixParameters)
+            matrixAssembly = CudaKernelCall(self._getFormName(matrix), params, gridXDim, blockXDim)
             func.append(matrixAssembly)
 
             # Then call the rhs assembly
-            form = self._uflObjects[vector]
             # FIXME what if we have multiple integrals?
-            tree = form.integrals()[0].integrand()
-            params = self._makeParameterListAndGetters(func, tree, form, vectorParameters)
-            vectorAssembly = CudaKernelCall(vector, params, gridXDim, blockXDim)
+            tree = vector.integrals()[0].integrand()
+            params = self._makeParameterListAndGetters(func, tree, vector, vectorParameters)
+            vectorAssembly = CudaKernelCall(self._getFormName(vector), params, gridXDim, blockXDim)
             func.append(vectorAssembly)
 
             # Zero the global matrix and vector
             # First we need to get numvalspernode, for the length of the global vector
-            similarField = self.findSimilarField(result)
-            self.simpleAppend(func, numValsPerNode, param=similarField)
+            self.simpleAppend(func, numValsPerNode, param=result)
             self.buildAppendCudaMemsetZero(func, globalMatrix, matrixColmSize)
             size = MultiplyOp(numValsPerNode, numNodes)
             self.buildAppendCudaMemsetZero(func, globalVector, size)
@@ -376,17 +387,14 @@ class CudaAssemblerBackend(AssemblerBackend):
             func.append(cgSolve)
 
             # expand the result
-            var = self.extractCoefficient(func, result)
+            var = self.extractCoefficient(func, _getTmpField(result))
             params = [ var, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle ]
             expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
             func.append(expand)
 
-        # Traverse the AST looking for fields that need to return to the host
-        returnedFields = findReturnedFields(self._ast)
-        
-        for hostField, GPUField in returnedFields:
-            # Found one? ok, call the method to return it.
-            params = [ Literal(hostField), Literal(GPUField) ]
+        # Transfer all fields solved for on the GPU and written back to state
+        for hostField in self._uflObjects['state'].returnedFields().values():
+            params = [ Literal(hostField), Literal(_getTmpField(hostField)) ]
             returnCall = FunctionCall('returnFieldToHost', params)
             arrow = ArrowOp(state, returnCall)
             func.append(arrow)
@@ -411,10 +419,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         params = list(staticParameters)
 
         for coeff in paramUFL['coefficients']:
-            # find which field this coefficient came from, then
-            # extract from that field.
-            field = self._uflObjects['state'].accessedFields()[coeff.count()][1]
-            var = self.extractCoefficient(func, field)
+            # find which field this coefficient came from, then extract from that field.
+            var = self.extractCoefficient(func, self.getInputFieldName(coeff.count()))
             params.append(var)
 
         if paramUFL['arguments']:
