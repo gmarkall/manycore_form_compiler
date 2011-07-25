@@ -22,47 +22,23 @@ MCFC Canonicaliser. Uses the FEniCS UFL implementation to canonicalise
 the input and write it out.
 """
 
+# Regular python modules
+import getopt, sys, ast
 # The UFL packages are required so that the sources execute correctly
 # when they are read in
 import ufl
-from ufl.algorithms import extract_arguments
 from ufl.algorithms.tuplenotation import as_form
-# Regular python modules
-import getopt, sys, ast
-# The remaining modules are part of the form compiler
-from symbolicvalue import SymbolicValue
-
-# Solve needs to return an appropriate function in order for the interpretation
-# to continue
-
-class solveFunctor:
-
-    def __init__(self):
-        # Dictionary to remember all solves with result coefficient count as
-        # the index and the operarands (forms for matrix and rhs) as data
-        self._solves = {}
-
-    def __call__(self,M,b):
-        # FIXME we currently lose the variable names of the forms
-        # FIXME what if we have multiple integrals?
-        # FIXME is that the proper way of getting the element? (issue #23)
-        element = extract_arguments(b)[0].element()
-        coeff = ufl.coefficient.Coefficient(element)
-        self._solves[coeff.count()] = (M,b)
-
-        return coeff
 
 # Intended as the front-end interface to the parser. e.g. to use,
 # call canonicalise(filename).
 
-def canonicalise(code, _state, _states):
+def canonicalise(code, namespace):
+    """Execute code in namespace and return an AST represenation of the code
+       and a collection of UFL objects (preprocessed forms, coefficients,
+       arguments)"""
 
-    for key in _states:
-        _states[key].readyToRun()
-
-    dt = SymbolicValue("dt")
-    solve = solveFunctor()
-    namespace = { "dt": dt, "solve": solve, "state": _state, "states": _states }
+    for state in namespace['states'].values():
+        state.readyToRun()
 
     st = ast.parse(code)
 
@@ -70,8 +46,8 @@ def canonicalise(code, _state, _states):
            "" + code
     exec code in namespace
 
-    # Pre-populate with state, states and solve
-    uflObjects = {"state": _state, "states": _states, "solve": solve}
+    # Pre-populate with state, states and solve from the namespace
+    uflObjects = {"state": namespace['state'], "states": namespace['states'], "solve": namespace['solve']}
 
     for name, value in namespace.iteritems():
         # UFL Forms
