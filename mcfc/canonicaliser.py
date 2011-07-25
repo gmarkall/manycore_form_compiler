@@ -67,34 +67,4 @@ def canonicalise(code, namespace):
 
     return st, uflObjects
 
-def main():
-    
-    # Get options
-    try:
-        opts, args = getopt.getopt(sys.argv[1:], "ho:", ["help"])
-    except getopt.error, msg:
-        print msg
-        print "for help use --help"
-        sys.exit(2)
-    
-    # process options
-    if len(args)>0:
-        inputfile = args[0]
-    outputfile = None
-
-    for o, a in opts:
-        if o in ("-h", "--help"):
-            print __doc__
-            sys.exit(0)
-    
-    # Run canonicaliser
-    print "Canonicalising " + inputfile
-    canonical, uflObjects = canonicalise(inputfile);
-    print canonical
-
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(main())
-
 # vim:sw=4:ts=4:sts=4:et
