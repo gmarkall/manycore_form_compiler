@@ -42,9 +42,7 @@ def canonicalise(equation):
 
     equation.frontendAst = ast.parse(equation.code)
 
-    code = "from ufl import *\n" + \
-           "" + equation.code
-    exec code in equation.namespace
+    exec equation.code in equation.namespace
 
     for name, value in equation.namespace.iteritems():
         # UFL Forms

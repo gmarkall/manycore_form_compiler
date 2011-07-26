@@ -22,6 +22,7 @@ from ufl.algorithms import extract_arguments
 from ufl.coefficient import Coefficient
 # MCFC modules
 from symbolicvalue import SymbolicValue
+from uflfunction import *
 
 class solveFunctor:
     """A functor class to be called as 'solve' in the execution namespace of
@@ -85,6 +86,10 @@ class FluidityEquation(UflEquation):
         self.name = name
         self.code = code
         self.namespace = { "dt": dt, "solve": solve, "state": state, "states": states }
+        # Import UFL modules into namespace
+        exec "from ufl import *" in self.namespace
+        # Import MCFC UFL overrides into namespace
+        exec "from mcfc.uflnamespace import *" in self.namespace
         self.solves = solve
         self.state = state
         self.states = states
