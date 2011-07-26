@@ -222,7 +222,7 @@ class ObjectVisualiser(DOTVisualiser):
             try:
                 objattr = getattr(obj, a)
             except:
-                self._handle_exception(sys.exc_info()[1])
+                self._handle_exception(obj, a, sys.exc_info()[1])
                 continue
             attrtype = objattr.__class__.__name__
             if attrtype not in [ "builtin_function_or_method", "instancemethod" ]:
@@ -262,8 +262,8 @@ class ObjectVisualiser(DOTVisualiser):
             count = count + 1
         self._edgeLabel = savedLabel
 
-    def _handle_exception(self, ex):
-        print "getattr() failed. Not fatal. Exception follows:"
+    def _handle_exception(self, obj, a, ex):
+        print "getattr() failed for attributed %s of object %s. Not fatal. Exception follows:" % (a,obj)
         print str(ex)
 
 class ReprVisualiser(DOTVisualiser):
