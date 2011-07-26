@@ -32,24 +32,21 @@ from ufl.algorithms.tuplenotation import as_form
 # Intended as the front-end interface to the parser. e.g. to use,
 # call canonicalise(filename).
 
-def canonicalise(code, namespace):
+def canonicalise(equation):
     """Execute code in namespace and return an AST represenation of the code
        and a collection of UFL objects (preprocessed forms, coefficients,
        arguments)"""
 
-    for state in namespace['states'].values():
+    for state in equation.states.values():
         state.readyToRun()
 
-    st = ast.parse(code)
+    equation.frontendAst = ast.parse(equation.code)
 
     code = "from ufl import *\n" + \
-           "" + code
-    exec code in namespace
+           "" + equation.code
+    exec code in equation.namespace
 
-    # Pre-populate with state, states and solve from the namespace
-    uflObjects = {"state": namespace['state'], "states": namespace['states'], "solve": namespace['solve']}
-
-    for name, value in namespace.iteritems():
+    for name, value in equation.namespace.iteritems():
         # UFL Forms
         if isinstance(value, (ufl.form.Form, tuple)):
             # Swap form for its preprocessed equivalent and re-attach form data
@@ -60,11 +57,11 @@ def canonicalise(code, namespace):
             form_data.original_form = form
             form = form_data.preprocessed_form
             form._form_data = form_data
-            uflObjects[name] = form
+            equation.uflObjects[name] = form
         # UFL Coefficients and Arguments
         elif isinstance(value, (ufl.coefficient.Coefficient, ufl.argument.Argument)):
-            uflObjects[name] = value
+            equation.uflObjects[name] = value
 
-    return st, uflObjects
+    return equation
 
 # vim:sw=4:ts=4:sts=4:et

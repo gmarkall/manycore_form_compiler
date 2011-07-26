@@ -23,10 +23,9 @@ from codegeneration import *
 
 class Op2AssemblerBackend(AssemblerBackend):
 
-    def compile(self, ast, uflObjects):
+    def compile(self, equation):
 
-        self._ast = ast
-        self._uflObjects = uflObjects
+        self._eq = equation
 
         # Build definitions
         definitions = NullExpression()

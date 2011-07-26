@@ -72,32 +72,28 @@ def run(inputFile, opts = None):
 
     # Parse input and trigger the pipeline for each UFL equation
     parser = inputparsers[os.path.splitext(inputFile)[1]]()
-    for equationname, data in parser.parse(inputFile).items():
+    for equation in parser.parse(inputFile):
 
-        outputFile = outputFileBase + equationname
-        ufl, namespace = data
-        ast, uflObjects = canonicaliser.canonicalise(ufl, namespace)
+        outputFile = outputFileBase + equation.name
+        equation = canonicaliser.canonicalise(equation)
 
         if vis:
-            visualise(ast, uflObjects, inputFile, objvis)
+            visualise(equation, inputFile, objvis)
             continue
 
         with screen or open(outputFile+extensions[backend], 'w') as fd:
             driver = drivers[backend]()
-            driver.drive(ast, uflObjects, fd)
+            driver.drive(equation, fd)
 
-def visualise(st, uflObjects, filename, obj=False):
+def visualise(equation, filename, obj=False):
     basename = filename[:-4]
-    ASTVisualiser(st, basename + ".pdf")
-    for i in uflObjects:
-        # Do not try to visualise state or solve
-        if i in ['state','states', 'solve']:
-            continue
-        objectfile = "%s_%s.pdf" % (basename, i)
+    ASTVisualiser(equation.frontendAst, basename + ".pdf")
+    for name, obj in equation.uflObjects.items():
+        objectfile = "%s_%s.pdf" % (basename, name)
         if obj:
-            ObjectVisualiser(uflObjects[i], objectfile)
+            ObjectVisualiser(obj, objectfile)
         else:
-            rep = ast.parse(repr(uflObjects[i]))
+            rep = ast.parse(repr(obj))
             ReprVisualiser(rep, objectfile)
     return 0
 
