@@ -24,7 +24,7 @@ from ufl.coefficient import Coefficient
 # Should be inherited by all assembler implementations.
 class AssemblerBackend:
 
-    def compile(self, ast, uflObjects):
+    def compile(self, equation):
         raise NotImplementedError("You're supposed to implement compile()!")
 
 # vim:sw=4:ts=4:sts=4:et

@@ -31,17 +31,17 @@ def findForms(uflObjects):
 
 class Driver:
 
-    def drive(self, ast, uflObjects, fd):
+    def drive(self, equation, fd):
 
         # Build forms
         # needs to happen first, since form_data attached to the forms is changed
-        forms = findForms(uflObjects)
+        forms = findForms(equation.uflObjects)
         for name, form in forms:
             assert form.form_data(), "Form has no form data attached!"
             form.form_data().code = self._formBackend.compile(name, form)
 
         # Build assembler
-        definitions, declarations = self._assemblerBackend.compile(ast, uflObjects)
+        definitions, declarations = self._assemblerBackend.compile(equation)
 
         # Unparse assembler defintions (headers)
         print >>fd, definitions.unparse()

@@ -91,30 +91,29 @@ class CudaAssemblerBackend(AssemblerBackend):
 
     def getSolveResultFields(self):
         "Get a list of field names of all the fields solved for"
-        return [self.getResultFieldName(count) for count in self._uflObjects['solve']._solves]
+        return [self.getResultFieldName(count) for count in self._eq.solves]
 
     def getResultFieldName(self, count):
         "Get the field name of a returned field from the coefficient count"
-        return self._uflObjects['state'].returnedFields()[count]
+        return self._eq.state.returnedFields()[count]
 
     def getInputFieldName(self, count):
         "Get the field name of an extracted field from the coefficient count"
-        return self._uflObjects['state'].accessedFields()[count][1]
+        return self._eq.state.accessedFields()[count][1]
 
     def _getFormName(self, form):
         "Look up the name of a given form in uflObjects"
         # Sanity check: we only accept forms
         assert isinstance(form, Form)
-        for name, obj in self._uflObjects.items():
+        for name, obj in self._eq.uflObjects.items():
             if isinstance(obj, Form) and obj.form_data().original_form == form:
                 return name
         # We went through all UFL objects and found nothing
         raise RuntimeError("Given form was not found.")
 
-    def compile(self, ast, uflObjects):
+    def compile(self, equation):
 
-        self._ast = ast
-        self._uflObjects = uflObjects
+        self._eq = equation
 
         # Build definitions
         definitions = self._buildHeadersAndGlobals()
@@ -152,7 +151,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.append(arrow)
 
         # Extract accessed fields
-        for rank, field in self._uflObjects['state'].accessedFields().values():
+        for rank, field in self._eq.state.accessedFields().values():
             params = [ Literal(field), Literal(rank) ]
             call = FunctionCall('extractField',params)
             arrow = ArrowOp(state, call)
@@ -341,7 +340,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         matrixParameters = [localMatrix, numEle, dt, detwei]
         vectorParameters = [localVector, numEle, dt, detwei]
 
-        for count, forms in self._uflObjects['solve']._solves.items():
+        for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
             result = self.getResultFieldName(count)
             matrix = forms[0]
@@ -393,7 +392,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             func.append(expand)
 
         # Transfer all fields solved for on the GPU and written back to state
-        for hostField in self._uflObjects['state'].returnedFields().values():
+        for hostField in self._eq.state.returnedFields().values():
             params = [ Literal(hostField), Literal(_getTmpField(hostField)) ]
             returnCall = FunctionCall('returnFieldToHost', params)
             arrow = ArrowOp(state, returnCall)

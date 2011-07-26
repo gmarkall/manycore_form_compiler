@@ -32,11 +32,10 @@
 # Python libs
 import os, sys, getopt, pprint, ast
 # MCFC libs
-from optionfileparser import OptionFileParser
 from visualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
 import canonicaliser
 from driverfactory import drivers
-from uflstate import UflState
+from inputparser import inputparsers
 
 extensions = {'cuda': '.cu', 'op2': '.cpp'}
 
@@ -44,21 +43,25 @@ def run(inputFile, opts = None):
 
     # Parse options
 
+    # Backend
     if 'b' in opts:
         backend = opts['b']
     else:
         backend = "cuda"
 
+    # Output file name
     if 'o' in opts:
         outputFileBase = os.path.splitext(opts['o'])[0]
     else:
         outputFileBase = os.path.splitext(inputFile)[0]
 
+    # Output to stdout
     if 'p' in opts:
         screen = sys.stdout
     else:
         screen = None
 
+    # PDF visualiser
     vis = False
     if 'visualise' in opts or 'v' in opts:
         vis = True
@@ -67,58 +70,30 @@ def run(inputFile, opts = None):
         vis = True
         objvis = True
 
-    # Parse input
+    # Parse input and trigger the pipeline for each UFL equation
+    parser = inputparsers[os.path.splitext(inputFile)[1]]()
+    for equation in parser.parse(inputFile):
 
-    states, uflinput = parse_input(inputFile)
-
-    for key in uflinput:
-
-        outputFile = outputFileBase + key
-        ufl = uflinput[key][0]
-        state = uflinput[key][1]
-        ast, uflObjects = canonicaliser.canonicalise(ufl, state, states)
+        outputFile = outputFileBase + equation.name
+        equation = canonicaliser.canonicalise(equation)
 
         if vis:
-            visualise(ast, uflObjects, inputFile, objvis)
+            visualise(equation, inputFile, objvis)
             continue
 
         with screen or open(outputFile+extensions[backend], 'w') as fd:
             driver = drivers[backend]()
-            driver.drive(ast, uflObjects, fd)
+            driver.drive(equation, fd)
 
-def parse_input(inputFile):
-
-    # FIXME this is for backwards compatibility, remove when not needed anymore
-    if inputFile.endswith('ufl'):
-        # read ufl input file
-        with open(inputFile, 'r') as fd:
-            ufl_input = fd.read()
-        # Build a fake state
-        phase = ""
-        state = UflState()
-        state.insert_field('Tracer',0)
-        state.insert_field('Height',0)
-        state.insert_field('Velocity',1)
-        state.insert_field('NewVelocity',1)
-        state.insert_field('TracerDiffusivity',2)
-        return {phase: state}, {phase: (ufl_input, state)}
-    else:
-        p = OptionFileParser(inputFile)
-        return p.states, p.uflinput
-
-
-def visualise(st, uflObjects, filename, obj=False):
+def visualise(equation, filename, obj=False):
     basename = filename[:-4]
-    ASTVisualiser(st, basename + ".pdf")
-    for i in uflObjects:
-        # Do not try to visualise state or solve
-        if i in ['state','states', 'solve']:
-            continue
-        objectfile = "%s_%s.pdf" % (basename, i)
+    ASTVisualiser(equation.frontendAst, basename + ".pdf")
+    for name, obj in equation.uflObjects.items():
+        objectfile = "%s_%s.pdf" % (basename, name)
         if obj:
-            ObjectVisualiser(uflObjects[i], objectfile)
+            ObjectVisualiser(obj, objectfile)
         else:
-            rep = ast.parse(repr(uflObjects[i]))
+            rep = ast.parse(repr(obj))
             ReprVisualiser(rep, objectfile)
     return 0
 
