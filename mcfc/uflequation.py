@@ -22,7 +22,6 @@ from ufl.algorithms import extract_arguments
 from ufl.coefficient import Coefficient
 # MCFC modules
 from symbolicvalue import SymbolicValue
-from uflfunction import *
 
 class solveFunctor:
     """A functor class to be called as 'solve' in the execution namespace of
