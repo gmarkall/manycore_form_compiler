@@ -47,7 +47,7 @@ def main():
     check_op2 =  'no-op2' not in keys
     check_optionfile = 'no-optionfile' not in keys
 
-    ufl_sources = ['diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
+    ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
             'laplacian', 'helmholtz', 'euler-advection', 'identity-vector' ]
     optionfile_sources = ['test', 'cdisk_adv_diff']
 
