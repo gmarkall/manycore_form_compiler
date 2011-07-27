@@ -1,0 +1,21 @@
+t=state.scalar_fields["Tracer"]
+u=state.vector_fields["Velocity"]
+
+p=TrialFunction(t)
+q=TestFunction(t)
+
+diffusivity = 0.1
+
+M=p*q*dx
+
+adv_rhs = (q*t+dt*dot(grad(q),u)*t)*dx
+
+t_adv = solve(M, adv_rhs)
+
+d=-dt*diffusivity*dot(grad(q),grad(p))*dx
+
+A=M-0.5*d
+diff_rhs=action(M+0.5*d,t_adv)
+tnew=solve(A,diff_rhs)
+
+state.scalar_fields["Tracer"]=tnew
