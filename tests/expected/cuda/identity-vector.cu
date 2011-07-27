@@ -70,9 +70,9 @@ extern "C" void initialise_gpu_()
   state -> extractField("Velocity", 1);
   state -> allocateAllGPUMemory();
   state -> transferAllFields();
-  state -> insertTemporaryField("dVelocity", "Velocity");
   int numEle = (state -> getNumEle());
   int numNodes = (state -> getNumNodes());
+  state -> insertTemporaryField("dVelocity", "Velocity");
   CsrSparsity* sparsity = (state -> getSparsity("Velocity"));
   matrix_colm = (sparsity -> getCudaColm());
   matrix_findrm = (sparsity -> getCudaFindrm());

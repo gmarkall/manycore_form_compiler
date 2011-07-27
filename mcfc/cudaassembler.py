@@ -165,69 +165,72 @@ class CudaAssemblerBackend(AssemblerBackend):
         call = FunctionCall('transferAllFields')
         arrow = ArrowOp(state, call)
         func.append(arrow)
+
+        # Get num_ele, num_nodes etc
+        # FIXME: These will need to take the field name as a parameter
+        self.simpleAppend(func, numEle)
+        self.simpleAppend(func, numNodes)
         
-        # Insert temporary fields into state
+        # FIXME: This will currently work only for a single field solved for
         for field in self.getSolveResultFields():
+
+            # Insert temporary fields into state
             params = [ Literal(_getTmpField(field)), Literal(field) ]
             call = FunctionCall('insertTemporaryField',params)
             arrow = ArrowOp(state, call)
             func.append(arrow)
 
-        # Get num_ele, num_nodes etc
-        self.simpleAppend(func, numEle)
-        self.simpleAppend(func, numNodes)
-
-        # Get sparsity of the field we're solving for
-        sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
-        # FIXME: We can use the field from earlier, since its
-        # the only field we're solving on for now. When we start working
-        # with solving multiple fields, this logic will need re-working.
-        # (For each solve field, we should use the similar field and
-        # generate a new sparsity from that)
-        params = [ Literal(field) ]
-        call = FunctionCall('getSparsity', params)
-        arrow = ArrowOp(state, call)
-        assignment = AssignmentOp(Declaration(sparsity), arrow)
-        func.append(assignment)
-
-        # Initialise matrix_colm, findrm, etc.
-        # FIXME: When you tidy this up, put these in a dict???
-        matrixVars = [ matrixColm,    matrixFindrm,    matrixColmSize, matrixFindrmSize ]
-        sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm',  'getSizeFindrm'   ]
-
-        for var, source in zip(matrixVars, sourceFns):
-            call = FunctionCall(source)
-            rhs = ArrowOp(sparsity, call)
-            assignment = AssignmentOp(var, rhs)
+            # Get sparsity of the field we're solving for
+            sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
+            # FIXME: We can use the field from earlier, since its
+            # the only field we're solving on for now. When we start working
+            # with solving multiple fields, this logic will need re-working.
+            # (For each solve field, we should use the similar field and
+            # generate a new sparsity from that)
+            params = [ Literal(field) ]
+            call = FunctionCall('getSparsity', params)
+            arrow = ArrowOp(state, call)
+            assignment = AssignmentOp(Declaration(sparsity), arrow)
             func.append(assignment)
 
-        # Get the number of values per node and use it to calculate the
-        # size of all the local vector entries. FIXME: For now we'll use the same
-        # logic as before, that we're only solving on one field, so we can
-        # get these things from the last similar field that we found.
-        self.simpleAppend(func, numValsPerNode, param=field)
-        self.simpleAppend(func, numVectorEntries, param=field)
-        
-        # Now multiply numVectorEntries by numValsPerNode to get the correct
-        # size of the storage required
-        mult = MultiplyOp(numVectorEntries, numValsPerNode)
-        assignment = AssignmentOp(numVectorEntries, mult)
-        func.append(assignment)
+            # Initialise matrix_colm, findrm, etc.
+            # FIXME: When you tidy this up, put these in a dict???
+            matrixVars = [ matrixColm,    matrixFindrm,    matrixColmSize, matrixFindrmSize ]
+            sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm',  'getSizeFindrm'   ]
 
-        # The space for the local matrix storage is equal to the local vector
-        # storage size squared.
-        numMatrixEntries = Variable('numMatrixEntries', Integer())
-        rhs = MultiplyOp(numVectorEntries, numVectorEntries)
-        assignment = AssignmentOp(Declaration(numMatrixEntries), rhs)
-        func.append(assignment)
+            for var, source in zip(matrixVars, sourceFns):
+                call = FunctionCall(source)
+                rhs = ArrowOp(sparsity, call)
+                assignment = AssignmentOp(var, rhs)
+                func.append(assignment)
 
-        # Generate Mallocs for the local matrix and vector, and the solution
-        # vector.
-        self.buildAppendCudaMalloc(func, localVector, MultiplyOp(numEle, numVectorEntries))
-        self.buildAppendCudaMalloc(func, localMatrix, MultiplyOp(numEle, numMatrixEntries))
-        self.buildAppendCudaMalloc(func, globalVector, MultiplyOp(numNodes, numValsPerNode))
-        self.buildAppendCudaMalloc(func, globalMatrix, matrixColmSize)
-        self.buildAppendCudaMalloc(func, solutionVector,MultiplyOp(numNodes, numValsPerNode))
+            # Get the number of values per node and use it to calculate the
+            # size of all the local vector entries. FIXME: For now we'll use the same
+            # logic as before, that we're only solving on one field, so we can
+            # get these things from the last similar field that we found.
+            self.simpleAppend(func, numValsPerNode, param=field)
+            self.simpleAppend(func, numVectorEntries, param=field)
+            
+            # Now multiply numVectorEntries by numValsPerNode to get the correct
+            # size of the storage required
+            mult = MultiplyOp(numVectorEntries, numValsPerNode)
+            assignment = AssignmentOp(numVectorEntries, mult)
+            func.append(assignment)
+
+            # The space for the local matrix storage is equal to the local vector
+            # storage size squared.
+            numMatrixEntries = Variable('numMatrixEntries', Integer())
+            rhs = MultiplyOp(numVectorEntries, numVectorEntries)
+            assignment = AssignmentOp(Declaration(numMatrixEntries), rhs)
+            func.append(assignment)
+
+            # Generate Mallocs for the local matrix and vector, and the solution
+            # vector.
+            self.buildAppendCudaMalloc(func, localVector, MultiplyOp(numEle, numVectorEntries))
+            self.buildAppendCudaMalloc(func, localMatrix, MultiplyOp(numEle, numMatrixEntries))
+            self.buildAppendCudaMalloc(func, globalVector, MultiplyOp(numNodes, numValsPerNode))
+            self.buildAppendCudaMalloc(func, globalMatrix, matrixColmSize)
+            self.buildAppendCudaMalloc(func, solutionVector,MultiplyOp(numNodes, numValsPerNode))
 
         return func
 
@@ -393,10 +396,12 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         # Transfer all fields solved for on the GPU and written back to state
         for hostField in self._eq.state.returnedFields().values():
-            params = [ Literal(hostField), Literal(_getTmpField(hostField)) ]
-            returnCall = FunctionCall('returnFieldToHost', params)
-            arrow = ArrowOp(state, returnCall)
-            func.append(arrow)
+            # Sanity check: only copy back fields that were solved for
+            if hostField in self.getSolveResultFields():
+                params = [ Literal(hostField), Literal(_getTmpField(hostField)) ]
+                returnCall = FunctionCall('returnFieldToHost', params)
+                arrow = ArrowOp(state, returnCall)
+                func.append(arrow)
 
         return func
 

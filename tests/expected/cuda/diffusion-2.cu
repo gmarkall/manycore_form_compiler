@@ -169,9 +169,9 @@ extern "C" void initialise_gpu_()
   state -> extractField("Tracer", 0);
   state -> allocateAllGPUMemory();
   state -> transferAllFields();
-  state -> insertTemporaryField("dTracer", "Tracer");
   int numEle = (state -> getNumEle());
   int numNodes = (state -> getNumNodes());
+  state -> insertTemporaryField("dTracer", "Tracer");
   CsrSparsity* sparsity = (state -> getSparsity("Tracer"));
   matrix_colm = (sparsity -> getCudaColm());
   matrix_findrm = (sparsity -> getCudaFindrm());
