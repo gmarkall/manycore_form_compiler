@@ -307,11 +307,7 @@ class Scope(BackendASTNode):
         code = '%s{' % (indent)
         indent = incIndent()
         for s in self._statements:
-            if isinstance(s, BinaryOp):
-                unparsed = s.unparse(False)
-            else:
-                unparsed = s.unparse()
-            code = code + '\n' + indent + unparsed + ';'
+            code = code + '\n' + indent + s.unparse() + ';'
         indent = decIndent()
         code = code + '\n' + indent + '}'
         return code
@@ -367,16 +363,17 @@ class Delete(BackendASTNode):
 
 class BinaryOp(BackendASTNode):
 
-    def __init__(self, lhs, rhs, op):
+    def __init__(self, lhs, rhs, op, bracketed=False):
         self._lhs = lhs
         self._rhs = rhs
         self._op = op
+        self._bracketed = bracketed
 
-    def unparse(self, bracketed=True):
+    def unparse(self, bracketed=False):
         lhs = self._lhs.unparse()
         rhs = self._rhs.unparse()
-        code = '%s %s %s' % (lhs, self._op, rhs)
-        if bracketed:
+        code = '%s%s%s' % (lhs, self._op, rhs)
+        if self._bracketed or bracketed:
             code = '(' + code + ')'
         return code
 
@@ -385,36 +382,36 @@ class BinaryOp(BackendASTNode):
 class MultiplyOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, lhs, rhs, '*')
+        BinaryOp.__init__(self, lhs, rhs, ' * ')
 
 class AddOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, lhs, rhs, '+')
+        BinaryOp.__init__(self, lhs, rhs, ' + ', True)
 
 class AssignmentOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, lhs, rhs, '=')
+        BinaryOp.__init__(self, lhs, rhs, ' = ')
 
 class PlusAssignmentOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, lhs, rhs, '+=')
+        BinaryOp.__init__(self, lhs, rhs, ' += ')
 
 class InitialisationOp(AssignmentOp):
 
     def unparse(self, bracketed=False):
         lhs = self._lhs.unparse_declaration()
         rhs = self._rhs.unparse()
-        return '%s %s %s' % (lhs, self._op, rhs)
+        return '%s%s%s' % (lhs, self._op, rhs)
 
     __str__ = unparse
 
 class LessThanOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, lhs, rhs, '<')
+        BinaryOp.__init__(self, lhs, rhs, ' < ')
 
 class ArrowOp(BinaryOp):
 
