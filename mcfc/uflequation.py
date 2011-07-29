@@ -20,6 +20,7 @@
 # UFL modules
 from ufl.algorithms import extract_arguments
 from ufl.coefficient import Coefficient
+from ufl.form import Form
 # MCFC modules
 from symbolicvalue import SymbolicValue
 
@@ -33,6 +34,7 @@ class solveFunctor:
         # the index and the operarands (forms for matrix and rhs) as data
         self._solves = {}
         self.__iter__ = self._solves.__iter__
+        self.__len__ = self._solves.__len__
         self.items = self._solves.items
 
     def __call__(self,M,b):
@@ -92,5 +94,66 @@ class FluidityEquation(UflEquation):
         self.solves = solve
         self.state = state
         self.states = states
+
+    def getInputCoeffName(self, count):
+        "Get the name of an input coefficient from the coefficient count"
+        return self._getCoeffName(count, self.state.accessedFields(), self.getInputFieldName)
+
+    def getResultCoeffName(self, count):
+        "Get the name of a returned coefficient from the coefficient count"
+        return self._getCoeffName(count, self.state.returnedFields(), self.getReturnedFieldName)
+
+    def _getCoeffName(self, count, fields, fieldName):
+        # If the coefficient is returned to state, use the field name
+        if count in fields:
+            return fieldName(count)
+        # Otherwise (if it is temporary) use its variable name in the UFL
+        for name, obj in self.uflObjects.items():
+            if isinstance(obj, Coefficient) and obj.count() == count:
+                return name
+        # If we reach this, the coefficient wasn't found
+        raise RuntimeError("Coefficient with count %s was not found." % count)
+
+    def getResultCoeffNames(self):
+        "Get a list of field names of all the fields solved for"
+        return [self.getResultCoeffName(count) for count in self.solves]
+
+    def getTmpCoeffNames(self):
+        "Get a list of coefficient names solved for but not written back to state"
+        return [name for name, obj in self.uflObjects.iteritems() \
+                if isinstance(obj, Coefficient) \
+                    and obj.count() in self.solves \
+                    and obj.count() not in self.state.returnedFields()]
+
+    def getReturnedFieldName(self, count):
+        "Get the field name of a returned field from the coefficient count"
+        try:
+            return self.state.returnedFields()[count]
+        except:
+            # Raise a more informative exception
+            raise RuntimeError("Coefficient with count %s is not returned to state." % count)
+
+    def getReturnedFieldNames(self):
+        return self.state.returnedFields().values()
+
+    def getInputFieldName(self, count):
+        "Get the field name of an extracted field from the coefficient count"
+        return self.state.accessedFields()[count][1]
+
+    def getFormName(self, form):
+        "Look up the name of a given form in uflObjects"
+        # Sanity check: we only accept forms
+        assert isinstance(form, Form)
+        for name, obj in self.uflObjects.items():
+            if isinstance(obj, Form) and obj.form_data().original_form == form:
+                return name
+        # We went through all UFL objects and found nothing
+        raise RuntimeError("Given form was not found:\n%s" % form)
+
+    def getFieldFromCoeff(self, coeff):
+        "Returns the first field found defined over the same element as coeff"
+        elem = self.uflObjects[coeff].element()
+        rank = self.uflObjects[coeff].rank()
+        return [name for name, coeff in self.state[rank].items() if coeff.element() == elem][0]
 
 # vim:sw=4:ts=4:sts=4:et

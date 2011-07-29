@@ -5,10 +5,10 @@ double* localMatrix;
 double* globalVector;
 double* globalMatrix;
 double* solutionVector;
-int matrix_colm_size;
-int matrix_findrm_size;
-int* matrix_colm;
-int* matrix_findrm;
+int* Velocity_findrm;
+int Velocity_findrm_size;
+int* Velocity_colm;
+int Velocity_colm_size;
 
 
 __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
@@ -72,12 +72,11 @@ extern "C" void initialise_gpu_()
   state -> transferAllFields();
   int numEle = (state -> getNumEle());
   int numNodes = (state -> getNumNodes());
-  state -> insertTemporaryField("dVelocity", "Velocity");
-  CsrSparsity* sparsity = (state -> getSparsity("Velocity"));
-  matrix_colm = (sparsity -> getCudaColm());
-  matrix_findrm = (sparsity -> getCudaFindrm());
-  matrix_colm_size = (sparsity -> getSizeColm());
-  matrix_findrm_size = (sparsity -> getSizeFindrm());
+  CsrSparsity* Velocity_sparsity = (state -> getSparsity("Velocity"));
+  Velocity_colm = (Velocity_sparsity -> getCudaColm());
+  Velocity_findrm = (Velocity_sparsity -> getCudaFindrm());
+  Velocity_colm_size = (Velocity_sparsity -> getSizeColm());
+  Velocity_findrm_size = (Velocity_sparsity -> getSizeFindrm());
   int numValsPerNode = (state -> getValsPerNode("Velocity"));
   int numVectorEntries = (state -> getNodesPerEle("Velocity"));
   numVectorEntries = (numVectorEntries * numValsPerNode);
@@ -85,7 +84,7 @@ extern "C" void initialise_gpu_()
   cudaMalloc((void**)(&localVector), (sizeof(double) * (numEle * numVectorEntries)));
   cudaMalloc((void**)(&localMatrix), (sizeof(double) * (numEle * numMatrixEntries)));
   cudaMalloc((void**)(&globalVector), (sizeof(double) * (numNodes * numValsPerNode)));
-  cudaMalloc((void**)(&globalMatrix), (sizeof(double) * matrix_colm_size));
+  cudaMalloc((void**)(&globalMatrix), (sizeof(double) * Velocity_colm_size));
   cudaMalloc((void**)(&solutionVector), (sizeof(double) * (numNodes * numValsPerNode)));
 }
 
@@ -116,15 +115,13 @@ extern "C" void run_model_(double* dt_pointer)
   A<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt, detwei, shape);
   double* VelocityCoeff = (state -> getElementValue("Velocity"));
   RHS<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, VelocityCoeff, shape);
-  int numValsPerNode = (state -> getValsPerNode("Velocity"));
-  cudaMemset(globalMatrix, 0, (sizeof(double) * matrix_colm_size));
-  cudaMemset(globalVector, 0, (sizeof(double) * (numValsPerNode * numNodes)));
-  matrix_addto<<<gridXDim,blockXDim>>>(matrix_findrm, matrix_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
+  cudaMemset(globalMatrix, 0, (sizeof(double) * Velocity_colm_size));
+  cudaMemset(globalVector, 0, (sizeof(double) * ((state -> getValsPerNode("Velocity")) * numNodes)));
+  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
-  cg_solve(matrix_findrm, matrix_findrm_size, matrix_colm, matrix_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
-  double* dVelocityCoeff = (state -> getElementValue("dVelocity"));
-  expand_data<<<gridXDim,blockXDim>>>(dVelocityCoeff, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle);
-  state -> returnFieldToHost("Velocity", "dVelocity");
+  cg_solve(Velocity_findrm, Velocity_findrm_size, Velocity_colm, Velocity_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
+  expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, numEle, (state -> getValsPerNode("Velocity")), nodesPerEle);
+  state -> returnFieldToHost("Velocity");
 }
 
 

@@ -30,7 +30,6 @@ from utilities import uniqify
 # FEniCS UFL libs
 import ufl.finiteelement
 from ufl.differentiation import SpatialDerivative
-from ufl.form import Form
 
 # Variables used throughout the code generation
 state            = Variable('state',              Pointer(Class('StateHolder')))
@@ -40,11 +39,6 @@ localMatrix      = Variable('localMatrix',        Pointer(Real()))
 globalVector     = Variable('globalVector',       Pointer(Real()))
 globalMatrix     = Variable('globalMatrix',       Pointer(Real()))
 solutionVector   = Variable('solutionVector',     Pointer(Real()))
-
-matrixColmSize   = Variable('matrix_colm_size',   Integer())
-matrixFindrmSize = Variable('matrix_findrm_size', Integer())
-matrixColm       = Variable('matrix_colm',        Pointer(Integer()))
-matrixFindrm     = Variable('matrix_findrm',      Pointer(Integer()))
 
 # Variables used in the run_model and initialiser functions
 
@@ -89,34 +83,9 @@ def _getTmpField(field):
 
 class CudaAssemblerBackend(AssemblerBackend):
 
-    def getSolveResultFields(self):
-        "Get a list of field names of all the fields solved for"
-        return [self.getResultFieldName(count) for count in self._eq.solves]
-
-    def getResultFieldName(self, count):
-        "Get the field name of a returned field from the coefficient count"
-        return self._eq.state.returnedFields()[count]
-
-    def getInputFieldName(self, count):
-        "Get the field name of an extracted field from the coefficient count"
-        return self._eq.state.accessedFields()[count][1]
-
-    def _getFormName(self, form):
-        "Look up the name of a given form in uflObjects"
-        # Sanity check: we only accept forms
-        assert isinstance(form, Form)
-        for name, obj in self._eq.uflObjects.items():
-            if isinstance(obj, Form) and obj.form_data().original_form == form:
-                return name
-        # We went through all UFL objects and found nothing
-        raise RuntimeError("Given form was not found.")
-
     def compile(self, equation):
 
         self._eq = equation
-
-        # Build definitions
-        definitions = self._buildHeadersAndGlobals()
 
         # Build declarations
         declarations = GlobalScope()
@@ -128,6 +97,10 @@ class CudaAssemblerBackend(AssemblerBackend):
         declarations.append(finaliser)
         runModel = self._buildRunModel()
         declarations.append(runModel)
+
+        # Build definitions
+        # This comes last since it requires information from earlier steps
+        definitions = self._buildHeadersAndGlobals()
 
         return definitions, declarations
 
@@ -147,51 +120,47 @@ class CudaAssemblerBackend(AssemblerBackend):
         
         # Call the state initialiser
         call = FunctionCall('initialise')
-        arrow = ArrowOp(state, call)
-        func.append(arrow)
+        func.append(ArrowOp(state, call))
 
         # Extract accessed fields
         for rank, field in self._eq.state.accessedFields().values():
             params = [ Literal(field), Literal(rank) ]
             call = FunctionCall('extractField',params)
-            arrow = ArrowOp(state, call)
-            func.append(arrow)
+            func.append(ArrowOp(state, call))
 
         # Allocate memory and transfer to GPU
         call = FunctionCall('allocateAllGPUMemory')
-        arrow = ArrowOp(state, call)
-        func.append(arrow)
+        func.append(ArrowOp(state, call))
 
         call = FunctionCall('transferAllFields')
-        arrow = ArrowOp(state, call)
-        func.append(arrow)
+        func.append(ArrowOp(state, call))
 
         # Get num_ele, num_nodes etc
-        # FIXME: These will need to take the field name as a parameter
-        self.simpleAppend(func, numEle)
-        self.simpleAppend(func, numNodes)
-        
-        # FIXME: This will currently work only for a single field solved for
-        for field in self.getSolveResultFields():
+        simpleAppend(func, numEle)
+        simpleAppend(func, numNodes)
 
-            # Insert temporary fields into state
-            params = [ Literal(_getTmpField(field)), Literal(field) ]
+        # If the coefficient is not written back to state, insert a
+        # temporary field for it
+        for field in self._eq.getTmpCoeffNames():
+            params = [ Literal(self._eq.getFieldFromCoeff(field)), Literal(field) ]
             call = FunctionCall('insertTemporaryField',params)
-            arrow = ArrowOp(state, call)
-            func.append(arrow)
+            func.append(ArrowOp(state, call))
+
+        self._sparsities = {}
+        # FIXME: This will stupidly extract a sparsity for each coefficient
+        # solved for (which is not necessary in the general case)
+        for field in self._eq.getResultCoeffNames():
 
             # Get sparsity of the field we're solving for
-            sparsity = Variable('sparsity', Pointer(Class('CsrSparsity')))
-            # FIXME: We can use the field from earlier, since its
-            # the only field we're solving on for now. When we start working
-            # with solving multiple fields, this logic will need re-working.
-            # (For each solve field, we should use the similar field and
-            # generate a new sparsity from that)
-            params = [ Literal(field) ]
-            call = FunctionCall('getSparsity', params)
-            arrow = ArrowOp(state, call)
-            assignment = AssignmentOp(Declaration(sparsity), arrow)
+            sparsity = Variable(field+'_sparsity', Pointer(Class('CsrSparsity')))
+            call = FunctionCall('getSparsity', [ Literal(field) ])
+            assignment = AssignmentOp(Declaration(sparsity), ArrowOp(state, call))
             func.append(assignment)
+
+            matrixColmSize   = Variable(field+'_colm_size',   Integer())
+            matrixFindrmSize = Variable(field+'_findrm_size', Integer())
+            matrixColm       = Variable(field+'_colm',        Pointer(Integer()))
+            matrixFindrm     = Variable(field+'_findrm',      Pointer(Integer()))
 
             # Initialise matrix_colm, findrm, etc.
             # FIXME: When you tidy this up, put these in a dict???
@@ -204,12 +173,20 @@ class CudaAssemblerBackend(AssemblerBackend):
                 assignment = AssignmentOp(var, rhs)
                 func.append(assignment)
 
+            # Remember the sparsity variable information
+            self._sparsities[field] = dict(zip(['colm','findrm','colm_size','findrm_size'], matrixVars))
+
+        # Only allocate device memory if we actually do a solve
+        # FIXME: In the following we stupidly take the last coefficient solved for
+        # Actually, we need to determine the maximum space required and allocate
+        # that
+        if len(self._eq.solves) > 0:
             # Get the number of values per node and use it to calculate the
             # size of all the local vector entries. FIXME: For now we'll use the same
             # logic as before, that we're only solving on one field, so we can
             # get these things from the last similar field that we found.
-            self.simpleAppend(func, numValsPerNode, param=field)
-            self.simpleAppend(func, numVectorEntries, param=field)
+            simpleAppend(func, numValsPerNode, param=field)
+            simpleAppend(func, numVectorEntries, param=field)
             
             # Now multiply numVectorEntries by numValsPerNode to get the correct
             # size of the storage required
@@ -226,28 +203,13 @@ class CudaAssemblerBackend(AssemblerBackend):
 
             # Generate Mallocs for the local matrix and vector, and the solution
             # vector.
-            self.buildAppendCudaMalloc(func, localVector, MultiplyOp(numEle, numVectorEntries))
-            self.buildAppendCudaMalloc(func, localMatrix, MultiplyOp(numEle, numMatrixEntries))
-            self.buildAppendCudaMalloc(func, globalVector, MultiplyOp(numNodes, numValsPerNode))
-            self.buildAppendCudaMalloc(func, globalMatrix, matrixColmSize)
-            self.buildAppendCudaMalloc(func, solutionVector,MultiplyOp(numNodes, numValsPerNode))
+            buildAppendCudaMalloc(func, localVector, MultiplyOp(numEle, numVectorEntries))
+            buildAppendCudaMalloc(func, localMatrix, MultiplyOp(numEle, numMatrixEntries))
+            buildAppendCudaMalloc(func, globalVector, MultiplyOp(numNodes, numValsPerNode))
+            buildAppendCudaMalloc(func, globalMatrix, matrixColmSize)
+            buildAppendCudaMalloc(func, solutionVector,MultiplyOp(numNodes, numValsPerNode))
 
         return func
-
-    def buildAppendCudaMalloc(self, scope, var, size):
-        cast = Cast(Pointer(Pointer(Void())), AddressOfOp(var))
-        sizeof = SizeOf(var.getType().getBaseType())
-        sizeArg = MultiplyOp(sizeof, size)
-        params = [ cast, sizeArg ]
-        malloc = FunctionCall('cudaMalloc', params)
-        scope.append(malloc)
-
-    def buildAppendCudaMemsetZero(self, func, base, length):
-        t = base.getType().getBaseType()
-        size = MultiplyOp(SizeOf(t), length)
-        params = [ base, Literal(0), size ]
-        memset = FunctionCall('cudaMemset', params)
-        func.append(memset)
 
     def _buildFinaliser(self):
         func = FunctionDefinition(Void(), 'finalise_gpu_')
@@ -266,34 +228,14 @@ class CudaAssemblerBackend(AssemblerBackend):
         scope.append(include)
 
         # Declare vars in global scope
-        declVars = [localVector, localMatrix, globalVector, globalMatrix, solutionVector, \
-                    matrixColmSize, matrixFindrmSize, matrixColm, matrixFindrm ]
+        declVars = [localVector, localMatrix, globalVector, globalMatrix, solutionVector ]
+        for sparsity in self._sparsities.values():
+            declVars += sparsity.values()
 
         for var in declVars:
             scope.append(Declaration(var))
 
         return scope
-
-    def simpleAppend(self, func, var, provider=None, param=None):
-        """Append a variable declaration to func, without building a new
-        Variable instance. The declaration is initialised by the provider
-        with the parameter param, unless these are not specified. If they
-        are not specified, then the getters dict is used to look one up."""
-        params = []
-        
-        if provider is None:
-            provider, defaultParam = getters[var]
-            if param is None:
-                param = defaultParam
-        
-        if param is not None:
-            paramString = Literal(param)
-            params.append(paramString)
-
-        call = FunctionCall(provider, params)
-        arrow = ArrowOp(state, call)
-        assignment = AssignmentOp(Declaration(var), arrow)
-        func.append(assignment)
 
     def _buildRunModel(self):
      
@@ -314,7 +256,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         toBeInitialised = [ numEle, numNodes, detwei, eleNodes, coordinates, dn, \
           quadWeights, nDim, nQuad, nodesPerEle, shape, dShape ]
         for var in toBeInitialised:
-            self.simpleAppend(func, var)
+            simpleAppend(func, var)
 
         # Build the block dimension declaration. Eventually this needs to be configurable
         # (e.g. for autotuning, performance experiments.)
@@ -345,34 +287,34 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
-            result = self.getResultFieldName(count)
+            result = self._eq.getResultCoeffName(count)
             matrix = forms[0]
             vector = forms[1]
+            sparsity = self._sparsities[result]
 
             # Call the matrix assembly
             # FIXME what if we have multiple integrals?
             tree = matrix.integrals()[0].integrand()
             params = self._makeParameterListAndGetters(func, tree, matrix, matrixParameters)
-            matrixAssembly = CudaKernelCall(self._getFormName(matrix), params, gridXDim, blockXDim)
+            matrixAssembly = CudaKernelCall(self._eq.getFormName(matrix), params, gridXDim, blockXDim)
             func.append(matrixAssembly)
 
             # Then call the rhs assembly
             # FIXME what if we have multiple integrals?
             tree = vector.integrals()[0].integrand()
             params = self._makeParameterListAndGetters(func, tree, vector, vectorParameters)
-            vectorAssembly = CudaKernelCall(self._getFormName(vector), params, gridXDim, blockXDim)
+            vectorAssembly = CudaKernelCall(self._eq.getFormName(vector), params, gridXDim, blockXDim)
             func.append(vectorAssembly)
 
             # Zero the global matrix and vector
             # First we need to get numvalspernode, for the length of the global vector
-            self.simpleAppend(func, numValsPerNode, param=result)
-            self.buildAppendCudaMemsetZero(func, globalMatrix, matrixColmSize)
-            size = MultiplyOp(numValsPerNode, numNodes)
-            self.buildAppendCudaMemsetZero(func, globalVector, size)
+            buildAppendCudaMemsetZero(func, globalMatrix, sparsity['colm_size'])
+            size = MultiplyOp(stateGetter(numValsPerNode, param=result), numNodes)
+            buildAppendCudaMemsetZero(func, globalVector, size)
 
             # Build calls to addto kernels. 
             # For the matrix
-            params = [ matrixFindrm, matrixColm, globalMatrix, eleNodes, \
+            params = [ sparsity['findrm'], sparsity['colm'], globalMatrix, eleNodes, \
                          localMatrix, numEle, nodesPerEle ]
             matrixAddto = CudaKernelCall('matrix_addto', params, gridXDim, blockXDim)
             func.append(matrixAddto)
@@ -383,25 +325,24 @@ class CudaAssemblerBackend(AssemblerBackend):
             func.append(vectorAddto)
             
             # call the solve
-            params = [ matrixFindrm, matrixFindrmSize, matrixColm, matrixColmSize, \
+            params = [ sparsity['findrm'], sparsity['findrm_size'], sparsity['colm'], sparsity['colm_size'], \
                           globalMatrix, globalVector, numNodes, solutionVector ]
             cgSolve = FunctionCall('cg_solve', params)
             func.append(cgSolve)
 
             # expand the result
-            var = self.extractCoefficient(func, _getTmpField(result))
-            params = [ var, solutionVector, eleNodes, numEle, numValsPerNode, nodesPerEle ]
+            var = self.extractCoefficient(func, result)
+            params = [ var, solutionVector, eleNodes, numEle, stateGetter(numValsPerNode, param=result), nodesPerEle ]
             expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
             func.append(expand)
 
         # Transfer all fields solved for on the GPU and written back to state
-        for hostField in self._eq.state.returnedFields().values():
+        for field in self._eq.getReturnedFieldNames():
             # Sanity check: only copy back fields that were solved for
-            if hostField in self.getSolveResultFields():
-                params = [ Literal(hostField), Literal(_getTmpField(hostField)) ]
+            if field in self._eq.getResultCoeffNames():
+                params = [ Literal(field) ]
                 returnCall = FunctionCall('returnFieldToHost', params)
-                arrow = ArrowOp(state, returnCall)
-                func.append(arrow)
+                func.append(ArrowOp(state, returnCall))
 
         return func
 
@@ -411,7 +352,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         
         # Don't declare and extract coefficients twice
         if varName not in self._alreadyExtracted:
-            self.simpleAppend(func, var, 'getElementValue', coefficientName)
+            # Get expanded field on device
+            simpleAppend(func, var, 'getElementValue', coefficientName)
             self._alreadyExtracted.append(varName)
         
         return var
@@ -424,7 +366,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         for coeff in paramUFL['coefficients']:
             # find which field this coefficient came from, then extract from that field.
-            var = self.extractCoefficient(func, self.getInputFieldName(coeff.count()))
+            var = self.extractCoefficient(func, self._eq.getInputCoeffName(coeff.count()))
             params.append(var)
 
         if paramUFL['arguments']:
@@ -433,5 +375,43 @@ class CudaAssemblerBackend(AssemblerBackend):
             params.append(dShape)
          
         return params
+
+def buildAppendCudaMemsetZero(func, base, length):
+    t = base.getType().getBaseType()
+    size = MultiplyOp(SizeOf(t), length)
+    params = [ base, Literal(0), size ]
+    memset = FunctionCall('cudaMemset', params)
+    func.append(memset)
+
+def buildAppendCudaMalloc(scope, var, size):
+    cast = Cast(Pointer(Pointer(Void())), AddressOfOp(var))
+    sizeof = SizeOf(var.getType().getBaseType())
+    sizeArg = MultiplyOp(sizeof, size)
+    params = [ cast, sizeArg ]
+    malloc = FunctionCall('cudaMalloc', params)
+    scope.append(malloc)
+
+def stateGetter(var, provider=None, param=None):
+    params = []
+
+    if provider is None:
+        provider, defaultParam = getters[var]
+        if param is None:
+            param = defaultParam
+
+    if param is not None:
+        params.append(Literal(param))
+
+    call = FunctionCall(provider, params)
+    return ArrowOp(state, call)
+
+def simpleAppend(func, var, provider=None, param=None):
+    """Append a variable declaration to func, without building a new
+    Variable instance. The declaration is initialised by the provider
+    with the parameter param, unless these are not specified. If they
+    are not specified, then the getters dict is used to look one up."""
+
+    assignment = AssignmentOp(Declaration(var), stateGetter(var, provider, param))
+    func.append(assignment)
 
 # vim:sw=4:ts=4:sts=4:et

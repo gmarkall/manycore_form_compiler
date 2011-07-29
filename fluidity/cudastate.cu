@@ -925,13 +925,16 @@ Field* StateHolder::getField(string fieldName)
   return fields[fieldName];
 }
 
-void StateHolder::returnFieldToHost(string hostFieldName, string GPUFieldName)
+void StateHolder::returnFieldToHost(string fieldName)
 {
-  Field* hostField = fields[hostFieldName];
-  Field* GPUField = fields[GPUFieldName];
-  double* hostFieldVal = hostField->getVal();
-  double* GPUFieldVal = GPUField->getVal();
-  int len = sizeof(double) * GPUField->getExpandedValSize();
-  cudaMemcpy(hostFieldVal, GPUFieldVal, len, cudaMemcpyDeviceToDevice);
-  GPUField->transferDtoH();
+  fields[fieldName]->transferDtoH();
+}
+
+void StateHolder::returnFieldToHost(string targetFieldName, string sourceFieldName)
+{
+  Field* targetField = fields[targetFieldName];
+  Field* sourceField = fields[sourceFieldName];
+  int len = sizeof(double) * sourceField->getExpandedValSize();
+  cudaMemcpy(targetField->getVal(), sourceField->getVal(), len, cudaMemcpyDeviceToDevice);
+  sourceField->transferDtoH();
 }

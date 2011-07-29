@@ -251,7 +251,8 @@ class StateHolder
     int getValsPerNode(string fieldName);
     int getNumQuadPoints(string fieldName);
     // For returning fields
-    void returnFieldToHost(string hostFieldName, string gpuFieldName);
+    void returnFieldToHost(string fieldName);
+    void returnFieldToHost(string targetFieldName, string sourceFieldName);
     double* getNodeValue(string fieldName);
     Field *getField(string fieldName);
     ~StateHolder();

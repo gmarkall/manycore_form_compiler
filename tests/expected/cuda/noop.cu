@@ -5,10 +5,6 @@ double* localMatrix;
 double* globalVector;
 double* globalMatrix;
 double* solutionVector;
-int matrix_colm_size;
-int matrix_findrm_size;
-int* matrix_colm;
-int* matrix_findrm;
 
 
 StateHolder* state;
