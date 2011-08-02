@@ -1,6 +1,5 @@
 #include "cudastatic.hpp"
 #include <sys/time.h>
-#include <cstdio>
 
 // Texture references for CSR matrix 
 texture<int,1> tex_findrm, tex_colm;
@@ -265,8 +264,6 @@ void cg_solve(int* k_findrm, int size_findrm, int* k_colm, int size_colm, double
     // i = i+1
     iterations++;
   }
-
-  printf("Iterations: %d\n",iterations);
 
   cudaUnbindTexture(tex_colm);
   cudaUnbindTexture(tex_val);
