@@ -142,7 +142,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         # If the coefficient is not written back to state, insert a
         # temporary field for it
         for field in self._eq.getTmpCoeffNames():
-            params = [ Literal(self._eq.getFieldFromCoeff(field)), Literal(field) ]
+            params = [ Literal(field), Literal(self._eq.getFieldFromCoeff(field)) ]
             call = FunctionCall('insertTemporaryField',params)
             func.append(ArrowOp(state, call))
 

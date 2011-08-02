@@ -719,7 +719,7 @@ void StateHolder::insertTemporaryField(string newFieldName, string likeFieldName
   }
   else
   {
-    cerr << "Copied field " << likeFieldName << "not found when trying to make new field " << newFieldName << endl;
+    cerr << "Copied field " << likeFieldName << " not found when trying to make new field " << newFieldName << endl;
   }
 
   newField->setName(newFieldName);
