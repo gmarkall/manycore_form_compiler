@@ -216,7 +216,8 @@ class ObjectVisualiser(DOTVisualiser):
         self._seen[OID] = nodeID
         savedLabel = self._edgeLabel
         attrs = dir(obj)
-        visible = [ s for s in attrs if s[:2] != "__" ]
+        # Ignore attribute 'T' which is expected to fail under some circumstances
+        visible = [ s for s in attrs if s[:2] != "__" and s != 'T' ]
         for a in visible:
             self._edgeLabel = a
             try:
@@ -225,7 +226,10 @@ class ObjectVisualiser(DOTVisualiser):
                 self._handle_exception(obj, a, sys.exc_info()[1])
                 continue
             attrtype = objattr.__class__.__name__
-            if attrtype not in [ "builtin_function_or_method", "instancemethod" ]:
+            # We have to ignore 'Transposed' to prevent an infinite recursion
+            # on a rank 2 tensor (i.e. taking the transpose of a transpose of
+            # a transpose... - you get the picture)
+            if attrtype not in [ "builtin_function_or_method", "instancemethod", "Transposed" ]:
                 self._dispatch(objattr)
         self._edgeLabel = savedLabel
 
