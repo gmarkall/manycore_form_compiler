@@ -78,18 +78,17 @@ def run(inputFile, opts = None):
         equation = canonicaliser.canonicalise(equation)
 
         if vis:
-            visualise(equation, inputFile, objvis)
+            visualise(equation, outputFile, objvis)
             continue
 
         with screen or open(outputFile+extensions[backend], 'w') as fd:
             driver = drivers[backend]()
             driver.drive(equation, fd)
 
-def visualise(equation, filename, obj=False):
-    basename = filename[:-4]
-    ASTVisualiser(equation.frontendAst, basename + ".pdf")
+def visualise(equation, outputFile, obj=False):
+    ASTVisualiser(equation.frontendAst, outputFile + ".pdf")
     for name, obj in equation.uflObjects.items():
-        objectfile = "%s_%s.pdf" % (basename, name)
+        objectfile = "%s_%s.pdf" % (outputFile, name)
         if obj:
             ObjectVisualiser(obj, objectfile)
         else:
@@ -128,6 +127,12 @@ def main():
 def testHook(inputFile, outputFile, backend = "cuda"):
 
     opts = {'o': outputFile, 'b': backend}
+    run(inputFile, opts)
+    return 0
+
+def testHookVisualiser(inputFile, outputFile):
+
+    opts = {'o': outputFile, 'v': None}
     run(inputFile, opts)
     return 0
 

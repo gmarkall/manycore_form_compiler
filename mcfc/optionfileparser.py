@@ -78,6 +78,7 @@ def testHook(inputFile, outputFile = None):
         print >>fd, 'element types: ', p.element_types
         print >>fd, 'states: ', p.states
         print >>fd, 'ufl input: ', p.uflinput
+    return 0
 
 if __name__ == "__main__":
     import sys

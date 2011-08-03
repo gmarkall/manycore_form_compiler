@@ -46,6 +46,7 @@ def main():
     check_cuda =  'no-cuda' not in keys
     check_op2 =  'no-op2' not in keys
     check_optionfile = 'no-optionfile' not in keys
+    check_visualiser = 'no-visualiser' not in keys
 
     ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
             'laplacian', 'helmholtz', 'euler-advection', 'identity-vector', \
@@ -111,12 +112,24 @@ def main():
             optionfile_sources,
             'Running option file parser tests...')
 
+    if check_visualiser:
+
+        # Create the visualiser outputs folder
+        os.mkdir('outputs/visualiser', 0755)
+
+        tester.test(frontend.testHookVisualiser,
+            lambda name: "inputs/ufl/" + name + ".ufl",
+            lambda name: "outputs/visualiser/" + name,
+            lambda name: None,
+            ufl_sources,
+            'Running PDF visualiser tests...')
+
     # Exit code is 0 if no tests failed.
     sys.exit(tester.failed)
 
 def get_options():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "n", ["non-interactive", "no-cuda", "no-op2", "no-optionfile"])
+        opts, args = getopt.getopt(sys.argv[1:], "n", ["non-interactive", "no-cuda", "no-op2", "no-optionfile", "no-visualiser"])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -156,16 +169,22 @@ class AutoTester:
         outputfile = self.outfile(sourcefile)
         expectedfile = self.expectfile(sourcefile)
 
-        self.testhook(inputfile, outputfile)
+        # Test hook returns 0 if successful, 1 if failed
+        self.failed = self.testhook(inputfile, outputfile)
 
-        cmd = "diff -u " + expectedfile + " " + outputfile
-        diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-        diffout, differr = diff.communicate()
-        if differr:
-            print differr
-            self.failed = 1
-        else:
-            self.check_diff(sourcefile, diffout)
+        # Print a message if the test hook failed
+        if self.failed:
+            print "    test hook failed."
+        # Otherwise, if we have an expected output, diff against it
+        elif expectedfile:
+            cmd = "diff -u " + expectedfile + " " + outputfile
+            diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+            diffout, differr = diff.communicate()
+            if differr:
+                print differr
+                self.failed = 1
+            else:
+                self.check_diff(sourcefile, diffout)
 
     def check_diff(self, sourcefile, diff):
 
