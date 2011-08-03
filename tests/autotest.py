@@ -3,7 +3,9 @@ Autotest framework for MCFC.
 
 Runs the MCFc on each of the ufl files in inputs, stores the output in outputs,
 and compares them with those in expected. Anomalies are highlighted, and the
-user may replace the testcase with the new output. 
+user may replace the testcase with the new output. In addition the PDF
+visualiser is tested, but no diffs are presented. A test for the PDF object
+visualiser is optionally available.
 
 usage: autotest.py [OPTIONS] [INPUT-FILE]
     where OPTIONS can be one of
@@ -11,6 +13,8 @@ usage: autotest.py [OPTIONS] [INPUT-FILE]
         --no-cuda              Do not test the CUDA backend
         --no-op2               Do not test the OP2 backend
         --no-optionfile        Do not test the option file parser
+        --no-visualiser        Do not test the PDF visualiser
+        --with-objvis          Also test the PDF object visualiser
 """
 
 # Python modules
@@ -63,6 +67,7 @@ def main():
             optionfile_sources = [ args[0] ]
             check_cuda = False
             check_op2 = False
+            check_visualiser = False
         else:
             print "Unsupported source file:",args[0]
             print "Needs to be in",ufl_sources,"or",optionfile_sources
@@ -124,12 +129,31 @@ def main():
             ufl_sources,
             'Running PDF visualiser tests...')
 
+        # If object visualiser tests have been requested
+        if 'with-objvis' in keys:
+
+            # Create the visualiser outputs folder
+            os.mkdir('outputs/objvisualiser', 0755)
+
+            tester.test(lambda infile, outfile: frontend.testHookVisualiser(infile, outfile, True), 
+                lambda name: "inputs/ufl/" + name + ".ufl",
+                lambda name: "outputs/objvisualiser/" + name,
+                lambda name: None,
+                ufl_sources,
+                'Running PDF object visualiser tests...')
+
     # Exit code is 0 if no tests failed.
     sys.exit(tester.failed)
 
 def get_options():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "n", ["non-interactive", "no-cuda", "no-op2", "no-optionfile", "no-visualiser"])
+        opts, args = getopt.getopt(sys.argv[1:], "n", [ "non-interactive",
+                                                        "no-cuda",
+                                                        "no-op2",
+                                                        "no-optionfile",
+                                                        "no-visualiser",
+                                                        "with-objvis",
+                                                        "with-objvisualise" ])
     except getopt.error, msg:
         print msg
         print __doc__

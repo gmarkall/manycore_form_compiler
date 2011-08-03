@@ -130,9 +130,11 @@ def testHook(inputFile, outputFile, backend = "cuda"):
     run(inputFile, opts)
     return 0
 
-def testHookVisualiser(inputFile, outputFile):
+def testHookVisualiser(inputFile, outputFile, objvis = False):
 
     opts = {'o': outputFile, 'v': None}
+    if objvis:
+        opts['objvisualise'] = None
     run(inputFile, opts)
     return 0
 
