@@ -17,20 +17,18 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from ufl.argument import TestFunction as UflTestFunction, \
-                         TrialFunction as UflTrialFunction
-from ufl.coefficient import Coefficient
+import ufl
 
 __all__ = ['TestFunction', 'TrialFunction']
 
 def TestFunction(initialiser):
-  if isinstance(initialiser, Coefficient):
+  if isinstance(initialiser, ufl.Coefficient):
     initialiser = initialiser.element()
-  return UflTestFunction(initialiser)
+  return ufl.TestFunction(initialiser)
 
 def TrialFunction(initialiser):
-  if isinstance(initialiser, Coefficient):
+  if isinstance(initialiser, ufl.Coefficient):
     initialiser = initialiser.element()
-  return UflTrialFunction(initialiser)
+  return ufl.TrialFunction(initialiser)
 
 # vim:sw=4:ts=4:sts=4:et
