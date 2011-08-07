@@ -37,8 +37,8 @@ def canonicalise(equation):
        and a collection of UFL objects (preprocessed forms, coefficients,
        arguments)"""
 
-    for state in equation.states.values():
-        state.readyToRun()
+    # Do any initialisation the UFL equation might require
+    equation.preExecute()
 
     equation.frontendAst = ast.parse(equation.code)
 

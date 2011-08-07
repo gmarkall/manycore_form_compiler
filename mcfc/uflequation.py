@@ -74,6 +74,11 @@ class UflEquation:
         self.dag = None
         self.backendAst = None
 
+    def preExecute(self):
+        """Called immediately prior to execution of the UFL code. Override this
+           method in a derived class to do any necessary initialisation."""
+        pass
+
 class FluidityEquation(UflEquation):
     """Container class representing a Fluidity UFL equation with the additional
        attributes state, states and solves."""
@@ -94,6 +99,10 @@ class FluidityEquation(UflEquation):
         self.solves = solve
         self.state = state
         self.states = states
+
+    def preExecute(self):
+        for state in self.states.values():
+            state.readyToRun()
 
     def getInputCoeffName(self, count):
         "Get the name of an input coefficient from the coefficient count"
