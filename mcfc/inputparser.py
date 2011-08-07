@@ -20,7 +20,7 @@
 # MCFC modules
 from optionfileparser import OptionFileParser
 from uflstate import UflState
-from uflequation import FluidityEquation
+from fluidityequation import FluidityEquation
 
 class InputParser:
     "Abstract base class for MCFC input parsers"
