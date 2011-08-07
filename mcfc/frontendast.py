@@ -20,7 +20,7 @@
 "Module for all pipeline stages dealing with the frontend AST."
 
 # Regular python modules
-import getopt, sys, ast
+import ast
 
 def generateFrontendAst(equation):
     "Generate the frontend AST from the UFL code"
@@ -29,6 +29,16 @@ def generateFrontendAst(equation):
 
 def preprocessFrontendAst(equation):
     "Preprocess the frontend AST (currently a no-op)"
+    return equation
+
+def executeFrontendAst(equation):
+    "Exectute the frontend AST in the given namespace"
+
+    # Do any initialisation the UFL equation might require
+    equation.preExecute()
+
+    # Compile the frontend AST and execute it in the UFL equation namespace
+    exec compile(equation.frontendAst, equation.name, 'exec') in equation.namespace
     return equation
 
 # vim:sw=4:ts=4:sts=4:et

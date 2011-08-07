@@ -37,11 +37,6 @@ def canonicalise(equation):
        and a collection of UFL objects (preprocessed forms, coefficients,
        arguments)"""
 
-    # Do any initialisation the UFL equation might require
-    equation.preExecute()
-
-    exec equation.code in equation.namespace
-
     for name, value in equation.namespace.iteritems():
         # UFL Forms
         if isinstance(value, (ufl.form.Form, tuple)):

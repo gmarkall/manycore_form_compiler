@@ -77,6 +77,7 @@ def run(inputFile, opts = None):
         outputFile = outputFileBase + equation.name
         equation = frontendast.generateFrontendAst(equation)
         equation = frontendast.preprocessFrontendAst(equation)
+        equation = frontendast.executeFrontendAst(equation)
         equation = canonicaliser.canonicalise(equation)
 
         if vis:
