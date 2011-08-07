@@ -33,7 +33,7 @@
 import os, sys, getopt, pprint, ast
 # MCFC libs
 from visualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
-import canonicaliser
+import canonicaliser, frontendast
 from driverfactory import drivers
 from inputparser import inputparsers
 
@@ -75,6 +75,7 @@ def run(inputFile, opts = None):
     for equation in parser.parse(inputFile):
 
         outputFile = outputFileBase + equation.name
+        equation = frontendast.generateFrontendAst(equation)
         equation = canonicaliser.canonicalise(equation)
 
         if vis:

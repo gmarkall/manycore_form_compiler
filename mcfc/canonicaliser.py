@@ -19,11 +19,11 @@
 
 """
 MCFC Canonicaliser. Uses the FEniCS UFL implementation to canonicalise
-the input and write it out.
+the input and return a dictionary of UFL objects.
 """
 
 # Regular python modules
-import getopt, sys, ast
+import getopt, sys
 # The UFL packages are required so that the sources execute correctly
 # when they are read in
 import ufl
@@ -39,8 +39,6 @@ def canonicalise(equation):
 
     # Do any initialisation the UFL equation might require
     equation.preExecute()
-
-    equation.frontendAst = ast.parse(equation.code)
 
     exec equation.code in equation.namespace
 
