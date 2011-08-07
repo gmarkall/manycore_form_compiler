@@ -58,6 +58,6 @@ class FlmlParser(InputParser):
         return [FluidityEquation(equationname, data[0], data[1], p.states) for equationname, data in p.uflinput.items()]
 
 # FIXME flufl files should have extension .flufl
-inputparsers = {'.ufl': FluflParser, '.flml': FlmlParser}
+inputparsers = {'.ufl': FluflParser(), '.flml': FlmlParser()}
 
 # vim:sw=4:ts=4:sts=4:et

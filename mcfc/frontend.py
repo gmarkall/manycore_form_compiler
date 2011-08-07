@@ -71,7 +71,7 @@ def run(inputFile, opts = None):
         objvis = True
 
     # Parse input and trigger the pipeline for each UFL equation
-    parser = inputparsers[os.path.splitext(inputFile)[1]]()
+    parser = inputparsers[os.path.splitext(inputFile)[1]]
     for equation in parser.parse(inputFile):
 
         outputFile = outputFileBase + equation.name
