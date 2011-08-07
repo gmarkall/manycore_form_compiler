@@ -23,7 +23,12 @@
 import getopt, sys, ast
 
 def generateFrontendAst(equation):
+    "Generate the frontend AST from the UFL code"
     equation.frontendAst = ast.parse(equation.code)
+    return equation
+
+def preprocessFrontendAst(equation):
+    "Preprocess the frontend AST (currently a no-op)"
     return equation
 
 # vim:sw=4:ts=4:sts=4:et
