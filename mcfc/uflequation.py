@@ -17,6 +17,9 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
+# MCFC libs
+from visualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
+
 class UflEquation:
     """Base class representing an equation in UFL with basic attributes.
        Objects of this type are passed from stage to stage in the MCFC
@@ -44,5 +47,23 @@ class UflEquation:
         """Called immediately prior to execution of the UFL code. Override this
            method in a derived class to do any necessary initialisation."""
         pass
+
+    def execPipeline(self, fd, driver):
+        "Invokes the code generation pipeline"
+        raise NotImplementedError("You're supposed to implement execPipeline()")
+
+    def execVisualisePipeline(self, outputFile, objvis):
+        "Invokes the visualisation pipeline"
+        raise NotImplementedError("You're supposed to implement execVisualisePipeline()")
+
+    def visualise(self, outputFile, obj=False):
+        ASTVisualiser(self.frontendAst, outputFile + ".pdf")
+        for name, obj in self.uflObjects.items():
+            objectfile = "%s_%s.pdf" % (outputFile, name)
+            if obj:
+                ObjectVisualiser(obj, objectfile)
+            else:
+                rep = ast.parse(repr(obj))
+                ReprVisualiser(rep, objectfile)
 
 # vim:sw=4:ts=4:sts=4:et

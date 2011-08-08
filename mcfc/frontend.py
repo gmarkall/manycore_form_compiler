@@ -32,10 +32,8 @@
 # Python libs
 import os, sys, getopt, pprint, ast
 # MCFC libs
-from visualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
-import canonicaliser, frontendast
-from driverfactory import drivers
 from inputparser import inputparsers
+from driverfactory import drivers
 
 extensions = {'cuda': '.cu', 'op2': '.cpp'}
 
@@ -66,38 +64,20 @@ def run(inputFile, opts = None):
     if 'visualise' in opts or 'v' in opts:
         vis = True
     objvis = False
-    if 'objvisualise' in opts:
+    if 'objvisualise' in opts or 'objvis' in opts:
         vis = True
         objvis = True
 
     # Parse input and trigger the pipeline for each UFL equation
     parser = inputparsers[os.path.splitext(inputFile)[1]]
     for equation in parser.parse(inputFile):
-
         outputFile = outputFileBase + equation.name
-        equation = frontendast.generateFrontendAst(equation)
-        equation = frontendast.preprocessFrontendAst(equation)
-        equation = frontendast.executeFrontendAst(equation)
-        equation = canonicaliser.canonicalise(equation)
 
         if vis:
-            visualise(equation, outputFile, objvis)
-            continue
-
-        with screen or open(outputFile+extensions[backend], 'w') as fd:
-            driver = drivers[backend]()
-            driver.drive(equation, fd)
-
-def visualise(equation, outputFile, obj=False):
-    ASTVisualiser(equation.frontendAst, outputFile + ".pdf")
-    for name, obj in equation.uflObjects.items():
-        objectfile = "%s_%s.pdf" % (outputFile, name)
-        if obj:
-            ObjectVisualiser(obj, objectfile)
+            equation.execVisualisePipeline(outputFile, objvis)
         else:
-            rep = ast.parse(repr(obj))
-            ReprVisualiser(rep, objectfile)
-    return 0
+            with screen or open(outputFile+extensions[backend], 'w') as fd:
+                equation.execPipeline(fd, drivers[backend])
 
 def _get_options():
     try: 

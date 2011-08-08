@@ -21,6 +21,6 @@
 from cudadriver import CudaDriver
 from op2driver import Op2Driver
 
-drivers = { "cuda": CudaDriver, "op2": Op2Driver }
+drivers = { "cuda": CudaDriver(), "op2": Op2Driver() }
 
 # vim:sw=4:ts=4:sts=4:et
