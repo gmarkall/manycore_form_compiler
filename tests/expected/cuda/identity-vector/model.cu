@@ -73,6 +73,7 @@ extern "C" void initialise_gpu_()
 {
   state = new StateHolder();
   state->initialise();
+  state->extractField("Coordinate", 1);
   state->extractField("Velocity", 1);
   state->allocateAllGPUMemory();
   state->transferAllFields();

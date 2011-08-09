@@ -15,24 +15,6 @@ int* Tracer_colm;
 int Tracer_colm_size;
 
 
-__global__ void Mass(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
-{
-  for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
-  {
-    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
-    {
-      for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
-      {
-        localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] = 0.0;
-        for(int i_g = 0; i_g < 6; i_g++)
-        {
-          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += CG1[i_r_0 + 3 * i_g] * CG1[i_r_1 + 3 * i_g] * detwei[i_ele + n_ele * i_g];
-        };
-      };
-    };
-  };
-}
-
 __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* c1, double* CG1, double* d_CG1)
 {
   double c_q0[6];
@@ -71,6 +53,24 @@ __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, d
   };
 }
 
+__global__ void Mass(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
+{
+  for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
+  {
+    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    {
+      for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
+      {
+        localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] = 0.0;
+        for(int i_g = 0; i_g < 6; i_g++)
+        {
+          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += CG1[i_r_0 + 3 * i_g] * CG1[i_r_1 + 3 * i_g] * detwei[i_ele + n_ele * i_g];
+        };
+      };
+    };
+  };
+}
+
 StateHolder* state;
 extern "C" void initialise_gpu_()
 {
@@ -78,6 +78,7 @@ extern "C" void initialise_gpu_()
   state->initialise();
   state->extractField("Tracer", 0);
   state->extractField("Velocity", 1);
+  state->extractField("Coordinate", 1);
   state->allocateAllGPUMemory();
   state->transferAllFields();
   int numEle = state->getNumEle();

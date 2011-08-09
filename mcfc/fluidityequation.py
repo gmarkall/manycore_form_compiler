@@ -24,6 +24,7 @@ from ufl.form import Form
 # MCFC modules
 from uflequation import UflEquation
 from symbolicvalue import SymbolicValue
+from transformation import transform
 import canonicaliser, frontendast
 
 class solveFunctor:
@@ -65,7 +66,7 @@ class FluidityEquation(UflEquation):
         solve = solveFunctor()
         self.name = name
         self.code = code
-        self.namespace = { "dt": dt, "solve": solve, "state": state, "states": states }
+        self.namespace = { "dt": dt, "solve": solve, "state": state, "states": states, "transform": transform }
         # Import UFL modules into namespace
         exec "from ufl import *" in self.namespace
         # Import MCFC UFL overrides into namespace
@@ -79,6 +80,7 @@ class FluidityEquation(UflEquation):
             state.readyToRun()
 
     def _execCommonPipeline(self):
+        self.preprocessCode()
         self = frontendast.generateFrontendAst(self)
         self = frontendast.preprocessFrontendAst(self)
         self = frontendast.executeFrontendAst(self)
@@ -94,6 +96,9 @@ class FluidityEquation(UflEquation):
         self = self._execCommonPipeline()
 
         self.visualise(outputFile, objvis)
+
+    def preprocessCode(self):
+        self.code = "x = state.vector_fields['Coordinate']\nT = transform(x)\n" + self.code
 
     def getInputCoeffName(self, count):
         "Get the name of an input coefficient from the coefficient count"
