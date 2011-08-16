@@ -18,7 +18,7 @@
 # holders.
 
 # MCFC libs
-from visualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
+from uflvisualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
 
 class UflEquation:
     """Base class representing an equation in UFL with basic attributes.

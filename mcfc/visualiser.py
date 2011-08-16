@@ -184,6 +184,9 @@ class ASTVisualiser(DOTVisualiser):
 
 class ObjectVisualiser(DOTVisualiser):
 
+    def _ignoreattr(self, attr):
+        return False
+
     def _dispatch(self, obj):
         # Don't redraw an object we've already seen; just link to it.
         OID = id(obj)
@@ -216,8 +219,7 @@ class ObjectVisualiser(DOTVisualiser):
         self._seen[OID] = nodeID
         savedLabel = self._edgeLabel
         attrs = dir(obj)
-        # Ignore attribute 'T' which is expected to fail under some circumstances
-        visible = [ s for s in attrs if s[:2] != "__" and s != 'T' ]
+        visible = [ s for s in attrs if s[:2] != "__" and not self._ignoreattr(s)]
         for a in visible:
             self._edgeLabel = a
             try:
@@ -229,7 +231,7 @@ class ObjectVisualiser(DOTVisualiser):
             # We have to ignore 'Transposed' to prevent an infinite recursion
             # on a rank 2 tensor (i.e. taking the transpose of a transpose of
             # a transpose... - you get the picture)
-            if attrtype not in [ "builtin_function_or_method", "instancemethod", "Transposed" ]:
+            if attrtype not in [ "builtin_function_or_method", "instancemethod" ]:
                 self._dispatch(objattr)
         self._edgeLabel = savedLabel
 
