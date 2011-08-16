@@ -82,7 +82,7 @@ class OptionFile:
         libspud.clear_options()
 
     def _children(self, path, test):
-        for i in range(libspud.number_of_children(path)):
+        for i in range(libspud.get_number_of_children(path)):
             child = libspud.get_child_name(path,i)
             if test(child):
                 yield child
