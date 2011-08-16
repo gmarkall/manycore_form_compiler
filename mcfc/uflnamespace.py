@@ -17,30 +17,27 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
+# UFL modules
 import ufl
+# MCFC modules
+from transformation import T
 
+# Introduce convenience shorthand for initialising TestFunction from Coefficient
 def TestFunction(initialiser):
     """UFL value: Create a test function argument to a form."""
     if isinstance(initialiser, ufl.Coefficient):
         initialiser = initialiser.element()
     return ufl.TestFunction(initialiser)
 
+# Introduce convenience shorthand for initialising TrialFunction from Coefficient
 def TrialFunction(initialiser):
     """UFL value: Create a trial function argument to a form."""
     if isinstance(initialiser, ufl.Coefficient):
         initialiser = initialiser.element()
     return ufl.TrialFunction(initialiser)
 
-def Jacobian(element):
-    """UFL value: Create a Jacobian matrix argument to a form."""
-    return ufl.Coefficient(element, -3)
-
-def JacobianInverse(element):
-    """UFL value: Create a Jacobian inverse argument to a form."""
-    return ufl.Coefficient(element, -4)
-
-def JacobianDeterminant(element):
-    """UFL value: Create a Jacobian determinant argument to a form."""
-    return ufl.Coefficient(element, -5)
+def transform(coordinates):
+    T.init(coordinates)
+    return T.J, T.invJ, T.detJ
 
 # vim:sw=4:ts=4:sts=4:et

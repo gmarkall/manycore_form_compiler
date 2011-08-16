@@ -17,12 +17,24 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from ufl import TensorElement, FiniteElement
-from uflnamespace import Jacobian, JacobianInverse, JacobianDeterminant
+from ufl import TensorElement, FiniteElement, Coefficient
+
+def Jacobian(element):
+    """UFL value: Create a Jacobian matrix argument to a form."""
+    return Coefficient(element, -3)
+
+def JacobianInverse(element):
+    """UFL value: Create a Jacobian inverse argument to a form."""
+    return Coefficient(element, -4)
+
+def JacobianDeterminant(element):
+    """UFL value: Create a Jacobian determinant argument to a form."""
+    return Coefficient(element, -5)
 
 class Transformation:
 
-    def __init__(self, coordinates):
+    # This is _not_ the constructor, since this class is used as a singleton
+    def init(self, coordinates):
         # If the coordinate field lives in P^n, the Jacobian lives in P^{n-1}_DG
         degree = coordinates.element().degree() - 1
         # FIXME: hardcoded for triangles
@@ -30,7 +42,7 @@ class Transformation:
         self.invJ = JacobianInverse(TensorElement('DG', 'triangle', degree))
         self.detJ = JacobianDeterminant(FiniteElement('DG', 'triangle', degree))
 
-def transform(coordinates):
-    return Transformation(coordinates)
+# Singleton instance of Transformation class
+T = Transformation()
 
 # vim:sw=4:ts=4:sts=4:et
