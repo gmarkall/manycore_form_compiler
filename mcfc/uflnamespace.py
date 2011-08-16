@@ -19,16 +19,28 @@
 
 import ufl
 
-__all__ = ['TestFunction', 'TrialFunction']
-
 def TestFunction(initialiser):
-  if isinstance(initialiser, ufl.Coefficient):
-    initialiser = initialiser.element()
-  return ufl.TestFunction(initialiser)
+    """UFL value: Create a test function argument to a form."""
+    if isinstance(initialiser, ufl.Coefficient):
+        initialiser = initialiser.element()
+    return ufl.TestFunction(initialiser)
 
 def TrialFunction(initialiser):
-  if isinstance(initialiser, ufl.Coefficient):
-    initialiser = initialiser.element()
-  return ufl.TrialFunction(initialiser)
+    """UFL value: Create a trial function argument to a form."""
+    if isinstance(initialiser, ufl.Coefficient):
+        initialiser = initialiser.element()
+    return ufl.TrialFunction(initialiser)
+
+def Jacobian(element):
+    """UFL value: Create a Jacobian matrix argument to a form."""
+    return ufl.Coefficient(element, -3)
+
+def JacobianInverse(element):
+    """UFL value: Create a Jacobian inverse argument to a form."""
+    return ufl.Coefficient(element, -4)
+
+def JacobianDeterminant(element):
+    """UFL value: Create a Jacobian determinant argument to a form."""
+    return ufl.Coefficient(element, -5)
 
 # vim:sw=4:ts=4:sts=4:et

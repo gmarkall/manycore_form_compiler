@@ -17,7 +17,8 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from ufl import Coefficient, TensorElement, FiniteElement
+from ufl import TensorElement, FiniteElement
+from uflnamespace import Jacobian, JacobianInverse, JacobianDeterminant
 
 class Transformation:
 
@@ -25,9 +26,9 @@ class Transformation:
         # If the coordinate field lives in P^n, the Jacobian lives in P^{n-1}_DG
         degree = coordinates.element().degree() - 1
         # FIXME: hardcoded for triangles
-        self.J = Coefficient(TensorElement('DG', 'triangle', degree))
-        self.invJ = Coefficient(TensorElement('DG', 'triangle', degree))
-        self.detJ = Coefficient(FiniteElement('DG', 'triangle', degree))
+        self.J = Jacobian(TensorElement('DG', 'triangle', degree))
+        self.invJ = JacobianInverse(TensorElement('DG', 'triangle', degree))
+        self.detJ = JacobianDeterminant(FiniteElement('DG', 'triangle', degree))
 
 def transform(coordinates):
     return Transformation(coordinates)

@@ -62,8 +62,8 @@ extern "C" void initialise_gpu_()
 {
   state = new StateHolder();
   state->initialise();
-  state->extractField("Tracer", 0);
   state->extractField("Coordinate", 1);
+  state->extractField("Tracer", 0);
   state->allocateAllGPUMemory();
   state->transferAllFields();
   int numEle = state->getNumEle();
