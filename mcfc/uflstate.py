@@ -91,9 +91,9 @@ class UflState:
         return returnedFields
 
     # FIXME hard coded for triangles
-    def insert_field(self, field, rank, shape = 'CG', degree = 1):
+    def insert_field(self, field, rank, shape = 'CG', degree = 1, quad_degree = 4):
         "Insert field as a coefficient of the element type given by rank, shape and degree"
-        self[rank][field] = Coefficient(ufl_elements[rank](shape, "triangle", degree))
+        self[rank][field] = Coefficient(ufl_elements[rank](shape, cell="triangle", degree=degree, quad_scheme=quad_degree))
 
     def readyToRun(self):
         self.scalar_fields.readyToRun()

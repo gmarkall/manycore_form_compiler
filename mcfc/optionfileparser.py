@@ -56,7 +56,11 @@ class OptionFileParser:
                     aliased_fields.append(field)
                 else:
                     shape, degree = self.element_types[field.mesh]
-                    state.insert_field(field.name, field.rank, shape, degree)
+                    # Insert the field in the state
+                    # FIXME currently we simply pass the quadrature degree as the
+                    # quadrature_shape parameter when creating a UFL element
+                    # is that a clean / safe way?
+                    state.insert_field(field.name, field.rank, shape, degree, optionfile.quadrature_degree())
                     # Store the UFL input if present
                     if hasattr(field, 'ufl_equation'):
                         self.uflinput[phase.name+field.name] \
