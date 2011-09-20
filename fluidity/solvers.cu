@@ -13,8 +13,9 @@ double* scratchpad;
 #define NUM_BLOCKS 128
 
 // Solver parameters - relative tolerance and maximum iterations
-#define epsilon2 1e-9
-#define IMAX 180
+// FIXME this should really be read from the flml!
+#define epsilon2 1e-14
+#define IMAX 300
 
 // For timing solver
 double utime () {
