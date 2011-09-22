@@ -115,9 +115,9 @@ __global__ void matrix_addto(int*findrm, int *colm, double *global_matrix_val, i
       {
         int mat_x = local_to_global[locToGlobIdx(i,x,nodes_per_ele)];
         int mat_y = local_to_global[locToGlobIdx(i,y,nodes_per_ele)];
-	int mpos = pos(mat_x, mat_y, findrm, colm);
-	int localMatrixIdx = lMatIdx(x,y,i,n_ele);
-	atomicDoubleAdd(&global_matrix_val[mpos], local_matrices[localMatrixIdx]);
+        int mpos = pos(mat_x, mat_y, findrm, colm);
+        int localMatrixIdx = lMatIdx(x,y,i,n_ele);
+        atomicDoubleAdd(&global_matrix_val[mpos], local_matrices[localMatrixIdx]);
       }
     }
   }
@@ -146,9 +146,9 @@ __global__ void expand_data(double *dest, double *src, int *local_to_global, int
     {
       for (int val=0; val<n_vals_per_node; val++)
       {
-	int destIdx = eleIdx(ele,node,val,n_ele,n_vals_per_node);
-	int srcIdx = (n_vals_per_node*(local_to_global[ele*nodes_per_ele+node]-1))+val;
-	dest[destIdx] = src[srcIdx];
+        int destIdx = eleIdx(ele,node,val,n_ele,n_vals_per_node);
+        int srcIdx = (n_vals_per_node*(local_to_global[ele*nodes_per_ele+node]-1))+val;
+        dest[destIdx] = src[srcIdx];
       }
     }
   }
@@ -163,7 +163,7 @@ __global__ void contract_data(double *dest, double *src, int *local_to_global, i
       for (int val=0; val<n_vals_per_node; val++)
       {
         int srcIdx =  eleIdx(ele,node,val,n_ele,n_vals_per_node);
-	int destIdx = (n_vals_per_node*(local_to_global[ele*nodes_per_ele+node]-1))+val;
+        int destIdx = (n_vals_per_node*(local_to_global[ele*nodes_per_ele+node]-1))+val;
         dest[destIdx] = src[srcIdx];
       }
     }
@@ -237,13 +237,13 @@ __global__ void transform_to_physical(double *node_coords, double *dn, double *q
       for(int i=0; i<nodes_per_ele; ++i)
       {
         for(int j=0; j<n_dim; ++j)
-	{
-	  const int localIdx = j*nodes_per_ele+i;
-	  const int localCoordsIdx = i*n_dim+j;
-	  const int nodeCoordsIdx = eleIdx(ele,i,j,n_ele,n_dim);
-	  local_dn[localIdx] = dn[j*(n_quad*nodes_per_ele) + q*(n_dim) + i];
-	  local_coords[localCoordsIdx] = node_coords[nodeCoordsIdx];
-	}
+        {
+          const int localIdx = j*nodes_per_ele+i;
+          const int localCoordsIdx = i*n_dim+j;
+          const int nodeCoordsIdx = eleIdx(ele,i,j,n_ele,n_dim);
+          local_dn[localIdx] = dn[j*(n_quad*nodes_per_ele) + q*(n_dim) + i];
+          local_coords[localCoordsIdx] = node_coords[nodeCoordsIdx];
+        }
       }
 
       matmult(local_coords, n_dim, nodes_per_ele, local_dn, nodes_per_ele, n_dim, J_local_T);
@@ -251,42 +251,42 @@ __global__ void transform_to_physical(double *node_coords, double *dn, double *q
       // Compute inverse of Jacobian
       switch (n_dim)
       {
-	case 1:
-	  invJ_local[0] = 1.0;
-	  break;
+        case 1:
+          invJ_local[0] = 1.0;
+          break;
 
-	case 2:
-	  invJ_local[0] =  J_local_T[3];
-	  invJ_local[1] = -J_local_T[2];
-	  invJ_local[2] = -J_local_T[1];
-	  invJ_local[3] =  J_local_T[0];
-	  break;
+        case 2:
+          invJ_local[0] =  J_local_T[3];
+          invJ_local[1] = -J_local_T[2];
+          invJ_local[2] = -J_local_T[1];
+          invJ_local[3] =  J_local_T[0];
+          break;
 
-	case 3:
-	  // Implement later.
-	  break;
+        case 3:
+          // Implement later.
+          break;
       }
 
       //Compute determinant of Jacobian
       switch (n_dim)
       {
-	case 1:
-	  detJ_local = J_local_T[0];
-	  break;
-	
-	case 2:
-	  detJ_local = (J_local_T[0]*J_local_T[3]) - (J_local_T[1]*J_local_T[2]);
-	  break;
+        case 1:
+          detJ_local = J_local_T[0];
+          break;
 
-	case 3:
-	  // Implement later.
-	  break;
+        case 2:
+          detJ_local = (J_local_T[0]*J_local_T[3]) - (J_local_T[1]*J_local_T[2]);
+          break;
+
+        case 3:
+          // Implement later.
+          break;
       }
 
       // Scale inverse by determinant
       for (int i=0; i<jac_size; ++i)
       {
-	invJ_local[i] = invJ_local[i]/detJ_local;
+        invJ_local[i] = invJ_local[i]/detJ_local;
       }
 
       // Evaluate derivatives in physical space.
@@ -294,20 +294,20 @@ __global__ void transform_to_physical(double *node_coords, double *dn, double *q
       {
         // First, gather data for matrix multiplication
         for (int j=0; j<n_dim; ++j)
-	{
-	  const int localIdx = j;
-	  shape_dn[localIdx] = dn[j*(n_quad*nodes_per_ele) + q*(n_dim) + i];
-	}
-        
-	// Transform to physical space
-	matmult(invJ_local, n_dim, n_dim, shape_dn, n_dim, 1, dshape_local);
-	
-	// Scatter result into dshape
-	for (int j=0; j<n_dim; ++j)
-	{
-	  const int dshapeIdx = ele + j*n_ele + q*n_dim*n_ele + i*n_quad*n_dim*n_ele;
-	  dshape[dshapeIdx] = dshape_local[j];
-	}
+        {
+          const int localIdx = j;
+          shape_dn[localIdx] = dn[j*(n_quad*nodes_per_ele) + q*(n_dim) + i];
+        }
+
+        // Transform to physical space
+        matmult(invJ_local, n_dim, n_dim, shape_dn, n_dim, 1, dshape_local);
+
+        // Scatter result into dshape
+        for (int j=0; j<n_dim; ++j)
+        {
+          const int dshapeIdx = ele + j*n_ele + q*n_dim*n_ele + i*n_quad*n_dim*n_ele;
+          dshape[dshapeIdx] = dshape_local[j];
+        }
       }
 
       const int detweiIdx = eleIdx(ele,q,n_ele);
@@ -316,4 +316,3 @@ __global__ void transform_to_physical(double *node_coords, double *dn, double *q
     }
   }
 }
-
