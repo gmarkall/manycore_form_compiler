@@ -177,16 +177,9 @@ class ScalarField : public Field
 
 class VectorField : public Field 
 {
-  private:
-    double *host_val_2, *host_val_3;
-    double *cuda_compact_val_2, *cuda_compact_val_3;
-    double *cuda_expanded_val_2, *cuda_expanded_val_3;
-
   public:
     VectorField(int dim, string name);
     VectorField(const VectorField &o);
-    
-    void setHostPointers(double *val_1, double *val_2, double *val_3);
 
     virtual void transferHtoD();
     virtual void transferDtoH();
