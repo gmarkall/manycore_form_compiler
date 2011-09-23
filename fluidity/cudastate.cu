@@ -1,6 +1,7 @@
 // CUDA State holder
 
 #include <iostream>
+#include <fstream>
 #include <cstdio>
 #include <cuda.h>
 #include "cudastate.hpp"
@@ -493,7 +494,6 @@ void Field::freeGPUMem()
   deallocate(cuda_expanded_val);
 }
 
-
 void Field::setMesh(Mesh *new_mesh)
 {
   mesh = new_mesh;
@@ -502,6 +502,11 @@ void Field::setMesh(Mesh *new_mesh)
 Mesh* Field::getMesh()
 {
   return mesh;
+}
+
+double* Field::getCompactVal()
+{
+  return cuda_compact_val;
 }
 
 double* Field::getVal()
@@ -923,4 +928,54 @@ void StateHolder::returnFieldToHost(string targetFieldName, string sourceFieldNa
   int len = sizeof(double) * sourceField->getExpandedValSize();
   cudaMemcpy(targetField->getVal(), sourceField->getVal(), len, cudaMemcpyDeviceToDevice);
   sourceField->transferDtoH();
+}
+
+void matrix_dump(int* findrm, int* colm, double* val, int findrm_size, int colm_size, const char* filename)
+{
+  int *host_findrm = new int[findrm_size];
+  int *host_colm = new int[colm_size];
+  double *host_val = new double[colm_size];
+
+  copyDtoH(findrm, host_findrm, findrm_size*sizeof(int));
+  copyDtoH(colm, host_colm, colm_size*sizeof(int));
+  copyDtoH(val, host_val, colm_size*sizeof(double));
+
+  ofstream f(filename);
+  // Matrix Market header
+  f << "%%MatrixMarket matrix coordinate real general\n";
+  // rows cols nonzeros
+  f << findrm_size-1 << " " << findrm_size-1 << " " << colm_size << "\n";
+  // row col value (row, col are 1-based)
+  for (int row = 0; row < findrm_size-1; row++) {
+    /*cout << "row " << row << endl;*/
+    for (int col = host_findrm[row]-1; col < host_findrm[row+1]-1; col++) {
+      f << row+1 << " " << host_colm[col] << " " << host_val[col] << "\n";
+    }
+  }
+  f.close();
+
+  delete [] host_findrm;
+  delete [] host_colm;
+  delete [] host_val;
+}
+
+void vector_dump(double* val, int size, const char* filename)
+{
+  double *host_val = new double[size];
+  copyDtoH(val, host_val, size*sizeof(double));
+  ofstream f(filename);
+  for (int i = 0; i < size; i++) {
+    f << host_val[i] << "\n";
+  }
+  f.close();
+  delete [] host_val;
+}
+
+void host_vector_dump(double* val, int size, const char* filename)
+{
+  ofstream f(filename);
+  for (int i = 0; i < size; i++) {
+    f << val[i] << "\n";
+  }
+  f.close();
 }

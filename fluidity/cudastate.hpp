@@ -157,6 +157,7 @@ class Field : public StateEntity
     virtual int getExpandedValSize() const = 0;
     void setMesh(Mesh *new_mesh);
     Mesh *getMesh();
+    double* getCompactVal();
     double* getVal();
     int getDim();
     int getRank();
@@ -247,5 +248,10 @@ class StateHolder
     Field *getField(string fieldName);
     ~StateHolder();
 };
+
+void matrix_dump(int* findrm, int* colm, double* val, int findrm_size, int colm_size, const char* filename);
+
+void vector_dump(double* val, int size, const char* filename);
+void host_vector_dump(double* val, int size, const char* filename);
 
 #endif
