@@ -1,0 +1,30 @@
+t=state.scalar_fields["Tracer"]
+u=state.vector_fields["Velocity"]
+
+p=TrialFunction(t)
+q=TestFunction(t)
+
+# Mass matrix.
+M=p*q*dx
+
+# Solve for T1-T4.
+rhs=dt*(dot(grad(q),u)*t-q*t*div(u))*dx
+t1=solve(M,rhs)
+
+rhs=dt*(dot(grad(q),u)*(t+0.5*t1)-q*(t+0.5*t1)*div(u))*dx
+t2=solve(M,rhs)
+
+rhs=dt*(dot(grad(q),u)*(t+0.5*t2)-q*(t+0.5*t2)*div(u))*dx
+t3=solve(M,rhs)
+
+rhs=dt*(dot(grad(q),u)*(t+t3)-q*(t+t3)*div(u))*dx
+t4=solve(M,rhs)
+
+# It's a little tricky to return something that isn't just a coefficient to
+# state at the moment. So we create a form and solve in order to work
+# around this problem.
+ta = action(M,t) + action(1.0/6.0*M,t1) + action(1.0/3.0*M, t2) + action(1.0/3.0*M, t3) + action(1.0/6.0*M, t4)
+
+ta2 = solve(M, ta)
+
+state.scalar_fields["Tracer"] = ta2
