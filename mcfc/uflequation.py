@@ -17,6 +17,7 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
+import ast
 # MCFC libs
 from uflvisualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
 
@@ -56,11 +57,11 @@ class UflEquation:
         "Invokes the visualisation pipeline"
         raise NotImplementedError("You're supposed to implement execVisualisePipeline()")
 
-    def visualise(self, outputFile, obj=False):
+    def visualise(self, outputFile, objvis=False):
         ASTVisualiser(self.frontendAst, outputFile + ".pdf")
         for name, obj in self.uflObjects.items():
             objectfile = "%s_%s.pdf" % (outputFile, name)
-            if obj:
+            if objvis:
                 ObjectVisualiser(obj, objectfile)
             else:
                 rep = ast.parse(repr(obj))
