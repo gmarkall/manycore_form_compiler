@@ -22,6 +22,8 @@
 from form import *
 from cudaparameters import CudaKernelParameterGenerator, numElements, statutoryParameters
 from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop
+# UFL libs
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 
 class CudaFormBackend(FormBackend):
 
@@ -142,10 +144,37 @@ class CudaFormBackend(FormBackend):
         computation = self.buildQuadratureExpression(coeff)
         basisLoop.append(computation)
 
+    def _elementRank(self, form):
+        # Use the element from the first argument, which should be the TestFunction
+        arg = form.form_data().arguments[0]
+        e = arg.element()
+
+        if isinstance(e, FiniteElement):
+            return 0
+        elif isinstance(e, VectorElement):
+            return 1
+        elif isinstance(e, TensorElement):
+            return 2
+        else:
+            raise RuntimeError("Not a recognised element.")
+
+    def _elementSpaceDim(self, form):
+        # Use the element from the first argument, which should be the TestFunction
+        arg = form.form_data().arguments[0]
+        e = arg.element()
+
+        return e.cell().geometric_dimension()
+
+    def _numBasisFunctions(self, form):
+        form_data = form.form_data()
+        elementRank = self._elementRank(form)
+        spaceDimension = self._elementSpaceDim(form)
+        return self.numNodesPerEle * pow(spaceDimension, elementRank)
 
     def buildLoopNest(self, form):
         form_data = form.form_data()
         rank = form_data.rank
+
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
@@ -155,7 +184,7 @@ class CudaFormBackend(FormBackend):
 
         # Build the loop over the first rank, which always exists
         indVarName = self.buildBasisIndex(0).name()
-        basisLoop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
+        basisLoop = buildSimpleForLoop(indVarName, self._numBasisFunctions(form))
         loop.append(basisLoop)
         loop = basisLoop
 
@@ -163,7 +192,7 @@ class CudaFormBackend(FormBackend):
         # more than one more... )
         for r in range(1,rank):
             indVarName = self.buildBasisIndex(r).name()
-            basisLoop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
+            basisLoop = buildSimpleForLoop(indVarName, self._numBasisFunctions(form))
             loop.append(basisLoop)
             loop = basisLoop
         

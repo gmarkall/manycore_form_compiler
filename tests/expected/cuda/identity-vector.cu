@@ -15,9 +15,9 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
 {
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
-    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    for(int i_r_0 = 0; i_r_0 < 6; i_r_0++)
     {
-      for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
+      for(int i_r_1 = 0; i_r_1 < 6; i_r_1++)
       {
         localTensor[((i_ele + n_ele * i_r_0) + 3 * n_ele * i_r_1)] = 0.0;
         for(int i_g = 0; i_g < 6; i_g++)
@@ -48,7 +48,7 @@ __global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, d
         };
       };
     };
-    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    for(int i_r_0 = 0; i_r_0 < 6; i_r_0++)
     {
       localTensor[(i_ele + n_ele * i_r_0)] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
