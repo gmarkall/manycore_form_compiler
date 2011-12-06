@@ -89,43 +89,26 @@ class CudaFormBackend(FormBackend):
         return KPG.generate(tree, form, statutoryParameters)
 
     def _buildBasisTensors(self, form_data):
-        initialisers = []
-        p = form_data.actualParameters
-        argDs = p['argumentDerivatives']
-        args = p['arguments']
         gp = self.numGaussPoints
         nn = self.numNodesPerEle
         nd = self.numDimensions
+        initialisers = []
         
-        for d in argDs:
-            a = d.operands()[0]
+        for a in form_data.actualParameters['arguments']:
             e = a.element()
             # Ignore scalars
             if isinstance(e, FiniteElement):
                 continue
-
-            n = buildVectorSpatialDerivativeName(d)
-            t = Array(Real(), [nd,nd,gp,nn])
-            var = Variable(n, t)
-            init = InitialisationOp(var, Literal(0))
-            initialisers.append(init)
-        for a in args:
-            e = a.element()
-            # Ignore scalars
-            if isinstance(e, FiniteElement):
-                continue
+            elif isinstance(e, VectorElement):
+                n = buildVectorArgumentName(a)
+            else:
+                raise RuntimeError("Not supported.")
 
             arg = buildArgumentName(a)
-            if isinstance(e, VectorElement):
-                n = buildVectorArgumentName(a)
-            elif isinstance(e, TensorElement):
-                n = buildTensorArgumentName(a)
-            else:
-                raise RuntimeError("Not a finite element.")
-
             t = Array(Real(), [nd,gp,nn*nd])
             var = Variable(n, t)
 
+            # Construct the initialiser lists for the tensor product of the scalar basis.
             outer = []
             for d1 in range(nd):
                 middle = []
@@ -146,9 +129,6 @@ class CudaFormBackend(FormBackend):
             initialisers.append(init)
         
         return initialisers
-
-    # We don't want these variables shared unless we do some extra legwork
-    # to sort out the offset needed by each thread. 
 
     def buildQuadratureLoopNest(self, form):
         
