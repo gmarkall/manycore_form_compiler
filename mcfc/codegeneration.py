@@ -111,17 +111,19 @@ class Literal(BackendASTNode):
 
 class InitialiserList(BackendASTNode):
 
-    def __init__(self, array, newlines = False, indentation = ''):
+    def __init__(self, array):
         # Make input a NumPy array (and fail it it doesn't work)
-        self._array = numpy.asarray(array, numpy.float)
-        self.arrStr = numpy.array2string(self._array, separator=',', prefix=indentation)
-        if not newlines:
-            self.arrStr = self.arrStr.replace('\n','')
+        #self._array = numpy.asarray(array, numpy.float)
+        #self.arrStr = numpy.array2string(self._array, separator=',', prefix=indentation)
+        #if not newlines:
+        #    self.arrStr = self.arrStr.replace('\n','')
         # Replace all [ delimiters by { in string representation of the array
-        self.arrStr = self.arrStr.replace('[','{ ').replace(']',' }')
+        #self.arrStr = self.arrStr.replace('[','{ ').replace(']',' }')
+        self._array = array
 
     def unparse(self):
-        return self.arrStr
+        arrStr = ", ".join(map(lambda x: x.unparse(), self._array))
+        return "{ %s }" % arrStr
 
 class ForLoop(BackendASTNode):
 
@@ -579,6 +581,9 @@ class Array(Type):
 
     def unparse_internal(self):
         return self._base.unparse()
+
+    def unparse_declaration(self):
+        return '%s%s' % (self.unparse_internal(), self.unparse_post())
 
     def unparse_post(self):
         code = ''
