@@ -582,9 +582,6 @@ class Array(Type):
     def unparse_internal(self):
         return self._base.unparse()
 
-    def unparse_declaration(self):
-        return '%s%s' % (self.unparse_internal(), self.unparse_post())
-
     def unparse_post(self):
         code = ''
         for extent in self._extents:

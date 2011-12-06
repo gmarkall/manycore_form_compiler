@@ -47,6 +47,8 @@ class CudaFormBackend(FormBackend):
         form.form_data().formalParameters = formalParameters
         form.form_data().actualParameters = actualParameters
 
+        basisTensors = self._buildBasisTensors(form_data)
+
         # Build the loop nest
         loopNest = self.buildLoopNest(form)
 
@@ -65,7 +67,7 @@ class CudaFormBackend(FormBackend):
             loopBody.prepend(expression)
 
         # Build the function with the loop nest inside
-        statements = [loopNest]
+        statements = basisTensors + [loopNest]
         body = Scope(statements)
         kernel = FunctionDefinition(Void(), name, formalParameters, body)
         
@@ -86,16 +88,67 @@ class CudaFormBackend(FormBackend):
         KPG = CudaKernelParameterGenerator()
         return KPG.generate(tree, form, statutoryParameters)
 
+    def _buildBasisTensors(self, form_data):
+        initialisers = []
+        p = form_data.actualParameters
+        argDs = p['argumentDerivatives']
+        args = p['arguments']
+        gp = self.numGaussPoints
+        nn = self.numNodesPerEle
+        nd = self.numDimensions
+        
+        for d in argDs:
+            a = d.operands()[0]
+            e = a.element()
+            # Ignore scalars
+            if isinstance(e, FiniteElement):
+                continue
+
+            n = buildVectorSpatialDerivativeName(d)
+            t = Array(Real(), [nd,nd,gp,nn])
+            var = Variable(n, t)
+            init = InitialisationOp(var, Literal(0))
+            initialisers.append(init)
+        for a in args:
+            e = a.element()
+            # Ignore scalars
+            if isinstance(e, FiniteElement):
+                continue
+
+            arg = buildArgumentName(a)
+            if isinstance(e, VectorElement):
+                n = buildVectorArgumentName(a)
+            elif isinstance(e, TensorElement):
+                n = buildTensorArgumentName(a)
+            else:
+                raise RuntimeError("Not a finite element.")
+
+            t = Array(Real(), [nd,gp,nn*nd])
+            var = Variable(n, t)
+
+            outer = []
+            for d1 in range(nd):
+                middle = []
+                for igp in range(gp):
+                    innermost = []
+                    for d2 in range(nd):
+                        for inn in range(nn):
+                            if d1 == d2:
+                                expr = Subscript(Variable(arg), Literal(inn*gp+igp))
+                            else:
+                                expr = Literal(0.0)
+                            innermost.append(expr)
+                    middle.append(InitialiserList(innermost))
+                outer.append(InitialiserList(middle))
+            initlist = InitialiserList(outer)
+
+            init = InitialisationOp(var, initlist)
+            initialisers.append(init)
+        
+        return initialisers
+
     # We don't want these variables shared unless we do some extra legwork
     # to sort out the offset needed by each thread. 
-
-    #def buildCoeffQuadDeclarations(self, form):
-    #    # The FormBackend's list of variables to declare is
-    #    # fine, but we want them to be __shared__
-    #    declarations = FormBackend.buildCoeffQuadDeclarations(self, form)
-    #    for decl in declarations:
-    #        decl.setCudaShared(True)
-    #    return declarations
 
     def buildQuadratureLoopNest(self, form):
         

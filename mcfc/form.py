@@ -277,6 +277,18 @@ def buildCoefficientQuadName(tree):
     name = 'c_q%d' %(count)
     return name
 
+def buildVectorArgumentName(tree):
+    return buildArgumentName(tree) + "_v"
+
+def buildVectorSpatialDerivativeName(tree):
+    return buildSpatialDerivativeName(tree) + "_v"
+
+def buildTensorArgumentName(tree):
+    return buildArgumentName(tree) + "_t"
+
+def buildTensorSpatialDerivativeName(tree):
+    return buildSpatialDerivativeName(tree) + "_t"
+
 # Variables used globally
 
 detwei = Variable("detwei", Pointer(Real()) )
