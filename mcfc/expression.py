@@ -54,6 +54,9 @@ class ExpressionBuilder(Transformer):
     def component_tensor(self, tree, *ops):
         pass
 
+    # When entering an index, we need to memorise the indices that are attached 
+    # to it before descending into the sub-tree. The sub-tree handlers can make
+    # use of these memorised indices in their code generation.
     def indexed(self, tree):
         o, i = tree.operands()
         self._indexStack.push(self.visit(i))
@@ -111,16 +114,13 @@ class ExpressionBuilder(Transformer):
         indices = self.subscript(tree)
         
         if isinstance(e, FiniteElement):
-            name = buildArgumentName(tree)
-            base = Variable(name)
+            base = Variable(buildArgumentName(tree))
             argExpr = self.buildSubscript(base, indices)
         elif isinstance(e, VectorElement):
-            name = buildVectorArgumentName(tree)
-            base = Variable(name)
+            base = Variable(buildVectorArgumentName(tree))
             argExpr = self.buildMultiArraySubscript(base, indices)
         else:
-            name = buildTensorArgumentName(tree)
-            base = Variable(name)
+            base = Variable(buildTensorArgumentName(tree))
             argExpr = self.buildMultiArraySubscript(base, indices)
 
         self._exprStack.append(argExpr)

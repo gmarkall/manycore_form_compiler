@@ -88,6 +88,9 @@ class CudaFormBackend(FormBackend):
         KPG = CudaKernelParameterGenerator()
         return KPG.generate(tree, form, statutoryParameters)
 
+    # When using a basis that is a tensor product of the scalar basis, we need
+    # to create an array that holds the tensor product. This function generates
+    # the code to declare and initialise that array.
     def _buildBasisTensors(self, form_data):
         gp = self.numGaussPoints
         nn = self.numNodesPerEle
@@ -195,9 +198,11 @@ class CudaFormBackend(FormBackend):
         # Use the element from the first argument, which should be the TestFunction
         arg = form.form_data().arguments[0]
         e = arg.element()
-
         return e.cell().geometric_dimension()
 
+    # This function provides a simple calculation of the number of basis
+    # functions per element. This works for the tensor product of a scalar basis
+    # only.
     def _numBasisFunctions(self, form):
         form_data = form.form_data()
         elementRank = self._elementRank(form)

@@ -69,7 +69,10 @@ def buildSubscript(variable, indices):
     return Subscript(variable, offset)
 
 def buildMultiArraySubscript(variable, indices):
-    
+    """Given a list of indices, return an AST of the variable
+    subscripted by the indices as if it were a multidimensional
+    array."""
+
     indexList = []
     for i in indices:
         variable = Subscript(variable, Variable(i.name()))
