@@ -19,6 +19,10 @@
 
 from form import *
 from symbolicvalue import SymbolicValue
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from ufl.argument import Argument
+from ufl.common import Stack
+from ufl.indexing import Index
 
 class ExpressionBuilder(Transformer):
 
@@ -28,6 +32,7 @@ class ExpressionBuilder(Transformer):
 
     def build(self, tree):
         self._exprStack = []
+        self._indexStack = Stack()
         # When we pass through the first IndexSum, this will get incremented
         # to 0, which is the count of the first dim index
         self._indexSumDepth = -1 
@@ -49,8 +54,21 @@ class ExpressionBuilder(Transformer):
     def component_tensor(self, tree, *ops):
         pass
 
-    def indexed(self, tree, *ops):
-        pass
+    def indexed(self, tree):
+        o, i = tree.operands()
+        self._indexStack.push(self.visit(i))
+        self.visit(o)
+        self._indexStack.pop()
+
+    def multi_index(self, tree):
+        indices = []
+        for i in tree:
+            if isinstance(i, Index):
+                indices.append(i)
+            else:
+                raise RuntimeError('Other types of indices not yet implemented.')
+        return tuple(indices)
+            
 
     # We need to keep track of how many IndexSums we passed through
     # so that we know which dim index we're dealing with.
@@ -89,11 +107,22 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(spatialDerivExpr)
  
     def argument(self, tree):
-        name = buildArgumentName(tree)
-        base = Variable(name)
-
+        e = tree.element()
         indices = self.subscript(tree)
-        argExpr = self.buildSubscript(base, indices)
+        
+        if isinstance(e, FiniteElement):
+            name = buildArgumentName(tree)
+            base = Variable(name)
+            argExpr = self.buildSubscript(base, indices)
+        elif isinstance(e, VectorElement):
+            name = buildVectorArgumentName(tree)
+            base = Variable(name)
+            argExpr = self.buildMultiArraySubscript(base, indices)
+        else:
+            name = buildTensorArgumentName(tree)
+            base = Variable(name)
+            argExpr = self.buildMultiArraySubscript(base, indices)
+
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):

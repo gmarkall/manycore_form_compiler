@@ -68,12 +68,23 @@ def buildSubscript(variable, indices):
     
     return Subscript(variable, offset)
 
+def buildMultiArraySubscript(variable, indices):
+    
+    indexList = []
+    for i in indices:
+        variable = Subscript(variable, Variable(i.name()))
+
+    return variable
+
 # Expression builders
 
 class CudaExpressionBuilder(ExpressionBuilder):
 
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
+
+    def buildMultiArraySubscript(self, variable, indices):
+        return buildMultiArraySubscript(variable, indices)
 
     def subscript(self, tree, depth=None):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
@@ -85,7 +96,11 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         count = tree.count()
-        indices = [self._form.buildBasisIndex(count), self._form.buildGaussIndex()]
+        indices = []
+        for t in self._indexStack:
+            for i in t:
+                indices.append(self._form.buildDimIndex(i.count()))
+        indices = indices + [self._form.buildBasisIndex(count), self._form.buildGaussIndex()]
         return indices
 
     def subscript_SpatialDerivative(self,tree,depth):
