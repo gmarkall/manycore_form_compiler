@@ -28,6 +28,7 @@ from utilities import uniqify
 import ufl.argument
 import ufl.coefficient
 from ufl.algorithms.transformations import Transformer
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 
 class FormBackend:
 
@@ -107,6 +108,35 @@ class FormBackend:
         var = Variable(name, t)
         decl = Declaration(var)
         return decl
+
+    def _elementRank(self, form):
+        # Use the element from the first argument, which should be the TestFunction
+        arg = form.form_data().arguments[0]
+        e = arg.element()
+
+        if isinstance(e, FiniteElement):
+            return 0
+        elif isinstance(e, VectorElement):
+            return 1
+        elif isinstance(e, TensorElement):
+            return 2
+        else:
+            raise RuntimeError("Not a recognised element.")
+
+    def _elementSpaceDim(self, form):
+        # Use the element from the first argument, which should be the TestFunction
+        arg = form.form_data().arguments[0]
+        e = arg.element()
+        return e.cell().geometric_dimension()
+
+    # This function provides a simple calculation of the number of basis
+    # functions per element. This works for the tensor product of a scalar basis
+    # only.
+    def _numBasisFunctions(self, form):
+        form_data = form.form_data()
+        elementRank = self._elementRank(form)
+        spaceDimension = self._elementSpaceDim(form)
+        return self.numNodesPerEle * pow(spaceDimension, elementRank)
 
     def compile(self, form):
         raise NotImplementedError("You're supposed to implement compile()!")
