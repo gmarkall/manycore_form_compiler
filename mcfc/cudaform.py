@@ -22,6 +22,8 @@
 from form import *
 from cudaparameters import CudaKernelParameterGenerator, numElements, statutoryParameters
 from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop
+# UFL libs
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 
 class CudaFormBackend(FormBackend):
 
@@ -45,6 +47,8 @@ class CudaFormBackend(FormBackend):
         form.form_data().formalParameters = formalParameters
         form.form_data().actualParameters = actualParameters
 
+        basisTensors = self._buildBasisTensors(form_data)
+
         # Build the loop nest
         loopNest = self.buildLoopNest(form)
 
@@ -63,7 +67,7 @@ class CudaFormBackend(FormBackend):
             loopBody.prepend(expression)
 
         # Build the function with the loop nest inside
-        statements = [loopNest]
+        statements = basisTensors + [loopNest]
         body = Scope(statements)
         kernel = FunctionDefinition(Void(), name, formalParameters, body)
         
@@ -84,16 +88,50 @@ class CudaFormBackend(FormBackend):
         KPG = CudaKernelParameterGenerator()
         return KPG.generate(tree, form, statutoryParameters)
 
-    # We don't want these variables shared unless we do some extra legwork
-    # to sort out the offset needed by each thread. 
+    # When using a basis that is a tensor product of the scalar basis, we need
+    # to create an array that holds the tensor product. This function generates
+    # the code to declare and initialise that array.
+    def _buildBasisTensors(self, form_data):
+        gp = self.numGaussPoints
+        nn = self.numNodesPerEle
+        nd = self.numDimensions
+        initialisers = []
+        
+        for a in form_data.actualParameters['arguments']:
+            e = a.element()
+            # Ignore scalars
+            if isinstance(e, FiniteElement):
+                continue
+            elif isinstance(e, VectorElement):
+                n = buildVectorArgumentName(a)
+            else:
+                raise RuntimeError("Not supported.")
 
-    #def buildCoeffQuadDeclarations(self, form):
-    #    # The FormBackend's list of variables to declare is
-    #    # fine, but we want them to be __shared__
-    #    declarations = FormBackend.buildCoeffQuadDeclarations(self, form)
-    #    for decl in declarations:
-    #        decl.setCudaShared(True)
-    #    return declarations
+            arg = buildArgumentName(a)
+            t = Array(Real(), [nd,gp,nn*nd])
+            var = Variable(n, t)
+
+            # Construct the initialiser lists for the tensor product of the scalar basis.
+            outer = []
+            for d1 in range(nd):
+                middle = []
+                for igp in range(gp):
+                    innermost = []
+                    for d2 in range(nd):
+                        for inn in range(nn):
+                            if d1 == d2:
+                                expr = Subscript(Variable(arg), Literal(inn*gp+igp))
+                            else:
+                                expr = Literal(0.0)
+                            innermost.append(expr)
+                    middle.append(InitialiserList(innermost))
+                outer.append(InitialiserList(middle))
+            initlist = InitialiserList(outer)
+
+            init = InitialisationOp(var, initlist)
+            initialisers.append(init)
+        
+        return initialisers
 
     def buildQuadratureLoopNest(self, form):
         
@@ -142,10 +180,39 @@ class CudaFormBackend(FormBackend):
         computation = self.buildQuadratureExpression(coeff)
         basisLoop.append(computation)
 
+    def _elementRank(self, form):
+        # Use the element from the first argument, which should be the TestFunction
+        arg = form.form_data().arguments[0]
+        e = arg.element()
+
+        if isinstance(e, FiniteElement):
+            return 0
+        elif isinstance(e, VectorElement):
+            return 1
+        elif isinstance(e, TensorElement):
+            return 2
+        else:
+            raise RuntimeError("Not a recognised element.")
+
+    def _elementSpaceDim(self, form):
+        # Use the element from the first argument, which should be the TestFunction
+        arg = form.form_data().arguments[0]
+        e = arg.element()
+        return e.cell().geometric_dimension()
+
+    # This function provides a simple calculation of the number of basis
+    # functions per element. This works for the tensor product of a scalar basis
+    # only.
+    def _numBasisFunctions(self, form):
+        form_data = form.form_data()
+        elementRank = self._elementRank(form)
+        spaceDimension = self._elementSpaceDim(form)
+        return self.numNodesPerEle * pow(spaceDimension, elementRank)
 
     def buildLoopNest(self, form):
         form_data = form.form_data()
         rank = form_data.rank
+
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
@@ -155,7 +222,7 @@ class CudaFormBackend(FormBackend):
 
         # Build the loop over the first rank, which always exists
         indVarName = self.buildBasisIndex(0).name()
-        basisLoop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
+        basisLoop = buildSimpleForLoop(indVarName, self._numBasisFunctions(form))
         loop.append(basisLoop)
         loop = basisLoop
 
@@ -163,7 +230,7 @@ class CudaFormBackend(FormBackend):
         # more than one more... )
         for r in range(1,rank):
             indVarName = self.buildBasisIndex(r).name()
-            basisLoop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
+            basisLoop = buildSimpleForLoop(indVarName, self._numBasisFunctions(form))
             loop.append(basisLoop)
             loop = basisLoop
         

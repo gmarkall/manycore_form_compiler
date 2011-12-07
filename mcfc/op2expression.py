@@ -37,6 +37,9 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
+    def buildMultiArraySubscript(self, variable, indices):
+        return buildSubscript(variable, indices)
+
     def subscript(self, tree, depth=None):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
         if depth is None:

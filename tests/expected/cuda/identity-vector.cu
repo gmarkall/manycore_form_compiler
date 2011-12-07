@@ -13,18 +13,19 @@ int Velocity_colm_size;
 
 __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
 {
+  double CG1_v[2][6][6] = { { { CG1[0], CG1[6], CG1[12], 0.0, 0.0, 0.0 }, { CG1[1], CG1[7], CG1[13], 0.0, 0.0, 0.0 }, { CG1[2], CG1[8], CG1[14], 0.0, 0.0, 0.0 }, { CG1[3], CG1[9], CG1[15], 0.0, 0.0, 0.0 }, { CG1[4], CG1[10], CG1[16], 0.0, 0.0, 0.0 }, { CG1[5], CG1[11], CG1[17], 0.0, 0.0, 0.0 } }, { { 0.0, 0.0, 0.0, CG1[0], CG1[6], CG1[12] }, { 0.0, 0.0, 0.0, CG1[1], CG1[7], CG1[13] }, { 0.0, 0.0, 0.0, CG1[2], CG1[8], CG1[14] }, { 0.0, 0.0, 0.0, CG1[3], CG1[9], CG1[15] }, { 0.0, 0.0, 0.0, CG1[4], CG1[10], CG1[16] }, { 0.0, 0.0, 0.0, CG1[5], CG1[11], CG1[17] } } };
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
-    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    for(int i_r_0 = 0; i_r_0 < 6; i_r_0++)
     {
-      for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
+      for(int i_r_1 = 0; i_r_1 < 6; i_r_1++)
       {
         localTensor[((i_ele + n_ele * i_r_0) + 3 * n_ele * i_r_1)] = 0.0;
         for(int i_g = 0; i_g < 6; i_g++)
         {
           for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
           {
-            localTensor[((i_ele + n_ele * i_r_0) + 3 * n_ele * i_r_1)] += CG1[(i_r_0 + 3 * i_g)] * CG1[(i_r_1 + 3 * i_g)] * detwei[(i_ele + n_ele * i_g)];
+            localTensor[((i_ele + n_ele * i_r_0) + 3 * n_ele * i_r_1)] += CG1_v[i_d_0][i_r_0][i_g] * CG1_v[i_d_0][i_r_1][i_g] * detwei[(i_ele + n_ele * i_g)];
           };
         };
       };
@@ -34,6 +35,7 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
 
 __global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1)
 {
+  double CG1_v[2][6][6] = { { { CG1[0], CG1[6], CG1[12], 0.0, 0.0, 0.0 }, { CG1[1], CG1[7], CG1[13], 0.0, 0.0, 0.0 }, { CG1[2], CG1[8], CG1[14], 0.0, 0.0, 0.0 }, { CG1[3], CG1[9], CG1[15], 0.0, 0.0, 0.0 }, { CG1[4], CG1[10], CG1[16], 0.0, 0.0, 0.0 }, { CG1[5], CG1[11], CG1[17], 0.0, 0.0, 0.0 } }, { { 0.0, 0.0, 0.0, CG1[0], CG1[6], CG1[12] }, { 0.0, 0.0, 0.0, CG1[1], CG1[7], CG1[13] }, { 0.0, 0.0, 0.0, CG1[2], CG1[8], CG1[14] }, { 0.0, 0.0, 0.0, CG1[3], CG1[9], CG1[15] }, { 0.0, 0.0, 0.0, CG1[4], CG1[10], CG1[16] }, { 0.0, 0.0, 0.0, CG1[5], CG1[11], CG1[17] } } };
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
     double c_q0[12];
@@ -48,14 +50,14 @@ __global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, d
         };
       };
     };
-    for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+    for(int i_r_0 = 0; i_r_0 < 6; i_r_0++)
     {
       localTensor[(i_ele + n_ele * i_r_0)] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
         for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
         {
-          localTensor[(i_ele + n_ele * i_r_0)] += CG1[(i_r_0 + 3 * i_g)] * c_q0[(i_g + 6 * i_d_0)] * detwei[(i_ele + n_ele * i_g)];
+          localTensor[(i_ele + n_ele * i_r_0)] += CG1_v[i_d_0][i_r_0][i_g] * c_q0[(i_g + 6 * i_d_0)] * detwei[(i_ele + n_ele * i_g)];
         };
       };
     };
