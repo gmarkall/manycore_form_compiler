@@ -17,7 +17,20 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
+# femtools libs
+from get_element import get_element
+# UFL libs
 from ufl import TensorElement, FiniteElement, Coefficient
+
+# Number of facets associated with each UFL domain
+domain2num_vertices = {"cell1D": None,
+                     "cell2D": None,
+                     "cell3D": None,
+                     "interval": 2,
+                     "triangle": 3,
+                     "tetrahedron": 4,
+                     "quadrilateral": 4,
+                     "hexahedron": 8}
 
 def Jacobian(element):
     """UFL value: Create a Jacobian matrix argument to a form."""
@@ -35,8 +48,19 @@ class Transformation:
 
     # This is _not_ the constructor, since this class is used as a singleton
     def init(self, coordinates):
+        e = coordinates.element()
+        # Query Femtools for:
+        # - quadrature weights
+        # - quadrature points
+        # - shape functions
+        # - shape function derivatives
+        e._weight, e._l, e._n, e._dn \
+            = get_element( e.cell()._topological_dimension,
+                           domain2num_vertices[e.cell().domain()],
+                           e.quadrature_scheme(),
+                           e.degree() )
         # If the coordinate field lives in P^n, the Jacobian lives in P^{n-1}_DG
-        degree = coordinates.element().degree() - 1
+        degree = e.degree() - 1
         # FIXME: hardcoded for triangles
         self.J = Jacobian(TensorElement('DG', 'triangle', degree))
         self.invJ = JacobianInverse(TensorElement('DG', 'triangle', degree))
