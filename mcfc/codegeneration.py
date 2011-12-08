@@ -500,6 +500,14 @@ class Include(BackendASTNode):
 
     __str__ = unparse
 
+class ArbitraryString(BackendASTNode):
+
+    def __init__(self, s):
+        self._s = s
+
+    def unparse(self):
+        return self._s
+
 # Types
 
 class Type:
