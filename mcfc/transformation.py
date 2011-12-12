@@ -24,13 +24,13 @@ from ufl import TensorElement, FiniteElement, Coefficient
 
 # Number of facets associated with each UFL domain
 domain2num_vertices = {"cell1D": None,
-                     "cell2D": None,
-                     "cell3D": None,
-                     "interval": 2,
-                     "triangle": 3,
-                     "tetrahedron": 4,
-                     "quadrilateral": 4,
-                     "hexahedron": 8}
+                       "cell2D": None,
+                       "cell3D": None,
+                       "interval": 2,
+                       "triangle": 3,
+                       "tetrahedron": 4,
+                       "quadrilateral": 4,
+                       "hexahedron": 8}
 
 def Jacobian(element):
     """UFL value: Create a Jacobian matrix argument to a form."""
@@ -48,23 +48,24 @@ class Transformation:
 
     # This is _not_ the constructor, since this class is used as a singleton
     def init(self, coordinates):
-        e = coordinates.element()
+        element = coordinates.element()
+        domain = element.cell().domain()
         # Query Femtools for:
         # - quadrature weights
         # - quadrature points
         # - shape functions
         # - shape function derivatives
-        e._weight, e._l, e._n, e._dn \
-            = get_element( e.cell()._topological_dimension,
-                           domain2num_vertices[e.cell().domain()],
-                           e.quadrature_scheme(),
-                           e.degree() )
+        element._weight, element._l, element._n, element._dn \
+            = get_element( element.cell()._topological_dimension,
+                           domain2num_vertices[domain],
+                           element.quadrature_scheme(),
+                           element.degree() )
         # If the coordinate field lives in P^n, the Jacobian lives in P^{n-1}_DG
-        degree = e.degree() - 1
-        # FIXME: hardcoded for triangles
-        self.J = Jacobian(TensorElement('DG', 'triangle', degree))
-        self.invJ = JacobianInverse(TensorElement('DG', 'triangle', degree))
-        self.detJ = JacobianDeterminant(FiniteElement('DG', 'triangle', degree))
+        degree = element.degree() - 1
+        self.J = Jacobian(TensorElement('DG', domain, degree))
+        self.invJ = JacobianInverse(TensorElement('DG', domain, degree))
+        self.detJ = JacobianDeterminant(FiniteElement('DG', domain, degree))
+        self.coordinates = coordinates
 
 # Singleton instance of Transformation class
 T = Transformation()
