@@ -76,6 +76,10 @@ class Op2FormBackend(FormBackend):
         
         return kernel
 
+    def _buildCoeffQuadDeclaration(self, name, rank):
+        extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
+        return Declaration(Variable(name, Array(Real(), extents)))
+
     def _buildKernelParameters(self, tree, form):
         KPG = Op2KernelParameterGenerator(self)
 

@@ -26,7 +26,7 @@ void RHS(double localTensor[3], double dt, double detwei[6], double c0[2][3], do
 {
   for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
   {
-    double c_q0[12];
+    double c_q0[6][2];
     for(int i_g = 0; i_g < 6; i_g++)
     {
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)

@@ -107,13 +107,6 @@ class FormBackend:
 
         return declarations
 
-    def _buildCoeffQuadDeclaration(self, name, rank):
-        length = self.numGaussPoints * pow(self.numDimensions, rank)
-        t = Array(Real(), Literal(length))
-        var = Variable(name, t)
-        decl = Declaration(var)
-        return decl
-
     def _elementRank(self, form):
         # Use the element from the first argument, which should be the TestFunction
         arg = form.form_data().arguments[0]
