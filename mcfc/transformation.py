@@ -34,17 +34,26 @@ domain2num_vertices = {"cell1D": None,
 
 def Jacobian(element):
     """UFL value: Create a Jacobian matrix argument to a form."""
-    return Coefficient(element, -3)
+    return Coefficient(element, Transformation.countJ)
 
 def JacobianInverse(element):
     """UFL value: Create a Jacobian inverse argument to a form."""
-    return Coefficient(element, -4)
+    return Coefficient(element, Transformation.countInvJ)
 
 def JacobianDeterminant(element):
     """UFL value: Create a Jacobian determinant argument to a form."""
-    return Coefficient(element, -5)
+    return Coefficient(element, Transformation.countDetJ)
 
 class Transformation:
+
+    countJ = -3
+    countInvJ = -4
+    countDetJ = -5
+
+    J = None
+    invJ = None
+    detJ = None
+    coordinates = None
 
     # This is _not_ the constructor, since this class is used as a singleton
     def init(self, coordinates):
