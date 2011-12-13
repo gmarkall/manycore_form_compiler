@@ -112,18 +112,25 @@ class Literal(BackendASTNode):
 class InitialiserList(BackendASTNode):
 
     def __init__(self, array):
-        # Make input a NumPy array (and fail it it doesn't work)
-        #self._array = numpy.asarray(array, numpy.float)
-        #self.arrStr = numpy.array2string(self._array, separator=',', prefix=indentation)
-        #if not newlines:
-        #    self.arrStr = self.arrStr.replace('\n','')
-        # Replace all [ delimiters by { in string representation of the array
-        #self.arrStr = self.arrStr.replace('[','{ ').replace(']',' }')
         self._array = array
 
     def unparse(self):
         arrStr = ", ".join(map(lambda x: x.unparse(), self._array))
         return "{ %s }" % arrStr
+
+class ArrayInitialiserList(BackendASTNode):
+
+    def __init__(self, array, newlines = False, indentation = ''):
+        # Make input a NumPy array (and fail it it doesn't work)
+        self._array = numpy.asarray(array, numpy.float)
+        self.arrStr = numpy.array2string(self._array, separator=',', prefix=indentation)
+        if not newlines:
+           self.arrStr = self.arrStr.replace('\n','')
+        # Replace all [ delimiters by { in string representation of the array
+        self.arrStr = self.arrStr.replace('[','{ ').replace(']',' }')
+
+    def unparse(self):
+        return self.arrStr
 
 class ForLoop(BackendASTNode):
 
@@ -632,7 +639,7 @@ def buildConstArrayInitializer(arrayName, values):
     # Create a const array of appropriate shape
     var = Variable(arrayName, Array(Real(isConst=True), [Literal(x) for x in values.shape]))
 
-    return InitialisationOp(var, InitialiserList(values, newlines=True, indentation=var.unparse_declaration()))
+    return InitialisationOp(var, ArrayInitialiserList(values, newlines=True, indentation=var.unparse_declaration()))
 
 # Unparser-specific functions
 
