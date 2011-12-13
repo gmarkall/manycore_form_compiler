@@ -34,6 +34,7 @@ class CudaFormBackend(FormBackend):
         self._indexSumCounter = IndexSumCounter()
 
     def compile(self, name, form):
+        "Compile a form with a given name."
 
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
@@ -88,10 +89,10 @@ class CudaFormBackend(FormBackend):
         KPG = CudaKernelParameterGenerator()
         return KPG.generate(tree, form, statutoryParameters)
 
-    # When using a basis that is a tensor product of the scalar basis, we need
-    # to create an array that holds the tensor product. This function generates
-    # the code to declare and initialise that array.
     def _buildBasisTensors(self, form_data):
+        """When using a basis that is a tensor product of the scalar basis, we
+        need to create an array that holds the tensor product. This function
+        generates the code to declare and initialise that array."""
         gp = self.numGaussPoints
         nn = self.numNodesPerEle
         nd = self.numDimensions
@@ -134,6 +135,7 @@ class CudaFormBackend(FormBackend):
         return initialisers
 
     def buildQuadratureLoopNest(self, form):
+        "Build quadrature loop nest evaluating all coefficients of the form."
         
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
@@ -157,6 +159,7 @@ class CudaFormBackend(FormBackend):
         return gaussLoop
 
     def buildCoefficientLoopNest(self, coeff, rank, scope):
+        "Build loop nest evaluating a coefficient at a given quadrature point."
 
         loop = scope
 
@@ -181,6 +184,7 @@ class CudaFormBackend(FormBackend):
         basisLoop.append(computation)
 
     def buildLoopNest(self, form):
+        "Build the loop nest for evaluating a form expression."
         form_data = form.form_data()
         rank = form_data.rank
 

@@ -31,6 +31,7 @@ from ufl.algorithms.transformations import Transformer
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 
 class FormBackend:
+    "Base class for generating form tabulation kernels."
 
     numNodesPerEle = 3
     numDimensions = 2
@@ -42,12 +43,15 @@ class FormBackend:
         self._coefficientUseFinder = CoefficientUseFinder()
 
     def buildBasisIndex(self, count):
+        "Build index for a loop over basis function values."
         return BasisIndex(self.numNodesPerEle, count)
 
     def buildDimIndex(self, count):
+        "Build index for a loop over spatial dimensions."
         return DimIndex(self.numDimensions, count)
 
     def buildGaussIndex(self):
+        "Build index for a Gauss quadrature loop."
         return GaussIndex(self.numGaussPoints)
 
     def buildExpression(self, form, tree):
@@ -62,6 +66,7 @@ class FormBackend:
         return expr
         
     def buildQuadratureExpression(self, coeff):
+        "Build the expression to evaluate a particular coefficient."
         rhs = self._quadratureExpressionBuilder.build(coeff)
 
         lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)

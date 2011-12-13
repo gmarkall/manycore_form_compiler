@@ -31,6 +31,7 @@ class ExpressionBuilder(Transformer):
         self._form = form
 
     def build(self, tree):
+        "Build the rhs for evaluating an expression tree."
         self._exprStack = []
         self._indexStack = Stack()
         # When we pass through the first IndexSum, this will get incremented
