@@ -315,13 +315,12 @@ contains
                                   &  ele_count, name) result (sparsity)
     ! Produce the sparsity of a first degree operator mapping from colmesh
     ! to rowmesh.
-    type(ilist), dimension(:), pointer :: list_matrix
-    type(csr_sparsity) :: sparsity
-    integer, dimension(:) intent(in) :: colmesh, rowmesh
-    integer, intent(in) :: node_count
+    integer, dimension(:), intent(in) :: colmesh, rowmesh
     integer, intent(in) :: node_count, nodes_per_ele, ele_count
     character(len=*), intent(in) :: name
 
+    type(ilist), dimension(:), pointer :: list_matrix
+    type(csr_sparsity) :: sparsity
     integer :: i
 
     allocate(list_matrix(node_count))
@@ -341,16 +340,16 @@ contains
 
   end function make_sparsity_from_ndglno
 
-  function make_sparsity_lists_ndglno(rowmesh, colmesh, node_count, 
+  function make_sparsity_lists_ndglno(rowmesh, colmesh, node_count, &
        & nodes_per_ele, ele_count) result (list_matrix)
     ! Produce the sparsity of a first degree operator mapping from colmesh
     ! to rowmesh. Return a listmatrix
     ! Note this really ought to be mesh_type.
-    integer, dimension(:), intent(in) :: colmesh, rowmesh
+    integer, dimension(:), target, intent(in) :: colmesh, rowmesh
     integer, intent(in) :: node_count, nodes_per_ele, ele_count
 
     type(ilist), dimension(node_count) :: list_matrix
-    integer :: ele, i, j
+    integer :: ele, i, j, lb, ub
     integer, dimension(:), pointer :: row_ele, col_ele
 
     ! this should happen automatically through the initialisations
@@ -358,8 +357,10 @@ contains
     list_matrix%length=0
 
     do ele=1,ele_count
-       row_ele=>rowmesh(((ele-1)*ele_count)+1)
-       col_ele=>colmesh(((ele-1)*ele_count)+1)
+       lb = ((ele-1)*ele_count)+1
+       ub = lb + ele_count
+       row_ele=>rowmesh(lb:ub)
+       col_ele=>colmesh(lb:ub)
 
        do i=1,nodes_per_ele
           do j=1,nodes_per_ele
