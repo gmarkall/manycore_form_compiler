@@ -311,4 +311,112 @@ contains
 
   end subroutine extract_vector_field_wrapper
 
+  function make_sparsity_from_ndglno(rowmesh, colmesh, node_count, name) result (sparsity)
+    ! Produce the sparsity of a first degree operator mapping from colmesh
+    ! to rowmesh.
+    type(ilist), dimension(:), pointer :: list_matrix
+    type(csr_sparsity) :: sparsity
+    integer, dimension(:) intent(in) :: colmesh, rowmesh
+    integer, intent(in) :: node_count
+    character(len=*), intent(in) :: name
+
+    integer :: i
+
+    allocate(list_matrix(node_count))
+
+    list_matrix=make_sparsity_lists_ndglno(rowmesh, colmesh)
+
+    sparsity=lists2csr_sparsity(list_matrix, name)
+    sparsity%columns=node_count
+    sparsity%sorted_rows=.true.
+
+    do i=1,node_count
+       call flush_list(list_matrix(i))
+    end do
+
+    deallocate(list_matrix)
+
+  end function make_sparsity_from_ndglno
+
+  function make_sparsity_lists_ndglno(rowmesh, colmesh, &
+       & include_all_neighbour_element_nodes) result (list_matrix)
+    ! Produce the sparsity of a first degree operator mapping from colmesh
+    ! to rowmesh. Return a listmatrix
+    ! Note this really ought to be mesh_type.
+    type(mesh_type), intent(in) :: colmesh, rowmesh
+    type(ilist), dimension(node_count(rowmesh)) :: list_matrix
+    logical, intent(in), optional :: &
+         & include_all_neighbour_element_nodes
+
+    integer :: ele, i, j, face, neigh
+    integer, dimension(:), pointer :: row_ele, col_ele, face_ele, col_neigh
+
+    logical :: l_include_all_neighbour_element_nodes
+
+    l_include_all_neighbour_element_nodes = .false.
+    if(present(include_all_neighbour_element_nodes)) then
+       l_include_all_neighbour_element_nodes = &
+            & include_all_neighbour_element_nodes
+    end if
+
+    ! this should happen automatically through the initialisations
+    ! statements, but not in old gcc4s: 
+    list_matrix%length=0
+
+    do ele=1,element_count(rowmesh)
+       row_ele=>ele_nodes(rowmesh, ele)
+       col_ele=>ele_nodes(colmesh, ele)
+
+       do i=1,size(row_ele)
+          do j=1,size(col_ele)
+             ! Every node in row_ele receives contribution from every node
+             ! in col_ele
+             call insert_ascending(list_matrix(row_ele(i)),col_ele(j))
+          end do
+       end do
+
+    end do
+
+    ! I think it's the continuity colmesh which determines whether you need
+    ! boundary integrals.
+    if (continuity(colmesh)<0) then
+       assert(has_faces(colmesh))
+
+       do ele=1,element_count(colmesh)
+          row_ele=>ele_nodes(rowmesh, ele)
+          col_neigh=>ele_neigh(colmesh, ele)
+
+          do neigh=1,size(col_neigh)
+             ! Skip external faces
+             if (col_neigh(neigh)<=0) cycle
+
+             face=ele_face(colmesh, col_neigh(neigh), ele)
+             face_ele=>face_local_nodes(colmesh, face)
+             col_ele=>ele_nodes(colmesh, col_neigh(neigh))
+
+             if(l_include_all_neighbour_element_nodes) then
+                do i=1,size(row_ele)
+                   do j=1,size(col_ele)
+                      call insert_ascending(list_matrix(row_ele(i))&
+                           &,col_ele(j))
+                   end do
+                end do
+             else
+
+                do i=1,size(row_ele)
+                   do j=1,size(face_ele)
+                      call insert_ascending(list_matrix(row_ele(i))&
+                           &,col_ele(face_ele(j)))
+                   end do
+                end do
+             end if
+          end do
+
+       end do
+
+    end if
+
+  end function make_sparsity_lists
+
+
 end module ufl_utilities
