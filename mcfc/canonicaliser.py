@@ -22,8 +22,6 @@ MCFC Canonicaliser. Uses the FEniCS UFL implementation to canonicalise
 the input and return a dictionary of UFL objects.
 """
 
-# Regular python modules
-import getopt, sys
 # The UFL packages are required so that the sources execute correctly
 # when they are read in
 import ufl
