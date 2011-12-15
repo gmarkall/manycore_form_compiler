@@ -19,8 +19,8 @@
 
 # UFL modules
 import ufl
-# MCFC modules
-from transformation import T
+# femtools libs
+from get_element import get_element
 
 # Introduce convenience shorthand for initialising TestFunction from Coefficient
 def TestFunction(initialiser):
@@ -36,8 +36,46 @@ def TrialFunction(initialiser):
         initialiser = initialiser.element()
     return ufl.TrialFunction(initialiser)
 
+def Jacobian(element):
+    """UFL value: Create a Jacobian matrix coefficient to a form."""
+    return ufl.Coefficient(element, -3)
+
+def JacobianInverse(element):
+    """UFL value: Create a Jacobian inverse coefficient to a form."""
+    return ufl.Coefficient(element, -4)
+
+def JacobianDeterminant(element):
+    """UFL value: Create a Jacobian determinant coefficient to a form."""
+    return ufl.Coefficient(element, -5)
+
+# Number of facets associated with each UFL domain
+domain2num_vertices = {"cell1D": None,
+                       "cell2D": None,
+                       "cell3D": None,
+                       "interval": 2,
+                       "triangle": 3,
+                       "tetrahedron": 4,
+                       "quadrilateral": 4,
+                       "hexahedron": 8}
+
 def transform(coordinates):
-    T.init(coordinates)
-    return T.J, T.invJ, T.detJ
+    element = coordinates.element()
+    domain = element.cell().domain()
+    # Query Femtools for:
+    # - quadrature weights
+    # - quadrature points
+    # - shape functions
+    # - shape function derivatives
+    element._weight, element._l, element._n, element._dn \
+        = get_element( element.cell()._topological_dimension,
+                       domain2num_vertices[domain],
+                       element.quadrature_scheme(),
+                       element.degree() )
+    # If the coordinate field lives in P^n, the Jacobian lives in P^{n-1}_DG
+    degree = element.degree() - 1
+    J = Jacobian(ufl.TensorElement('DG', domain, degree))
+    invJ = JacobianInverse(ufl.TensorElement('DG', domain, degree))
+    detJ = JacobianDeterminant(ufl.FiniteElement('DG', domain, degree))
+    return J, invJ, detJ
 
 # vim:sw=4:ts=4:sts=4:et
