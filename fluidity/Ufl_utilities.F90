@@ -358,7 +358,7 @@ contains
 
     do ele=1,ele_count
        lb = ((ele-1)*ele_count)+1
-       ub = lb + ele_count
+       ub = lb + ele_count - 1
        row_ele=>rowmesh(lb:ub)
        col_ele=>colmesh(lb:ub)
 
@@ -374,5 +374,26 @@ contains
 
   end function make_sparsity_lists_ndglno
 
+  function make_vector_numbering(ndglno, nodes_per_ele, num_ele, num_dim) result (ndglno_v)
+
+  integer, dimension(:), intent(in) :: ndglno
+  integer, intent(in) :: nodes_per_ele, num_ele, num_dim
+  
+  integer :: ele
+  integer, dimension(size(ndglno)) :: ndglno_tmp
+  integer, dimension(size(ndglno)*num_dim) :: ndglno_v
+  integer, dimension(1) :: v_shape
+
+  v_shape = (/ size(ndglno)*num_dim /)
+
+  ! Subtract 1 from every element of ndglno, double every element and repeat every
+  ! element once to initialise ndglno_v.
+  ndglno_v = reshape(spread(ndglno-1, 1, 2), v_shape) * 2 
+  ! Add 1 to every other element of ndglno_v.
+  ndglno_v = ndglno_v + reshape(spread((/ 0, 1 /), 2, nodes_per_ele*num_ele), v_shape)
+  ! Get back to fortran numbering by adding 1.
+  ndglno_v = ndglno_v + 1
+
+  end function make_vector_numbering
 
 end module ufl_utilities
