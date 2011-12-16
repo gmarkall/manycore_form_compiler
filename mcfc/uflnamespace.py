@@ -22,6 +22,10 @@ import ufl
 # femtools libs
 from get_element import get_element
 
+countJ = -3
+countInvJ = -4
+countDetJ = -5
+
 # Introduce convenience shorthand for initialising TestFunction from Coefficient
 def TestFunction(initialiser):
     """UFL value: Create a test function argument to a form."""
@@ -38,15 +42,15 @@ def TrialFunction(initialiser):
 
 def Jacobian(element):
     """UFL value: Create a Jacobian matrix coefficient to a form."""
-    return ufl.Coefficient(element, -3)
+    return ufl.Coefficient(element, countJ)
 
 def JacobianInverse(element):
     """UFL value: Create a Jacobian inverse coefficient to a form."""
-    return ufl.Coefficient(element, -4)
+    return ufl.Coefficient(element, countInvJ)
 
 def JacobianDeterminant(element):
     """UFL value: Create a Jacobian determinant coefficient to a form."""
-    return ufl.Coefficient(element, -5)
+    return ufl.Coefficient(element, countDetJ)
 
 # Number of facets associated with each UFL domain
 domain2num_vertices = {"cell1D": None,
@@ -74,8 +78,14 @@ def transform(coordinates):
     # If the coordinate field lives in P^n, the Jacobian lives in P^{n-1}_DG
     degree = element.degree() - 1
     J = Jacobian(ufl.TensorElement('DG', domain, degree))
+    J._coordinates = coordinates
+    J._label = 'Jacobian'
     invJ = JacobianInverse(ufl.TensorElement('DG', domain, degree))
+    invJ._coordinates = coordinates
+    invJ._label = 'JacobianInverse'
     detJ = JacobianDeterminant(ufl.FiniteElement('DG', domain, degree))
+    detJ._coordinates = coordinates
+    detJ._label = 'JacobianDeterminant'
     return J, invJ, detJ
 
 # vim:sw=4:ts=4:sts=4:et
