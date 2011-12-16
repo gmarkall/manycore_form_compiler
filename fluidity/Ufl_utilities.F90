@@ -225,6 +225,8 @@ contains
     integer(c_int), pointer :: tmp_int_ptr
     real(c_double), pointer :: tmp_real_ptr
 
+    integer, dimension(:), pointer :: ndglno_s, ndglno_v
+
     do c=1,field_name_len
       field_name(c:c) = field_name_buf(c)
     end do
@@ -235,18 +237,6 @@ contains
     if (stat/=0) then
       FLAbort("Tried to extract non-existent/non-allocated vector field!")
     end if
-
-    ! Connectivity sparsity
-    conn_sparsity = get_csr_sparsity_firstorder(state, field%mesh, field%mesh)
-    
-    tmp_int_ptr => conn_sparsity%findrm(1)
-    conn_findrm = c_loc(tmp_int_ptr)
-
-    tmp_int_ptr => conn_sparsity%colm(1)
-    conn_colm = c_loc(tmp_int_ptr)
-
-    conn_findrm_size = size(conn_sparsity%findrm)
-    conn_colm_size = size(conn_sparsity%colm)
 
     ! AT Sparsity
     row_count = node_count(field%mesh)
@@ -278,6 +268,22 @@ contains
 
     at_findrm_size = size(at_sparsity%findrm)
     at_colm_size = size(at_sparsity%colm)
+
+    ! Connectivity sparsity
+
+    ndglno_s => field%mesh%ndglno
+    ndglno_v = make_vector_numbering(ndglno_s, 3, ele_count, 2)
+    conn_sparsity = make_sparsity_from_ndglno(ndglno_v, ndglno_v, row_count, 3, &
+                  & ele_count, "vec")
+
+    tmp_int_ptr => conn_sparsity%findrm(1)
+    conn_findrm = c_loc(tmp_int_ptr)
+
+    tmp_int_ptr => conn_sparsity%colm(1)
+    conn_colm = c_loc(tmp_int_ptr)
+
+    conn_findrm_size = size(conn_sparsity%findrm)
+    conn_colm_size = size(conn_sparsity%colm)
 
     ! Mesh
     num_ele = ele_count
