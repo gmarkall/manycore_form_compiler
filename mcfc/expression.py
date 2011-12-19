@@ -34,7 +34,6 @@ class ExpressionBuilder(Transformer):
         "Build the rhs for evaluating an expression tree."
         self._exprStack = []
         self._indexStack = Stack()
-        self._indexSumIndexStack = Stack()
         self.visit(tree)
 
         expr = self._exprStack.pop()
@@ -77,9 +76,7 @@ class ExpressionBuilder(Transformer):
     def index_sum(self, tree):
         summand, mi = tree.operands()
 
-        self._indexSumIndexStack.push(self.visit(mi))
         self.visit(summand)
-        self._indexSumIndexStack.pop()
 
     def constant_value(self, tree):
         if isinstance(tree, SymbolicValue):
@@ -104,7 +101,7 @@ class ExpressionBuilder(Transformer):
         name = buildSpatialDerivativeName(tree)
         base = Variable(name)
 
-        dimIndices = self._indexSumIndexStack.peek()
+        dimIndices = self._indexStack.peek()
         indices = self.subscript(tree, dimIndices)
         spatialDerivExpr = self.buildSubscript(base, indices)
         self._exprStack.append(spatialDerivExpr)
