@@ -82,7 +82,7 @@ class Op2FormBackend(FormBackend):
     def _buildKernelParameters(self, tree, form):
         KPG = Op2KernelParameterGenerator(self)
 
-        detwei = _buildArrayParameter("detwei", KPG.expBuilder.subscript_detwei())
+        detwei = _buildArrayParameter("detwei", self.subscript_detwei())
         timestep = Variable("dt", Real() )
         localTensor = _buildArrayParameter("localTensor", KPG.expBuilder.subscript_LocalTensor(form))
 
@@ -159,5 +159,9 @@ class Op2FormBackend(FormBackend):
     def buildParameterList(self, tree, form):
         formalParameters, _ = self._buildKernelParameters(tree, form)
         return formalParameters
+
+    def subscript_detwei(self):
+        indices = [self.buildGaussIndex()]
+        return indices
 
 # vim:sw=4:ts=4:sts=4:et

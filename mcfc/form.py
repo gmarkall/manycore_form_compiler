@@ -59,6 +59,12 @@ class FormBackend:
         # Build the rhs expression
         rhs = self._expressionBuilder.build(tree)
 
+        # The rhs of a form needs to be multiplied by detwei
+        indices = self.subscript_detwei()
+        detwei = Variable("detwei")
+        detweiExpr = self._expressionBuilder.buildSubscript(detwei, indices)
+        rhs = MultiplyOp(rhs, detweiExpr)
+
         # Assign expression to the local tensor value
         lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
         expr = PlusAssignmentOp(lhs, rhs)
@@ -165,6 +171,9 @@ class FormBackend:
 
     def _buildKernelParameters(self, tree, form):
         raise NotImplementedError("You're supposed to implement _buildKernelParameters()!")
+
+    def subscript_detwei(self, tree):
+        raise NotImplementedError("You're supposed to implement subscript_detwei()!")
 
 class CoefficientUseFinder(Transformer):
     """Finds the nodes that 'use' a coefficient. This is either a Coefficient

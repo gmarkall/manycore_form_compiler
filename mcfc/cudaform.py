@@ -21,7 +21,7 @@
 # MCFC libs
 from form import *
 from cudaparameters import CudaKernelParameterGenerator, numElements, statutoryParameters
-from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop
+from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop, ElementIndex
 # UFL libs
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 
@@ -209,5 +209,9 @@ class CudaFormBackend(FormBackend):
         # Hand back the outer loop, so it can be inserted into some
         # scope.
         return outerLoop
+
+    def subscript_detwei(self):
+        indices = [ElementIndex(), self.buildGaussIndex()]
+        return indices
 
 # vim:sw=4:ts=4:sts=4:et

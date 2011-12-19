@@ -41,12 +41,6 @@ class ExpressionBuilder(Transformer):
         if len(self._exprStack) is not 0:
             raise RuntimeError("Expression stack not empty.")
 
-        # Everything needs to be multiplied by detwei
-        indices = self.subscript_detwei()
-        detwei = Variable("detwei")
-        detweiExpr = self.buildSubscript(detwei, indices)
-        expr = MultiplyOp(expr, detweiExpr)
-
         return expr
 
     def component_tensor(self, tree, *ops):
@@ -172,9 +166,6 @@ class ExpressionBuilder(Transformer):
 
     def subscript(self, tree):
         raise NotImplementedError("You're supposed to implement subscript()!")
-
-    def subscript_detwei(self, tree):
-        raise NotImplementedError("You're supposed to implement subscript_detwei()!")
 
 class QuadratureExpressionBuilder:
 

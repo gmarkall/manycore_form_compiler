@@ -127,10 +127,6 @@ class CudaExpressionBuilder(ExpressionBuilder):
 
         return indices
 
-    def subscript_detwei(self):
-        indices = [ElementIndex(), self._form.buildGaussIndex()]
-        return indices
-
     def subscript_LocalTensor(self, form):
         form_data = form.form_data()
         rank = form_data.rank
