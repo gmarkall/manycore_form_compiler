@@ -69,7 +69,7 @@ class FormBackend:
         "Build the expression to evaluate a particular coefficient."
         rhs = self._quadratureExpressionBuilder.build(coeff)
 
-        lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
+        lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff, True)
         expr = PlusAssignmentOp(lhs, rhs)
         
         return expr
@@ -81,7 +81,7 @@ class FormBackend:
         return initialiser
 
     def buildCoeffQuadratureInitialiser(self, coeff):
-        accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
+        accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff, True)
         initialiser = AssignmentOp(accessor, Literal(0.0))
         return initialiser
 

@@ -126,10 +126,10 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
-        coeffExpr = self.buildCoeffQuadratureAccessor(tree)
+        coeffExpr = self.buildCoeffQuadratureAccessor(tree, True)
         self._exprStack.append(coeffExpr)
 
-    def buildCoeffQuadratureAccessor(self, coeff):
+    def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
         rank = coeff.rank()
         if isinstance(coeff, ufl.coefficient.Coefficient):
             name = buildCoefficientQuadName(coeff)
@@ -140,19 +140,22 @@ class ExpressionBuilder(Transformer):
             name = buildSpatialDerivativeName(coeff)
         base = Variable(name)
         
+        print "Expected rank: %d" % rank
         # If there are no indices present (e.g. in the quadrature evaluation loop) then
         # we need to fake indices for the coefficient based on its rank:
-        #if len(self._indexStack) == 0:
-        fake_indices = []
-        for i in range(rank):
-            fake_indices.append(i)
-        self._indexStack.push(tuple(fake_indices))
+        if fake_indices:
+            fake = []
+            for i in range(rank):
+                fake.append(i)
+            print fake
+            self._indexStack.push(tuple(fake))
+            print self._indexStack
 
         indices = self.subscript_CoeffQuadrature(coeff)
 
         # Remove the fake indices
-        #if len(self._indexStack) == 0:
-        self._indexStack.pop()
+        if fake_indices:
+            self._indexStack.pop()
 
         coeffExpr = self.buildSubscript(base, indices)
         return coeffExpr
