@@ -106,23 +106,22 @@ class CudaExpressionBuilder(ExpressionBuilder):
         indices = indices + [self._form.buildBasisIndex(count), self._form.buildGaussIndex()]
         return indices
 
-    def subscript_SpatialDerivative(self,tree,depth):
+    def subscript_SpatialDerivative(self,tree,dimIndices):
         # Build the subscript based on the argument count and the
-        # nesting depth of IndexSums of the expression.
+        # indices
         operand, _ = tree.operands()
         count = operand.count()
 
         if isinstance(operand, ufl.argument.Argument):
-            indices = [ ElementIndex(),
-                        self._form.buildDimIndex(depth),
-                        self._form.buildGaussIndex(),
-                        self._form.buildBasisIndex(count) ]
+            indices = [ ElementIndex()]
+            for i in dimIndices:
+                indices.append(self._form.buildDimIndex(i.count()))
+            indices = indices + [ self._form.buildGaussIndex(),
+                                  self._form.buildBasisIndex(count) ]
         elif isinstance(operand, ufl.coefficient.Coefficient):
             indices = [ self._form.buildGaussIndex() ]
-            depth = operand.rank() + 1
-
-            for r in range(depth):
-                indices.append(self._form.buildDimIndex(r))
+            for i in dimIndices:
+                indices.append(self._form.buildDimIndex(i.count()))
 
         return indices
 
@@ -147,12 +146,14 @@ class CudaExpressionBuilder(ExpressionBuilder):
         # Build the subscript based on the rank
         indices = [self._form.buildGaussIndex()]
         depth = coeff.rank()
-        if isinstance(coeff, ufl.differentiation.SpatialDerivative):
-            # We need to add one, since the differentiation added a 
-            # dim index
-            depth = depth + 1
-        for r in range(depth):
-            indices.append(self._form.buildDimIndex(r))
+
+        if coeff.rank() != 0:
+            print "Rank: %d" % coeff.rank()
+            dimIndices = self._indexStack.peek()
+            if len(dimIndices) != coeff.rank():
+                raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), coeff.rank()))
+            for i in dimIndices:
+                indices.append(self._form.buildDimIndex(i))
         
         return indices
 

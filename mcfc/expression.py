@@ -34,9 +34,7 @@ class ExpressionBuilder(Transformer):
         "Build the rhs for evaluating an expression tree."
         self._exprStack = []
         self._indexStack = Stack()
-        # When we pass through the first IndexSum, this will get incremented
-        # to 0, which is the count of the first dim index
-        self._indexSumDepth = -1 
+        self._indexSumIndexStack = Stack()
         self.visit(tree)
 
         expr = self._exprStack.pop()
@@ -77,10 +75,11 @@ class ExpressionBuilder(Transformer):
     # We need to keep track of how many IndexSums we passed through
     # so that we know which dim index we're dealing with.
     def index_sum(self, tree):
-        summand, indices = tree.operands()
-        self._indexSumDepth = self._indexSumDepth + 1
+        summand, mi = tree.operands()
+
+        self._indexSumIndexStack.push(self.visit(mi))
         self.visit(summand)
-        self._indexSumDepth = self._indexSumDepth - 1
+        self._indexSumIndexStack.pop()
 
     def constant_value(self, tree):
         if isinstance(tree, SymbolicValue):
@@ -105,8 +104,8 @@ class ExpressionBuilder(Transformer):
         name = buildSpatialDerivativeName(tree)
         base = Variable(name)
 
-        depth = self._indexSumDepth
-        indices = self.subscript(tree, depth)
+        dimIndices = self._indexSumIndexStack.peek()
+        indices = self.subscript(tree, dimIndices)
         spatialDerivExpr = self.buildSubscript(base, indices)
         self._exprStack.append(spatialDerivExpr)
  
@@ -131,13 +130,29 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(coeffExpr)
 
     def buildCoeffQuadratureAccessor(self, coeff):
+        rank = coeff.rank()
         if isinstance(coeff, ufl.coefficient.Coefficient):
             name = buildCoefficientQuadName(coeff)
         else:
+            # The spatial derivative adds an extra dim index so we need to
+            # bump up the rank
+            rank = rank + 1
             name = buildSpatialDerivativeName(coeff)
         base = Variable(name)
         
+        # If there are no indices present (e.g. in the quadrature evaluation loop) then
+        # we need to fake indices for the coefficient based on its rank:
+        #if len(self._indexStack) == 0:
+        fake_indices = []
+        for i in range(rank):
+            fake_indices.append(i)
+        self._indexStack.push(tuple(fake_indices))
+
         indices = self.subscript_CoeffQuadrature(coeff)
+
+        # Remove the fake indices
+        #if len(self._indexStack) == 0:
+        self._indexStack.pop()
 
         coeffExpr = self.buildSubscript(base, indices)
         return coeffExpr
