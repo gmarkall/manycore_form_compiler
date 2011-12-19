@@ -90,13 +90,16 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def subscript_CoeffQuadrature(self, coeff):
         # Build the subscript based on the rank
         indices = [self._form.buildGaussIndex()]
-        depth = coeff.rank()
-        if coeff.rank() != 0:
+        rank = coeff.rank()
+
+        if isinstance(coeff, ufl.differentiation.SpatialDerivative):
+            rank = rank + 1
+        if rank != 0:
             dimIndices = self._indexStack.peek()
-            if len(dimIndices) != coeff.rank():
-                raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), coeff.rank()))
+            if len(dimIndices) != rank:
+                raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
             for i in dimIndices:
-                indices.append(self._form.buildDimIndex(i))
+                indices.append(self._form.buildDimIndex(i.count()))
         
         return indices
 
