@@ -31,7 +31,6 @@ class CudaFormBackend(FormBackend):
         FormBackend.__init__(self)
         self._expressionBuilder = CudaExpressionBuilder(self)
         self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder(self)
-        self._indexSumCounter = IndexSumCounter()
 
     def compile(self, name, form):
         "Compile a form with a given name."
@@ -226,8 +225,6 @@ class CudaFormBackend(FormBackend):
 
         # Add loops for each dimension as necessary. 
         for d in dimLoops:
-            print d['count']
-            print d['extent']
             indVarName = self.buildDimIndex(d['count']).name()
             dimLoop = buildSimpleForLoop(indVarName, d['extent'])
             loop.append(dimLoop)

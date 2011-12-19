@@ -189,7 +189,6 @@ class IndexSumIndexFinder(Transformer):
         summand, mi = tree.operands()
         indices = mi.index_dimensions()
 
-        print indices
         for c, d in indices.items():
             self._indices.append({"count": c.count(), "extent": d})
 
