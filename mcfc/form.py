@@ -69,7 +69,7 @@ class FormBackend:
         "Build the expression to evaluate a particular coefficient."
         rhs = self._quadratureExpressionBuilder.build(coeff)
 
-        lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
+        lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff, True)
         expr = PlusAssignmentOp(lhs, rhs)
         
         return expr
@@ -81,7 +81,7 @@ class FormBackend:
         return initialiser
 
     def buildCoeffQuadratureInitialiser(self, coeff):
-        accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff)
+        accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff, True)
         initialiser = AssignmentOp(accessor, Literal(0.0))
         return initialiser
 
@@ -175,6 +175,32 @@ class CoefficientUseFinder(Transformer):
 
     def coefficient(self, tree):
         self._coefficients.append(tree)
+
+class IndexSumIndexFinder(Transformer):
+    "Find the count and extent of indices reduced by an IndexSum in a form."
+
+    def find(self, tree):
+        self._indices = []
+        self.visit(tree)
+        return self._indices
+
+    def index_sum(self, tree):
+
+        summand, mi = tree.operands()
+        indices = mi.index_dimensions()
+
+        for c, d in indices.items():
+            self._indices.append({"count": c.count(), "extent": d})
+
+        self.visit(summand)
+
+    # We don't care about any other node.
+    def expr(self, tree, *ops):
+        pass
+
+def indexSumIndices(tree):
+    ISIF = IndexSumIndexFinder()
+    return ISIF.find(tree)
 
 class IndexSumCounter(Transformer):
     "Count how many IndexSums are nested inside a tree."
