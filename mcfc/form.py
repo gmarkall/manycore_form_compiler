@@ -50,6 +50,10 @@ class FormBackend:
         "Build index for a loop over spatial dimensions."
         return DimIndex(self.numDimensions, count)
 
+    def buildConstDimIndex(self, count):
+        "Build literal subscript for a loop over spatial dimensions."
+        return ConstIndex(self.numDimensions, count)
+
     def buildGaussIndex(self):
         "Build index for a Gauss quadrature loop."
         return GaussIndex(self.numGaussPoints)
@@ -324,6 +328,11 @@ class DimIndex(CodeIndex):
 
     def name(self):
         return "i_d_%d" % (self._count)
+
+class ConstIndex(CodeIndex):
+
+    def name(self):
+        return str(self._count)
 
 # Name builders
 

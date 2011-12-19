@@ -22,7 +22,7 @@ from symbolicvalue import SymbolicValue
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.argument import Argument
 from ufl.common import Stack
-from ufl.indexing import Index
+from ufl.indexing import Index, FixedIndex
 
 class ExpressionBuilder(Transformer):
 
@@ -59,7 +59,9 @@ class ExpressionBuilder(Transformer):
         indices = []
         for i in tree:
             if isinstance(i, Index):
-                indices.append(i)
+                indices.append(self._formBackend.buildDimIndex(i.count()))
+            elif isinstance(i, FixedIndex):
+                indices.append(self._formBackend.buildConstDimIndex(i._value))
             else:
                 raise RuntimeError('Other types of indices not yet implemented.')
         return tuple(indices)
@@ -134,9 +136,7 @@ class ExpressionBuilder(Transformer):
         # If there are no indices present (e.g. in the quadrature evaluation loop) then
         # we need to fake indices for the coefficient based on its rank:
         if fake_indices:
-            fake = []
-            for i in range(rank):
-                fake.append(Index(i))
+            fake = [self._formBackend.buildDimIndex(i) for i in range(rank)]
             self._indexStack.push(tuple(fake))
 
         indices = self.subscript_CoeffQuadrature(coeff)

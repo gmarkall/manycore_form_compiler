@@ -62,14 +62,12 @@ class Op2ExpressionBuilder(ExpressionBuilder):
 
         if isinstance(operand, ufl.argument.Argument):
             indices = [] 
-            for i in dimIndices:
-                indices.append(self._formBackend.buildDimIndex(i.count()))
+            indices.extend(dimIndices)
             indices = indices + [ self._formBackend.buildGaussIndex(),
                                   self._formBackend.buildBasisIndex(count) ]
         elif isinstance(operand, ufl.coefficient.Coefficient):
             indices = [ self._formBackend.buildGaussIndex() ]
-            for i in dimIndices:
-                indices.append(self._formBackend.buildDimIndex(i.count()))
+            indices.extend(dimIndices)
 
         return indices
 
@@ -91,12 +89,11 @@ class Op2ExpressionBuilder(ExpressionBuilder):
 
         if isinstance(coeff, ufl.differentiation.SpatialDerivative):
             rank = rank + 1
-        if rank != 0:
+        if rank > 0:
             dimIndices = self._indexStack.peek()
             if len(dimIndices) != rank:
                 raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
-            for i in dimIndices:
-                indices.append(self._formBackend.buildDimIndex(i.count()))
+            indices.extend(dimIndices)
         
         return indices
 

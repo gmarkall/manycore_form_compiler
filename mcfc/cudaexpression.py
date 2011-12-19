@@ -102,11 +102,9 @@ class CudaExpressionBuilder(ExpressionBuilder):
         # Build the subscript based on the argument count
         count = tree.count()
         indices = []
-        for t in self._indexStack:
-            for i in t:
-                indices.append(self._formBackend.buildDimIndex(i.count()))
-        indices = indices + [self._formBackend.buildBasisIndex(count), 
-                             self._formBackend.buildGaussIndex()]
+        for dimIndices in self._indexStack:
+            indices.extend(dimIndices)
+        indices = indices + [self._formBackend.buildBasisIndex(count), self._formBackend.buildGaussIndex()]
         return indices
 
     def subscript_SpatialDerivative(self,tree,dimIndices):
@@ -117,14 +115,12 @@ class CudaExpressionBuilder(ExpressionBuilder):
 
         if isinstance(operand, ufl.argument.Argument):
             indices = [ ElementIndex()]
-            for i in dimIndices:
-                indices.append(self._formBackend.buildDimIndex(i.count()))
+            indices.extend(dimIndices)
             indices = indices + [ self._formBackend.buildGaussIndex(),
                                   self._formBackend.buildBasisIndex(count) ]
         elif isinstance(operand, ufl.coefficient.Coefficient):
             indices = [ self._formBackend.buildGaussIndex() ]
-            for i in dimIndices:
-                indices.append(self._formBackend.buildDimIndex(i.count()))
+            indices.extend(dimIndices)
 
         return indices
 
@@ -149,12 +145,11 @@ class CudaExpressionBuilder(ExpressionBuilder):
         if isinstance(coeff, ufl.differentiation.SpatialDerivative):
             rank = rank + 1 
 
-        if rank != 0:
+        if rank > 0:
             dimIndices = self._indexStack.peek()
             if len(dimIndices) != rank:
                 raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
-            for i in dimIndices:
-                indices.append(self._formBackend.buildDimIndex(i.count()))
+            indices.extend(dimIndices)
         
         return indices
 
