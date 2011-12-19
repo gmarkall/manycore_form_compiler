@@ -176,6 +176,33 @@ class CoefficientUseFinder(Transformer):
     def coefficient(self, tree):
         self._coefficients.append(tree)
 
+class IndexSumIndexFinder(Transformer):
+    "Find the count and extent of indices reduced by an IndexSum in a form."
+
+    def find(self, tree):
+        self._indices = []
+        self.visit(tree)
+        return self._indices
+
+    def index_sum(self, tree):
+
+        summand, mi = tree.operands()
+        indices = mi.index_dimensions()
+
+        print indices
+        for c, d in indices.items():
+            self._indices.append({"count": c.count(), "extent": d})
+
+        self.visit(summand)
+
+    # We don't care about any other node.
+    def expr(self, tree, *ops):
+        pass
+
+def indexSumIndices(tree):
+    ISIF = IndexSumIndexFinder()
+    return ISIF.find(tree)
+
 class IndexSumCounter(Transformer):
     "Count how many IndexSums are nested inside a tree."
 

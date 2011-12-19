@@ -222,12 +222,14 @@ class CudaFormBackend(FormBackend):
         # Determine how many dimension loops we need by inspection.
         # We count the nesting depth of IndexSums to determine
         # how many dimension loops we need.
-        numDimLoops = self._indexSumCounter.count(integrand)
+        dimLoops = indexSumIndices(integrand)
 
         # Add loops for each dimension as necessary. 
-        for d in range(numDimLoops):
-            indVarName = self.buildDimIndex(d).name()
-            dimLoop = buildSimpleForLoop(indVarName, self.numDimensions)
+        for d in dimLoops:
+            print d['count']
+            print d['extent']
+            indVarName = self.buildDimIndex(d['count']).name()
+            dimLoop = buildSimpleForLoop(indVarName, d['extent'])
             loop.append(dimLoop)
             loop = dimLoop
 

@@ -27,7 +27,7 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
         for(int i_g = 0; i_g < 6; i_g++)
         {
           localTensor[((i_ele + n_ele * i_r_0) + 3 * n_ele * i_r_1)] += -1 * CG1[(i_r_0 + 3 * i_g)] * CG1[(i_r_1 + 3 * i_g)] * detwei[(i_ele + n_ele * i_g)];
-          for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+          for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
           {
             localTensor[((i_ele + n_ele * i_r_0) + 3 * n_ele * i_r_1)] += d_CG1[(((i_ele + n_ele * i_d_0) + 2 * n_ele * i_g) + 6 * 2 * n_ele * i_r_0)] * d_CG1[(((i_ele + n_ele * i_d_0) + 2 * n_ele * i_g) + 6 * 2 * n_ele * i_r_1)] * detwei[(i_ele + n_ele * i_g)];
           };
