@@ -137,30 +137,6 @@ class CudaFormBackend(FormBackend):
         
         return initialisers
 
-    def buildQuadratureLoopNest(self, form):
-        "Build quadrature loop nest evaluating all coefficients of the form."
-        
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
-        coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
-
-        # Outer loop over gauss points
-        indVar = self.buildGaussIndex().name()
-        gaussLoop = buildSimpleForLoop(indVar, self.numGaussPoints)
-
-        # Build a loop nest for each coefficient containing expressions
-        # to compute its value
-        for coeff in coefficients:
-            rank = coeff.rank()
-            self.buildCoefficientLoopNest(coeff, rank, gaussLoop)
-
-        for spatialDerivative in spatialDerivatives:
-            operand = spatialDerivative.operands()[0]
-            rank = operand.rank() + 1
-            self.buildCoefficientLoopNest(spatialDerivative, rank, gaussLoop)
-
-        return gaussLoop
-
     def buildCoefficientLoopNest(self, coeff, rank, scope):
         "Build loop nest evaluating a coefficient at a given quadrature point."
 
