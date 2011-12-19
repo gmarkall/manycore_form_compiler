@@ -134,7 +134,7 @@ void rhs(double localTensor[3], double dt, double detwei[6], double c0[3], doubl
       {
         for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
         {
-          localTensor[i_r_0] += 0.5 * -1 * c_q1[i_g][i_d_0][i_d_1] * d_CG1[i_d_0][i_g][i_r_0] * d_c_q0[i_g][i_d_0] * detwei[i_g];
+          localTensor[i_r_0] += 0.5 * -1 * c_q1[i_g][i_d_0][i_d_1] * d_CG1[i_d_0][i_g][i_r_0] * d_c_q0[i_g][i_d_3] * detwei[i_g];
         };
       };
     };

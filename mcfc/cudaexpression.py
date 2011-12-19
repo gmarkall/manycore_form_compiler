@@ -153,12 +153,10 @@ class CudaExpressionBuilder(ExpressionBuilder):
             rank = rank + 1 
 
         if rank != 0:
-            print "Rank: %d" % coeff.rank()
             dimIndices = self._indexStack.peek()
             if len(dimIndices) != rank:
                 raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
             for i in dimIndices:
-                print "Count: ", i.count()
                 indices.append(self._form.buildDimIndex(i.count()))
         
         return indices
