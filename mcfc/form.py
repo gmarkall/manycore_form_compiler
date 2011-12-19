@@ -25,6 +25,7 @@ from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 # MCFC libs
 from codegeneration import *
 from formutils import *
+from utilities import uniqify, formElementRank, formElementSpaceDim
 
 class FormBackend(object):
     "Base class for generating form tabulation kernels."
@@ -262,32 +263,12 @@ class FormBackend(object):
 
         return declarations
 
-    def _elementRank(self, form):
-        # Use the element from the first argument, which should be the TestFunction
-        arg = form.form_data().arguments[0]
-        e = arg.element()
-
-        if isinstance(e, FiniteElement):
-            return 0
-        elif isinstance(e, VectorElement):
-            return 1
-        elif isinstance(e, TensorElement):
-            return 2
-        else:
-            raise RuntimeError("Not a recognised element.")
-
-    def _elementSpaceDim(self, form):
-        # Use the element from the first argument, which should be the TestFunction
-        arg = form.form_data().arguments[0]
-        e = arg.element()
-        return e.cell().geometric_dimension()
-
     # This function provides a simple calculation of the number of basis
     # functions per element. This works for the tensor product of a scalar basis
     # only.
     def _numBasisFunctions(self, form):
-        elementRank = self._elementRank(form)
-        spaceDimension = self._elementSpaceDim(form)
+        elementRank = formElementRank(form)
+        spaceDimension = formElementSpaceDim(form)
         return self.numNodesPerEle * pow(spaceDimension, elementRank)
 
     def _buildBasisTensors(self, form_data):
