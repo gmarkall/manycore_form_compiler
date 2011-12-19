@@ -19,38 +19,36 @@
 
 # UFL modules
 import ufl
+from ufl.tensoralgebra import Inverse, Determinant
 # femtools libs
 from get_element import get_element
 
 countJ = -3
-countInvJ = -4
-countDetJ = -5
 
 # Introduce convenience shorthand for initialising TestFunction from Coefficient
 def TestFunction(initialiser):
-    """UFL value: Create a test function argument to a form."""
+    "UFL value: Create a test function argument to a form."
     if isinstance(initialiser, ufl.Coefficient):
         initialiser = initialiser.element()
     return ufl.TestFunction(initialiser)
 
 # Introduce convenience shorthand for initialising TrialFunction from Coefficient
 def TrialFunction(initialiser):
-    """UFL value: Create a trial function argument to a form."""
+    "UFL value: Create a trial function argument to a form."
     if isinstance(initialiser, ufl.Coefficient):
         initialiser = initialiser.element()
     return ufl.TrialFunction(initialiser)
 
-def Jacobian(element):
-    """UFL value: Create a Jacobian matrix coefficient to a form."""
+def Jacobian(coordinates):
+    "UFL value: Create a Jacobian matrix coefficient from the coordinate field."
+    # If the coordinate field lives in P^n, the Jacobian lives in P^{n-1}_DG
+    degree = coordinates.element().degree() - 1
+    domain = coordinates.element().cell().domain()
+    # FIXME Evil hack!
+    # We attach the coordinate field as the quad_scheme property, since this
+    # is not affected by reconstruction
+    element = ufl.TensorElement('DG', domain, degree, quad_scheme=coordinates)
     return ufl.Coefficient(element, countJ)
-
-def JacobianInverse(element):
-    """UFL value: Create a Jacobian inverse coefficient to a form."""
-    return ufl.Coefficient(element, countInvJ)
-
-def JacobianDeterminant(element):
-    """UFL value: Create a Jacobian determinant coefficient to a form."""
-    return ufl.Coefficient(element, countDetJ)
 
 # Number of facets associated with each UFL domain
 domain2num_vertices = {"cell1D": None,
@@ -75,17 +73,9 @@ def transform(coordinates):
                        domain2num_vertices[domain],
                        element.quadrature_scheme(),
                        element.degree() )
-    # If the coordinate field lives in P^n, the Jacobian lives in P^{n-1}_DG
-    degree = element.degree() - 1
-    J = Jacobian(ufl.TensorElement('DG', domain, degree))
-    J._coordinates = coordinates
-    J._label = 'Jacobian'
-    invJ = JacobianInverse(ufl.TensorElement('DG', domain, degree))
-    invJ._coordinates = coordinates
-    invJ._label = 'JacobianInverse'
-    detJ = JacobianDeterminant(ufl.FiniteElement('DG', domain, degree))
-    detJ._coordinates = coordinates
-    detJ._label = 'JacobianDeterminant'
+    J = Jacobian(coordinates)
+    invJ = Inverse(J)
+    detJ = Determinant(J)
     return J, invJ, detJ
 
 # vim:sw=4:ts=4:sts=4:et
