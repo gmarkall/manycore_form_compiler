@@ -315,12 +315,12 @@ class CudaAssemblerBackend(AssemblerBackend):
             # Build calls to addto kernels. 
             # For the matrix
             params = [ sparsity['findrm'], sparsity['colm'], globalMatrix, eleNodes, \
-                         localMatrix, numEle, nodesPerEle ]
+                         localMatrix, numEle, self._numBasisExpr(matrix) ]
             matrixAddto = CudaKernelCall('matrix_addto', params, gridXDim, blockXDim)
             func.append(matrixAddto)
 
             # And the vector
-            params = [ globalVector, eleNodes, localVector, numEle, nodesPerEle ]
+            params = [ globalVector, eleNodes, localVector, numEle, self._numBasisExpr(vector) ]
             vectorAddto = CudaKernelCall('vector_addto', params, gridXDim, blockXDim)
             func.append(vectorAddto)
             
@@ -332,7 +332,7 @@ class CudaAssemblerBackend(AssemblerBackend):
 
             # expand the result
             var = self.extractCoefficient(func, result)
-            params = [ var, solutionVector, eleNodes, numEle, stateGetter(numValsPerNode, param=result), nodesPerEle ]
+            params = [ var, solutionVector, eleNodes, numEle, stateGetter(numValsPerNode, param=result), self._numBasisExpr(matrix) ]
             expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
             func.append(expand)
 
@@ -345,6 +345,9 @@ class CudaAssemblerBackend(AssemblerBackend):
                 func.append(ArrowOp(state, returnCall))
 
         return func
+
+    def _numBasisExpr(self, form):
+        return nodesPerEle
 
     def extractCoefficient(self, func, coefficientName):
         varName = coefficientName + 'Coeff'
