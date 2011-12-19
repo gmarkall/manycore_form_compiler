@@ -91,10 +91,10 @@ __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, d
       };
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
-        d_c_q0[i_g] = 0.0;
+        d_c_q0[(i_g + 6 * i_d_0)] = 0.0;
         for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
         {
-          d_c_q0[i_g] += c0[(i_ele + n_ele * i_r_0)] * d_CG1[(((i_ele + n_ele * i_d_0) + 2 * n_ele * i_g) + 6 * 2 * n_ele * i_r_0)];
+          d_c_q0[(i_g + 6 * i_d_0)] += c0[(i_ele + n_ele * i_r_0)] * d_CG1[(((i_ele + n_ele * i_d_0) + 2 * n_ele * i_g) + 6 * 2 * n_ele * i_r_0)];
         };
       };
     };

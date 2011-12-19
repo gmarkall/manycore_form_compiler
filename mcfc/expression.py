@@ -126,7 +126,8 @@ class ExpressionBuilder(Transformer):
         self._exprStack.append(argExpr)
 
     def coefficient(self, tree):
-        coeffExpr = self.buildCoeffQuadratureAccessor(tree, True)
+        print "Real indices: ", self._indexStack
+        coeffExpr = self.buildCoeffQuadratureAccessor(tree)
         self._exprStack.append(coeffExpr)
 
     def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
@@ -146,12 +147,12 @@ class ExpressionBuilder(Transformer):
         if fake_indices:
             fake = []
             for i in range(rank):
-                fake.append(i)
-            print fake
+                fake.append(Index(i))
             self._indexStack.push(tuple(fake))
-            print self._indexStack
+            print "fake indices: ", self._indexStack
 
         indices = self.subscript_CoeffQuadrature(coeff)
+        print indices
 
         # Remove the fake indices
         if fake_indices:
