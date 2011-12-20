@@ -104,8 +104,9 @@ class CudaExpressionBuilder(ExpressionBuilder):
         indices = []
         for t in self._indexStack:
             for i in t:
-                indices.append(self._form.buildDimIndex(i.count()))
-        indices = indices + [self._form.buildBasisIndex(count), self._form.buildGaussIndex()]
+                indices.append(self._formBackend.buildDimIndex(i.count()))
+        indices = indices + [self._formBackend.buildBasisIndex(count), 
+                             self._formBackend.buildGaussIndex()]
         return indices
 
     def subscript_SpatialDerivative(self,tree,dimIndices):
@@ -117,13 +118,13 @@ class CudaExpressionBuilder(ExpressionBuilder):
         if isinstance(operand, ufl.argument.Argument):
             indices = [ ElementIndex()]
             for i in dimIndices:
-                indices.append(self._form.buildDimIndex(i.count()))
-            indices = indices + [ self._form.buildGaussIndex(),
-                                  self._form.buildBasisIndex(count) ]
+                indices.append(self._formBackend.buildDimIndex(i.count()))
+            indices = indices + [ self._formBackend.buildGaussIndex(),
+                                  self._formBackend.buildBasisIndex(count) ]
         elif isinstance(operand, ufl.coefficient.Coefficient):
-            indices = [ self._form.buildGaussIndex() ]
+            indices = [ self._formBackend.buildGaussIndex() ]
             for i in dimIndices:
-                indices.append(self._form.buildDimIndex(i.count()))
+                indices.append(self._formBackend.buildDimIndex(i.count()))
 
         return indices
 
@@ -136,13 +137,13 @@ class CudaExpressionBuilder(ExpressionBuilder):
 
         # One rank index for each rank
         for r in range(rank):
-            indices.append(self._form.buildBasisIndex(r))
+            indices.append(self._formBackend.buildBasisIndex(r))
 
         return indices
 
     def subscript_CoeffQuadrature(self, coeff):
         # Build the subscript based on the rank
-        indices = [self._form.buildGaussIndex()]
+        indices = [self._formBackend.buildGaussIndex()]
         rank = coeff.rank()
 
         if isinstance(coeff, ufl.differentiation.SpatialDerivative):
@@ -153,7 +154,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
             if len(dimIndices) != rank:
                 raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
             for i in dimIndices:
-                indices.append(self._form.buildDimIndex(i.count()))
+                indices.append(self._formBackend.buildDimIndex(i.count()))
         
         return indices
 
@@ -166,15 +167,16 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         rank = tree.rank()
         indices = [ ElementIndex() ]
         for r in range(rank):
-            index = self._form.buildDimIndex(r)
+            index = self._formBackend.buildDimIndex(r)
             indices.append(index)
-        indices.append(self._form.buildBasisIndex(0))
+        indices.append(self._formBackend.buildBasisIndex(0))
         return indices
 
     def subscript_argument(self, tree):
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
-        indices = [self._form.buildBasisIndex(0), self._form.buildGaussIndex()]
+        indices = [self._formBackend.buildBasisIndex(0), 
+                   self._formBackend.buildGaussIndex()]
         return indices
 
     def subscript_spatial_derivative(self, tree):
@@ -184,9 +186,9 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         argument = tree.operands()[0]
         count = argument.count()
         indices = [ ElementIndex(),
-                    self._form.buildDimIndex(0),
-                    self._form.buildGaussIndex(),
-                    self._form.buildBasisIndex(0) ]
+                    self._formBackend.buildDimIndex(0),
+                    self._formBackend.buildGaussIndex(),
+                    self._formBackend.buildBasisIndex(0) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et
