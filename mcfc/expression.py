@@ -26,9 +26,9 @@ from ufl.indexing import Index
 
 class ExpressionBuilder(Transformer):
 
-    def __init__(self, form):
+    def __init__(self, formBackend):
         Transformer.__init__(self)
-        self._form = form
+        self._formBackend = formBackend
 
     def build(self, tree):
         "Build the rhs for evaluating an expression tree."
@@ -169,8 +169,8 @@ class ExpressionBuilder(Transformer):
 
 class QuadratureExpressionBuilder:
 
-    def __init__(self, form):
-        self._form = form
+    def __init__(self, formBackend):
+        self._formBackend = formBackend
 
     def build(self, tree):
         # Build Accessor for values at nodes

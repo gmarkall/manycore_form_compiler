@@ -50,7 +50,8 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         count = tree.count()
-        indices = [self._form.buildBasisIndex(count), self._form.buildGaussIndex()]
+        indices = [self._formBackend.buildBasisIndex(count), 
+                   self._formBackend.buildGaussIndex()]
         return indices
 
     def subscript_SpatialDerivative(self,tree,dimIndices):
@@ -62,13 +63,13 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         if isinstance(operand, ufl.argument.Argument):
             indices = [] 
             for i in dimIndices:
-                indices.append(self._form.buildDimIndex(i.count()))
-            indices = indices + [ self._form.buildGaussIndex(),
-                                  self._form.buildBasisIndex(count) ]
+                indices.append(self._formBackend.buildDimIndex(i.count()))
+            indices = indices + [ self._formBackend.buildGaussIndex(),
+                                  self._formBackend.buildBasisIndex(count) ]
         elif isinstance(operand, ufl.coefficient.Coefficient):
-            indices = [ self._form.buildGaussIndex() ]
+            indices = [ self._formBackend.buildGaussIndex() ]
             for i in dimIndices:
-                indices.append(self._form.buildDimIndex(i.count()))
+                indices.append(self._formBackend.buildDimIndex(i.count()))
 
         return indices
 
@@ -79,13 +80,13 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         indices = []
         # One rank index for each rank
         for r in range(rank):
-            indices.append(self._form.buildBasisIndex(r))
+            indices.append(self._formBackend.buildBasisIndex(r))
 
         return indices
 
     def subscript_CoeffQuadrature(self, coeff):
         # Build the subscript based on the rank
-        indices = [self._form.buildGaussIndex()]
+        indices = [self._formBackend.buildGaussIndex()]
         rank = coeff.rank()
 
         if isinstance(coeff, ufl.differentiation.SpatialDerivative):
@@ -95,7 +96,7 @@ class Op2ExpressionBuilder(ExpressionBuilder):
             if len(dimIndices) != rank:
                 raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
             for i in dimIndices:
-                indices.append(self._form.buildDimIndex(i.count()))
+                indices.append(self._formBackend.buildDimIndex(i.count()))
         
         return indices
 
@@ -106,16 +107,17 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def subscript(self, tree):
         rank = tree.rank()
-        indices = [self._form.buildBasisIndex(0)]
+        indices = [self._formBackend.buildBasisIndex(0)]
         for r in range(rank):
-            index = self._form.buildDimIndex(r)
+            index = self._formBackend.buildDimIndex(r)
             indices.insert(0, index)
         return indices
 
     def subscript_argument(self, tree):
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
-        indices = [self._form.buildBasisIndex(0), self._form.buildGaussIndex()]
+        indices = [self._formBackend.buildBasisIndex(0), 
+                   self._formBackend.buildGaussIndex()]
         return indices
 
     def subscript_spatial_derivative(self, tree):
@@ -123,9 +125,9 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
         argument = tree.operands()[0]
-        indices = [ self._form.buildDimIndex(0),
-                    self._form.buildGaussIndex(),
-                    self._form.buildBasisIndex(0) ]
+        indices = [ self._formBackend.buildDimIndex(0),
+                    self._formBackend.buildGaussIndex(),
+                    self._formBackend.buildBasisIndex(0) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et
