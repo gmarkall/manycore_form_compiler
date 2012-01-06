@@ -212,6 +212,51 @@ class FormBackend(object):
         spaceDimension = self._elementSpaceDim(form)
         return self.numNodesPerEle * pow(spaceDimension, elementRank)
 
+    def _buildBasisTensors(self, form_data):
+        """When using a basis that is a tensor product of the scalar basis, we
+        need to create an array that holds the tensor product. This function
+        generates the code to declare and initialise that array."""
+        gp = self.numGaussPoints
+        nn = self.numNodesPerEle
+        nd = self.numDimensions
+        initialisers = []
+
+        for a in form_data.actualParameters['arguments']:
+            e = a.element()
+            # Ignore scalars
+            if isinstance(e, FiniteElement):
+                continue
+            elif isinstance(e, VectorElement):
+                n = buildVectorArgumentName(a)
+            else:
+                raise RuntimeError("Not supported.")
+
+            arg = buildArgumentName(a)
+            t = Array(Real(), [nd,gp,nn*nd])
+            var = Variable(n, t)
+
+            # Construct the initialiser lists for the tensor product of the scalar basis.
+            outer = []
+            for d1 in range(nd):
+                middle = []
+                for igp in range(gp):
+                    innermost = []
+                    for d2 in range(nd):
+                        for inn in range(nn):
+                            if d1 == d2:
+                                expr = Subscript(Variable(arg), Literal(inn*gp+igp))
+                            else:
+                                expr = Literal(0.0)
+                            innermost.append(expr)
+                    middle.append(InitialiserList(innermost))
+                outer.append(InitialiserList(middle))
+            initlist = InitialiserList(outer)
+
+            init = InitialisationOp(var, initlist)
+            initialisers.append(init)
+
+        return initialisers
+
     def compile(self, form):
         raise NotImplementedError("You're supposed to implement compile()!")
 
