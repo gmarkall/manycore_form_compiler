@@ -4,12 +4,12 @@
 # modify it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
-# 
+#
 # The Manycore Form Compiler is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # the Manycore Form Compiler.  If not, see <http://www.gnu.org/licenses>
 #
@@ -74,19 +74,19 @@ class FormBackend:
         expr = PlusAssignmentOp(lhs, rhs)
 
         return expr
-        
+
     def buildQuadratureExpression(self, coeff):
         "Build the expression to evaluate a particular coefficient."
         rhs = self._quadratureExpressionBuilder.build(coeff)
 
         lhs = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff, True)
         expr = PlusAssignmentOp(lhs, rhs)
-        
+
         return expr
 
     def buildQuadratureLoopNest(self, form):
         "Build quadrature loop nest evaluating all coefficients of the form."
-        
+
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
@@ -123,7 +123,7 @@ class FormBackend:
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
-        
+
         declarations = []
 
         for coeff in coefficients:
@@ -165,7 +165,6 @@ class FormBackend:
     # functions per element. This works for the tensor product of a scalar basis
     # only.
     def _numBasisFunctions(self, form):
-        form_data = form.form_data()
         elementRank = self._elementRank(form)
         spaceDimension = self._elementSpaceDim(form)
         return self.numNodesPerEle * pow(spaceDimension, elementRank)
@@ -188,7 +187,7 @@ class CoefficientUseFinder(Transformer):
         # because we need separate criteria to uniqify the lists.
         self._coefficients = []
         self._spatialDerivatives = []
-        
+
         self.visit(tree)
 
         # Coefficients define __eq__ and __hash__ so the straight uniqify works.
@@ -249,7 +248,7 @@ class IndexSumCounter(Transformer):
         return self._maxIndexSumDepth
 
     def index_sum(self, tree):
-        
+
         summand, indices = tree.operands()
 
         self._indexSumDepth = self._indexSumDepth + 1
@@ -290,7 +289,7 @@ class Partitioner(Transformer):
         else:
             self.visit(ops[0])
             self.visit(ops[1])
-    
+
     # If it's not a sum, then there shouldn't be any partitioning
     # of the tree anyway.
     def expr(self, tree):
@@ -315,7 +314,7 @@ class CodeIndex:
         return Literal(self._extent)
 
 class BasisIndex(CodeIndex):
-    
+
     def name(self):
         return "i_r_%d" % (self._count)
 
@@ -348,7 +347,7 @@ def buildArgumentName(tree):
             # Sub elements are all the same
             sub_elements = element.sub_elements()
             element = sub_elements[0]
-        
+
     return safe_shortstr(element.shortstr())
 
 def buildSpatialDerivativeName(tree):

@@ -4,12 +4,12 @@
 # modify it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
-# 
+#
 # The Manycore Form Compiler is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # the Manycore Form Compiler.  If not, see <http://www.gnu.org/licenses>
 #
@@ -40,7 +40,7 @@ class CudaFormBackend(FormBackend):
         form_data = form.form_data()
         assert form_data, "Form has no form data attached!"
         rank = form_data.rank
-        
+
         # Get parameter list for kernel declaration.
         formalParameters, actualParameters = self._buildKernelParameters(integrand, form)
         # Attach list of formal and actual kernel parameters to form data
@@ -70,7 +70,7 @@ class CudaFormBackend(FormBackend):
         statements = basisTensors + [loopNest]
         body = Scope(statements)
         kernel = FunctionDefinition(Void(), name, formalParameters, body)
-        
+
         # If there's any coefficients, we need to build a loop nest
         # that calculates their values at the quadrature points
         if form_data.num_coefficients > 0:
@@ -79,7 +79,7 @@ class CudaFormBackend(FormBackend):
             loopNest.prepend(quadLoopNest)
             for decl in declarations:
                 loopNest.prepend(decl)
-        
+
         # Make this a Cuda kernel.
         kernel.setCudaKernel(True)
         return kernel
@@ -100,7 +100,7 @@ class CudaFormBackend(FormBackend):
         nn = self.numNodesPerEle
         nd = self.numDimensions
         initialisers = []
-        
+
         for a in form_data.actualParameters['arguments']:
             e = a.element()
             # Ignore scalars
@@ -134,7 +134,7 @@ class CudaFormBackend(FormBackend):
 
             init = InitialisationOp(var, initlist)
             initialisers.append(init)
-        
+
         return initialisers
 
     def buildCoefficientLoopNest(self, coeff, rank, scope):
@@ -157,15 +157,15 @@ class CudaFormBackend(FormBackend):
         indVar = self.buildBasisIndex(0).name()
         basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
         loop.append(basisLoop)
-    
+
         # Add the expression to compute the value inside the basis loop
         computation = self.buildQuadratureExpression(coeff)
         basisLoop.append(computation)
 
     def buildLoopNest(self, form):
         "Build the loop nest for evaluating a form expression."
-        form_data = form.form_data()
-        rank = form_data.rank
+        rank = form.form_data().rank
+        numBasisFunctions = self._numBasisFunctions(form)
 
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
@@ -176,7 +176,7 @@ class CudaFormBackend(FormBackend):
 
         # Build the loop over the first rank, which always exists
         indVarName = self.buildBasisIndex(0).name()
-        basisLoop = buildSimpleForLoop(indVarName, self._numBasisFunctions(form))
+        basisLoop = buildSimpleForLoop(indVarName, numBasisFunctions)
         loop.append(basisLoop)
         loop = basisLoop
 
@@ -184,10 +184,10 @@ class CudaFormBackend(FormBackend):
         # more than one more... )
         for r in range(1,rank):
             indVarName = self.buildBasisIndex(r).name()
-            basisLoop = buildSimpleForLoop(indVarName, self._numBasisFunctions(form))
+            basisLoop = buildSimpleForLoop(indVarName, numBasisFunctions)
             loop.append(basisLoop)
             loop = basisLoop
-        
+
         # Add a loop for the quadrature
         indVarName = self.buildGaussIndex().name()
         gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
@@ -199,7 +199,7 @@ class CudaFormBackend(FormBackend):
         # how many dimension loops we need.
         dimLoops = indexSumIndices(integrand)
 
-        # Add loops for each dimension as necessary. 
+        # Add loops for each dimension as necessary.
         for d in dimLoops:
             indVarName = self.buildDimIndex(d['count']).name()
             dimLoop = buildSimpleForLoop(indVarName, d['extent'])

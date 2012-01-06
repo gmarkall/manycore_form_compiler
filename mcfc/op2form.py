@@ -4,12 +4,12 @@
 # modify it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
-# 
+#
 # The Manycore Form Compiler is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # the Manycore Form Compiler.  If not, see <http://www.gnu.org/licenses>
 #
@@ -37,11 +37,7 @@ class Op2FormBackend(FormBackend):
         form_data = form.form_data()
         assert form_data, "Form has no form data attached!"
         rank = form_data.rank
-        
-        # Things for kernel declaration.
-        t = Void()
-        params = self.buildParameterList(integrand, form)
-        
+
         # Build the loop nest
         loopNest = self.buildLoopNest(form)
 
@@ -62,8 +58,9 @@ class Op2FormBackend(FormBackend):
         # Build the function with the loop nest inside
         statements = [loopNest]
         body = Scope(statements)
-        kernel = FunctionDefinition(t, name, params, body)
-        
+        formalParameters, _ = self._buildKernelParameters(integrand, form)
+        kernel = FunctionDefinition(Void(), name, formalParameters, body)
+
         # If there's any coefficients, we need to build a loop nest
         # that calculates their values at the quadrature points
         if form_data.num_coefficients > 0:
@@ -72,7 +69,7 @@ class Op2FormBackend(FormBackend):
             loopNest.prepend(quadLoopNest)
             for decl in declarations:
                 loopNest.prepend(decl)
-        
+
         return kernel
 
     def _buildCoeffQuadDeclaration(self, name, rank):
@@ -109,14 +106,13 @@ class Op2FormBackend(FormBackend):
         indVar = self.buildBasisIndex(0).name()
         basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
         loop.append(basisLoop)
-    
+
         # Add the expression to compute the value inside the basis loop
         computation = self.buildQuadratureExpression(coeff)
         basisLoop.append(computation)
 
     def buildLoopNest(self, form):
-        form_data = form.form_data()
-        rank = form_data.rank
+        rank = form.form_data().rank
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
@@ -132,7 +128,7 @@ class Op2FormBackend(FormBackend):
             basisLoop = buildSimpleForLoop(indVarName, self.numNodesPerEle)
             loop.append(basisLoop)
             loop = basisLoop
-        
+
         # Add a loop for the quadrature
         indVarName = self.buildGaussIndex().name()
         gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
@@ -144,7 +140,7 @@ class Op2FormBackend(FormBackend):
         # how many dimension loops we need.
         dimLoops = indexSumIndices(integrand)
 
-        # Add loops for each dimension as necessary. 
+        # Add loops for each dimension as necessary.
         for d in dimLoops:
             indVarName = self.buildDimIndex(d['count']).name()
             dimLoop = buildSimpleForLoop(indVarName, d['extent'])
@@ -154,10 +150,6 @@ class Op2FormBackend(FormBackend):
         # Hand back the outer loop, so it can be inserted into some
         # scope.
         return outerLoop
-
-    def buildParameterList(self, tree, form):
-        formalParameters, _ = self._buildKernelParameters(tree, form)
-        return formalParameters
 
     def subscript_detwei(self):
         indices = [self.buildGaussIndex()]
