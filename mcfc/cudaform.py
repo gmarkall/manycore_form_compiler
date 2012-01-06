@@ -164,47 +164,11 @@ class CudaFormBackend(FormBackend):
 
     def buildLoopNest(self, form):
         "Build the loop nest for evaluating a form expression."
-        rank = form.form_data().rank
-        numBasisFunctions = self._numBasisFunctions(form)
-
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
 
         # The element loop is the outermost loop
-        loop = buildElementLoop()
-        outerLoop = loop
-
-        # Build the loop over the first rank, which always exists
-        indVarName = self.buildBasisIndex(0).name()
-        basisLoop = buildSimpleForLoop(indVarName, numBasisFunctions)
-        loop.append(basisLoop)
-        loop = basisLoop
-
-        # Add another loop for each rank of the form (probably no
-        # more than one more... )
-        for r in range(1,rank):
-            indVarName = self.buildBasisIndex(r).name()
-            basisLoop = buildSimpleForLoop(indVarName, numBasisFunctions)
-            loop.append(basisLoop)
-            loop = basisLoop
-
-        # Add a loop for the quadrature
-        indVarName = self.buildGaussIndex().name()
-        gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
-        loop.append(gaussLoop)
-        loop = gaussLoop
-
-        # Determine how many dimension loops we need by inspection.
-        # We count the nesting depth of IndexSums to determine
-        # how many dimension loops we need.
-        dimLoops = indexSumIndices(integrand)
-
-        # Add loops for each dimension as necessary.
-        for d in dimLoops:
-            indVarName = self.buildDimIndex(d['count']).name()
-            dimLoop = buildSimpleForLoop(indVarName, d['extent'])
-            loop.append(dimLoop)
-            loop = dimLoop
+        outerLoop = buildElementLoop()
+        # Append the kernel loop nest
+        outerLoop.append(super(CudaFormBackend, self).buildLoopNest(form))
 
         # Hand back the outer loop, so it can be inserted into some
         # scope.
