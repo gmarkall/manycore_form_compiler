@@ -4,12 +4,12 @@
 # modify it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
-# 
+#
 # The Manycore Form Compiler is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # the Manycore Form Compiler.  If not, see <http://www.gnu.org/licenses>
 #
@@ -23,11 +23,11 @@ def buildSubscript(variable, indices):
     """Given a list of indices, return an AST that subscripts
     the given array using those indices. The order is
     important."""
-    
+
     # Add subscripts for all indices
     for i in indices:
         variable = Subscript(variable, Variable(i.name()))
-    
+
     return variable
 
 # Expression builders
@@ -50,7 +50,7 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         count = tree.count()
-        indices = [self._formBackend.buildBasisIndex(count), 
+        indices = [self._formBackend.buildBasisIndex(count),
                    self._formBackend.buildGaussIndex()]
         return indices
 
@@ -60,12 +60,12 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         operand, _ = tree.operands()
         count = operand.count()
 
-        if isinstance(operand, ufl.argument.Argument):
-            indices = [] 
+        if isinstance(operand, Argument):
+            indices = []
             indices.extend(dimIndices)
             indices = indices + [ self._formBackend.buildGaussIndex(),
                                   self._formBackend.buildBasisIndex(count) ]
-        elif isinstance(operand, ufl.coefficient.Coefficient):
+        elif isinstance(operand, Coefficient):
             indices = [ self._formBackend.buildGaussIndex() ]
             indices.extend(dimIndices)
 
@@ -74,7 +74,7 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def subscript_LocalTensor(self, form):
         form_data = form.form_data()
         rank = form_data.rank
-        
+
         indices = []
         # One rank index for each rank
         for r in range(rank):
@@ -87,14 +87,14 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         indices = [self._formBackend.buildGaussIndex()]
         rank = coeff.rank()
 
-        if isinstance(coeff, ufl.differentiation.SpatialDerivative):
+        if isinstance(coeff, SpatialDerivative):
             rank = rank + 1
         if rank > 0:
             dimIndices = self._indexStack.peek()
             if len(dimIndices) != rank:
                 raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
             indices.extend(dimIndices)
-        
+
         return indices
 
 class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
@@ -113,7 +113,7 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
     def subscript_argument(self, tree):
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
-        indices = [self._formBackend.buildBasisIndex(0), 
+        indices = [self._formBackend.buildBasisIndex(0),
                    self._formBackend.buildGaussIndex()]
         return indices
 
@@ -121,7 +121,6 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
-        argument = tree.operands()[0]
         indices = [ self._formBackend.buildDimIndex(0),
                     self._formBackend.buildGaussIndex(),
                     self._formBackend.buildBasisIndex(0) ]

@@ -142,7 +142,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
         indices = [self._formBackend.buildGaussIndex()]
         rank = coeff.rank()
 
-        if isinstance(coeff, ufl.differentiation.SpatialDerivative):
+        if isinstance(coeff, SpatialDerivative):
             rank = rank + 1 
 
         if rank > 0:
@@ -178,8 +178,6 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
-        argument = tree.operands()[0]
-        count = argument.count()
         indices = [ ElementIndex(),
                     self._formBackend.buildDimIndex(0),
                     self._formBackend.buildGaussIndex(),

@@ -19,9 +19,11 @@
 
 from form import *
 from symbolicvalue import SymbolicValue
-from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
-from ufl.argument import Argument
+from ufl.argument import TrialFunction
+from ufl.coefficient import Coefficient
 from ufl.common import Stack
+from ufl.differentiation import SpatialDerivative
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.indexing import Index, FixedIndex
 
 class ExpressionBuilder(Transformer):
@@ -124,7 +126,7 @@ class ExpressionBuilder(Transformer):
 
     def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
         rank = coeff.rank()
-        if isinstance(coeff, ufl.coefficient.Coefficient):
+        if isinstance(coeff, Coefficient):
             name = buildCoefficientQuadName(coeff)
         else:
             # The spatial derivative adds an extra dim index so we need to
@@ -176,9 +178,9 @@ class QuadratureExpressionBuilder:
         # Build Accessor for values at nodes
         indices = self.subscript(tree)
         
-        if isinstance(tree, ufl.coefficient.Coefficient):
+        if isinstance(tree, Coefficient):
             name = buildCoefficientName(tree)
-        elif isinstance (tree, ufl.differentiation.SpatialDerivative):
+        elif isinstance (tree, SpatialDerivative):
             operand, _ = tree.operands()
             name = buildCoefficientName(operand)
 
@@ -186,14 +188,14 @@ class QuadratureExpressionBuilder:
         coeffExpr = self.buildSubscript(coeffAtBasis, indices)
         
         # Build accessor for argument
-        if isinstance(tree, ufl.coefficient.Coefficient):
+        if isinstance(tree, Coefficient):
             name = buildArgumentName(tree)
             indices = self.subscript_argument(tree)
-        elif isinstance (tree, ufl.differentiation.SpatialDerivative):
+        elif isinstance (tree, SpatialDerivative):
             operand, indices = tree.operands()
             element = operand.element()
-            basis = ufl.argument.TrialFunction(element)
-            basisDerivative = ufl.differentiation.SpatialDerivative(basis, indices)
+            basis = TrialFunction(element)
+            basisDerivative = SpatialDerivative(basis, indices)
             name = buildSpatialDerivativeName(basisDerivative)
             indices = self.subscript_spatial_derivative(basisDerivative)
 

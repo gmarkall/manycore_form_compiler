@@ -25,8 +25,8 @@ cudaform.py, op2form.py, etc."""
 from codegeneration import *
 from utilities import uniqify
 # UFL libs
-import ufl.argument
-import ufl.coefficient
+from ufl.argument import Argument
+from ufl.coefficient import Coefficient
 from ufl.algorithms.transformations import Transformer
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 
@@ -207,7 +207,7 @@ class CoefficientUseFinder(Transformer):
 
     def spatial_derivative(self, tree):
         subject = tree.operands()[0]
-        if isinstance(subject, ufl.coefficient.Coefficient):
+        if isinstance(subject, Coefficient):
             self._spatialDerivatives.append(tree)
 
     def coefficient(self, tree):
@@ -353,9 +353,9 @@ def buildArgumentName(tree):
 
 def buildSpatialDerivativeName(tree):
     operand = tree.operands()[0]
-    if isinstance(operand, ufl.argument.Argument):
+    if isinstance(operand, Argument):
         name = buildArgumentName(operand)
-    elif isinstance(operand, ufl.coefficient.Coefficient):
+    elif isinstance(operand, Coefficient):
         name = buildCoefficientQuadName(operand)
     else:
         cls = operand.__class__.__name__

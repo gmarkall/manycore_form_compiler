@@ -114,7 +114,6 @@ class Op2FormBackend(FormBackend):
         computation = self.buildQuadratureExpression(coeff)
         basisLoop.append(computation)
 
-
     def buildLoopNest(self, form):
         form_data = form.form_data()
         rank = form_data.rank
