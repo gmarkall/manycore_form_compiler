@@ -215,31 +215,43 @@ class QuadratureExpressionBuilder:
 
     def build(self, tree):
         # Build Accessor for values at nodes
-        indices = self.subscript(tree)
-
+        coeffIndices = self.subscript(tree)
+        
         if isinstance(tree, Coefficient):
-            name = buildCoefficientName(tree)
-        elif isinstance (tree, SpatialDerivative):
-            operand, _ = tree.operands()
-            name = buildCoefficientName(operand)
+            coeffName = buildCoefficientName(tree)
+            argName = buildArgumentName(tree)
+            argIndices = self.subscript_argument(tree)
 
-        coeffAtBasis = Variable(name)
-        coeffExpr = self.buildSubscript(coeffAtBasis, indices)
+            # Check if we are dealing with the Jacobian
+            if isinstance(tree.element().quadrature_scheme(), Coefficient):
+                coordinates = tree.element().quadrature_scheme()
+                # Subscript the coordinate field
+                coeffIndices = self.subscript(coordinates)
+                # We actually need to pass a SpatialDerivative to build its name
+                # FIXME: can this be done any nicer?
+                from ufl.objects import i
+                fakeDerivative = SpatialDerivative(TrialFunction(coordinates.element()),i)
+                argName = buildSpatialDerivativeName(fakeDerivative)
+                # Add an index over dimensions, since we're dealing with shape derivatives
+                # FIXME: should there be a separate function like 'subscript_dn'?
+                dim = coordinates.element().cell().topological_dimension()
+                argIndices += [self._formBackend.buildDimIndex(1)]
 
-        # Build accessor for argument
-        if isinstance(tree, Coefficient):
-            name = buildArgumentName(tree)
-            indices = self.subscript_argument(tree)
         elif isinstance (tree, SpatialDerivative):
             operand, indices = tree.operands()
-            element = operand.element()
-            basis = TrialFunction(element)
-            basisDerivative = SpatialDerivative(basis, indices)
-            name = buildSpatialDerivativeName(basisDerivative)
-            indices = self.subscript_spatial_derivative(basisDerivative)
+            coeffName = buildCoefficientName(operand)
 
-        arg = Variable(name)
-        argExpr = self.buildSubscript(arg, indices)
+            basis = TrialFunction(operand.element())
+            basisDerivative = SpatialDerivative(basis, indices)
+            argName = buildSpatialDerivativeName(basisDerivative)
+            argIndices = self.subscript_spatial_derivative(basisDerivative)
+
+            # Check if we are dealing with the Jacobian
+            if isinstance(operand.element().quadrature_scheme(), Coefficient):
+                raise RuntimeError("Oops, the Jacobian shouldn't appear under a derivative.")
+
+        coeffExpr = self.buildSubscript(Variable(coeffName), coeffIndices)
+        argExpr = self.buildSubscript(Variable(argName), argIndices)
 
         # Combine to form the expression
         expr = MultiplyOp(coeffExpr, argExpr)
