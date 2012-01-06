@@ -55,20 +55,19 @@ class Op2FormBackend(FormBackend):
             loopBody = getScopeFromNest(loopNest, exprDepth)
             loopBody.prepend(expression)
 
-        # Build the function with the loop nest inside
-        statements = [loopNest]
-        body = Scope(statements)
-        formalParameters, _ = self._buildKernelParameters(integrand, form)
-        kernel = FunctionDefinition(Void(), name, formalParameters, body)
-
         # If there's any coefficients, we need to build a loop nest
         # that calculates their values at the quadrature points
         if form_data.num_coefficients > 0:
             declarations = self.buildCoeffQuadDeclarations(form)
             quadLoopNest = self.buildQuadratureLoopNest(form)
-            loopNest.prepend(quadLoopNest)
-            for decl in declarations:
-                loopNest.prepend(decl)
+            statements = declarations + [quadLoopNest, loopNest]
+        else:
+            statements = [loopNest]
+
+        # Build the function with the loop nest inside
+        body = Scope(statements)
+        formalParameters, _ = self._buildKernelParameters(integrand, form)
+        kernel = FunctionDefinition(Void(), name, formalParameters, body)
 
         return kernel
 
