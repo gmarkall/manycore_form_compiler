@@ -38,6 +38,63 @@ class FormBackend(object):
         self._quadratureExpressionBuilder = None
         self._coefficientUseFinder = CoefficientUseFinder()
 
+    def compile(self, name, form, outerScope = None):
+        "Compile a form with a given name."
+
+        # FIXME what if we have multiple integrals?
+        integrand = form.integrals()[0].integrand()
+        form_data = form.form_data()
+        assert form_data, "Form has no form data attached!"
+        rank = form_data.rank
+
+        # Get parameter list for kernel declaration.
+        formalParameters, actualParameters = self._buildKernelParameters(integrand, form)
+        # Attach list of formal and actual kernel parameters to form data
+        form.form_data().formalParameters = formalParameters
+        form.form_data().actualParameters = actualParameters
+
+        # Initialise basis tensors if necessary
+        declarations = self._buildBasisTensors(form_data)
+
+        # Build the loop nest
+        loopNest = self.buildLoopNest(form)
+        statements = [loopNest]
+
+        # Initialise the local tensor values to 0
+        initialiser = self.buildLocalTensorInitialiser(form)
+        depth = rank
+        loopBody = getScopeFromNest(loopNest, depth)
+        loopBody.prepend(initialiser)
+
+        # Insert the expressions into the loop nest
+        partitions = findPartitions(integrand)
+        for (tree, depth) in partitions:
+            expression = self.buildExpression(form, tree)
+            exprDepth = depth + rank + 1 # add 1 for quadrature loop
+            loopBody = getScopeFromNest(loopNest, exprDepth)
+            loopBody.prepend(expression)
+
+        # If there's any coefficients, we need to build a loop nest
+        # that calculates their values at the quadrature points
+        # Note: this uses data generated during building of the expressions,
+        # hence needs to be done afterwards, though it comes first in the
+        # generated code
+        if form_data.num_coefficients > 0:
+            declarations += self.buildCoeffQuadDeclarations(form)
+            statements = [self.buildQuadratureLoopNest(form)] + statements
+
+        # If we are given an outer scope, append the statements to it
+        if outerScope:
+            for s in statements:
+                outerScope.append(s)
+            statements = [outerScope]
+
+        # Build the function with the loop nest inside
+        body = Scope(declarations + statements)
+        kernel = FunctionDefinition(Void(), name, formalParameters, body)
+
+        return kernel
+
     def buildBasisIndex(self, count):
         "Build index for a loop over basis function values."
         return BasisIndex(self.numNodesPerEle, count)
@@ -252,9 +309,6 @@ class FormBackend(object):
             initialisers.append(init)
 
         return initialisers
-
-    def compile(self, form):
-        raise NotImplementedError("You're supposed to implement compile()!")
 
     def _buildKernelParameters(self, tree, form):
         raise NotImplementedError("You're supposed to implement _buildKernelParameters()!")

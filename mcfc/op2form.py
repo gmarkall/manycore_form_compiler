@@ -30,47 +30,6 @@ class Op2FormBackend(FormBackend):
         self._expressionBuilder = Op2ExpressionBuilder(self)
         self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder(self)
 
-    def compile(self, name, form):
-
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
-        form_data = form.form_data()
-        assert form_data, "Form has no form data attached!"
-        rank = form_data.rank
-
-        # Build the loop nest
-        loopNest = self.buildLoopNest(form)
-
-        # Initialise the local tensor values to 0
-        initialiser = self.buildLocalTensorInitialiser(form)
-        depth = rank
-        loopBody = getScopeFromNest(loopNest, depth)
-        loopBody.prepend(initialiser)
-
-        # Insert the expressions into the loop nest
-        partitions = findPartitions(integrand)
-        for (tree, depth) in partitions:
-            expression = self.buildExpression(form, tree)
-            exprDepth = depth + rank + 1 # 1 = gauss loop
-            loopBody = getScopeFromNest(loopNest, exprDepth)
-            loopBody.prepend(expression)
-
-        # If there's any coefficients, we need to build a loop nest
-        # that calculates their values at the quadrature points
-        if form_data.num_coefficients > 0:
-            declarations = self.buildCoeffQuadDeclarations(form)
-            quadLoopNest = self.buildQuadratureLoopNest(form)
-            statements = declarations + [quadLoopNest, loopNest]
-        else:
-            statements = [loopNest]
-
-        # Build the function with the loop nest inside
-        body = Scope(statements)
-        formalParameters, _ = self._buildKernelParameters(integrand, form)
-        kernel = FunctionDefinition(Void(), name, formalParameters, body)
-
-        return kernel
-
     def _buildCoeffQuadDeclaration(self, name, rank):
         extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
         return Declaration(Variable(name, Array(Real(), extents)))

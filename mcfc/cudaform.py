@@ -35,50 +35,12 @@ class CudaFormBackend(FormBackend):
     def compile(self, name, form):
         "Compile a form with a given name."
 
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
-        form_data = form.form_data()
-        assert form_data, "Form has no form data attached!"
-        rank = form_data.rank
+        # The element loop is the outermost loop
+        outerLoop = buildElementLoop()
 
-        # Get parameter list for kernel declaration.
-        formalParameters, actualParameters = self._buildKernelParameters(integrand, form)
-        # Attach list of formal and actual kernel parameters to form data
-        form.form_data().formalParameters = formalParameters
-        form.form_data().actualParameters = actualParameters
-
-        basisTensors = self._buildBasisTensors(form_data)
-
-        # Build the loop nest
-        loopNest = self.buildLoopNest(form)
-
-        # Initialise the local tensor values to 0
-        initialiser = self.buildLocalTensorInitialiser(form)
-        depth = rank + 1 # Rank + element loop
-        loopBody = getScopeFromNest(loopNest, depth)
-        loopBody.prepend(initialiser)
-
-        # Insert the expressions into the loop nest
-        partitions = findPartitions(integrand)
-        for (tree, depth) in partitions:
-            expression = self.buildExpression(form, tree)
-            exprDepth = depth + rank + 2 # 2 = Ele loop + gauss loop
-            loopBody = getScopeFromNest(loopNest, exprDepth)
-            loopBody.prepend(expression)
-
-        # Build the function with the loop nest inside
-        statements = basisTensors + [loopNest]
-        body = Scope(statements)
-        kernel = FunctionDefinition(Void(), name, formalParameters, body)
-
-        # If there's any coefficients, we need to build a loop nest
-        # that calculates their values at the quadrature points
-        if form_data.num_coefficients > 0:
-            declarations = self.buildCoeffQuadDeclarations(form)
-            quadLoopNest = self.buildQuadratureLoopNest(form)
-            loopNest.prepend(quadLoopNest)
-            for decl in declarations:
-                loopNest.prepend(decl)
+        # Build the kernel as normal, but pass the element loop as the outer
+        # scope to nest the other loop nests under
+        kernel = super(CudaFormBackend, self).compile(name, form, outerLoop)
 
         # Make this a Cuda kernel.
         kernel.setCudaKernel(True)
@@ -116,18 +78,6 @@ class CudaFormBackend(FormBackend):
         # Add the expression to compute the value inside the basis loop
         computation = self.buildQuadratureExpression(coeff)
         basisLoop.append(computation)
-
-    def buildLoopNest(self, form):
-        "Build the loop nest for evaluating a form expression."
-
-        # The element loop is the outermost loop
-        outerLoop = buildElementLoop()
-        # Append the kernel loop nest
-        outerLoop.append(super(CudaFormBackend, self).buildLoopNest(form))
-
-        # Hand back the outer loop, so it can be inserted into some
-        # scope.
-        return outerLoop
 
     def subscript_detwei(self):
         indices = [ElementIndex(), self.buildGaussIndex()]

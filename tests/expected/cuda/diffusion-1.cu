@@ -17,9 +17,9 @@ int Tracer_colm_size;
 
 __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1, double* d_CG1)
 {
+  double c_q0[24];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
-    double c_q0[24];
     for(int i_g = 0; i_g < 6; i_g++)
     {
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
@@ -57,9 +57,9 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
 
 __global__ void d(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* d_CG1)
 {
+  double c_q0[24];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
-    double c_q0[24];
     for(int i_g = 0; i_g < 6; i_g++)
     {
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
@@ -114,11 +114,11 @@ __global__ void M(double* localTensor, int n_ele, double dt, double* detwei, dou
 
 __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* c1, double* CG1, double* d_CG1)
 {
+  double c_q0[6];
+  double c_q1[24];
+  double d_c_q0[12];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
-    double d_c_q0[12];
-    double c_q1[24];
-    double c_q0[6];
     for(int i_g = 0; i_g < 6; i_g++)
     {
       c_q0[i_g] = 0.0;

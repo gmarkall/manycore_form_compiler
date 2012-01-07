@@ -78,10 +78,10 @@ __global__ void M(double* localTensor, int n_ele, double dt, double* detwei, dou
 
 __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1, double* d_CG1)
 {
+  double c_q0[6];
+  double d_c_q0[12];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
-    double d_c_q0[12];
-    double c_q0[6];
     for(int i_g = 0; i_g < 6; i_g++)
     {
       c_q0[i_g] = 0.0;

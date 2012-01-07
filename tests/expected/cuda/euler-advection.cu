@@ -35,10 +35,10 @@ __global__ void Mass(double* localTensor, int n_ele, double dt, double* detwei, 
 
 __global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* c1, double* CG1, double* d_CG1)
 {
+  double c_q0[6];
+  double c_q1[12];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
-    double c_q1[12];
-    double c_q0[6];
     for(int i_g = 0; i_g < 6; i_g++)
     {
       c_q0[i_g] = 0.0;
