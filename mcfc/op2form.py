@@ -45,30 +45,6 @@ class Op2FormBackend(FormBackend):
 
         return KPG.generate(tree, form, statutoryParameters)
 
-    def buildCoefficientLoopNest(self, coeff, rank, scope):
-
-        loop = scope
-
-        # Build loop over the correct number of dimensions
-        for r in range(rank):
-            indVar = self.buildDimIndex(r).name()
-            dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
-            loop.append(dimLoop)
-            loop = dimLoop
-
-        # Add initialiser here
-        initialiser = self.buildCoeffQuadratureInitialiser(coeff)
-        loop.append(initialiser)
-
-        # One loop over the basis functions
-        indVar = self.buildBasisIndex(0).name()
-        basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
-        loop.append(basisLoop)
-
-        # Add the expression to compute the value inside the basis loop
-        computation = self.buildQuadratureExpression(coeff)
-        basisLoop.append(computation)
-
     def subscript_detwei(self):
         indices = [self.buildGaussIndex()]
         return indices

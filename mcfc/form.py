@@ -171,6 +171,31 @@ class FormBackend(object):
         # scope.
         return outerLoop
 
+    def buildCoefficientLoopNest(self, coeff, rank, scope):
+        "Build loop nest evaluating a coefficient at a given quadrature point."
+
+        loop = scope
+
+        # Build loop over the correct number of dimensions
+        for r in range(rank):
+            indVar = self.buildDimIndex(r).name()
+            dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
+            loop.append(dimLoop)
+            loop = dimLoop
+
+        # Add initialiser here
+        initialiser = self.buildCoeffQuadratureInitialiser(coeff)
+        loop.append(initialiser)
+
+        # One loop over the basis functions
+        indVar = self.buildBasisIndex(0).name()
+        basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
+        loop.append(basisLoop)
+
+        # Add the expression to compute the value inside the basis loop
+        computation = self.buildQuadratureExpression(coeff)
+        basisLoop.append(computation)
+
     def buildQuadratureExpression(self, coeff):
         "Build the expression to evaluate a particular coefficient."
         rhs = self._quadratureExpressionBuilder.build(coeff)
