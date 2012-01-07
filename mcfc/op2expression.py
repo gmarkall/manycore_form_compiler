@@ -82,10 +82,10 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def subscript(self, tree):
         rank = tree.rank()
-        indices = []
+        # Subscript order: basis index followed by dimension indices (if any)
+        indices = [self._formBackend.buildBasisIndex(0)]
         for r in range(rank):
-            indices.insert(0,self._formBackend.buildDimIndex(r))
-        indices.append(self._formBackend.buildBasisIndex(0))
+            indices.append(self._formBackend.buildDimIndex(r))
         return indices
 
     def subscript_spatial_derivative(self, tree):
