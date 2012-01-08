@@ -6,9 +6,10 @@
 
 void A(double localTensor[3][3], double dt, double detwei[6], double CG1[3][6])
 {
-  for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+  double CG1_v[2][6][6] = { { { CG1[0], CG1[6], CG1[12], 0.0, 0.0, 0.0 }, { CG1[1], CG1[7], CG1[13], 0.0, 0.0, 0.0 }, { CG1[2], CG1[8], CG1[14], 0.0, 0.0, 0.0 }, { CG1[3], CG1[9], CG1[15], 0.0, 0.0, 0.0 }, { CG1[4], CG1[10], CG1[16], 0.0, 0.0, 0.0 }, { CG1[5], CG1[11], CG1[17], 0.0, 0.0, 0.0 } }, { { 0.0, 0.0, 0.0, CG1[0], CG1[6], CG1[12] }, { 0.0, 0.0, 0.0, CG1[1], CG1[7], CG1[13] }, { 0.0, 0.0, 0.0, CG1[2], CG1[8], CG1[14] }, { 0.0, 0.0, 0.0, CG1[3], CG1[9], CG1[15] }, { 0.0, 0.0, 0.0, CG1[4], CG1[10], CG1[16] }, { 0.0, 0.0, 0.0, CG1[5], CG1[11], CG1[17] } } };
+  for(int i_r_0 = 0; i_r_0 < 6; i_r_0++)
   {
-    for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
+    for(int i_r_1 = 0; i_r_1 < 6; i_r_1++)
     {
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
@@ -22,22 +23,23 @@ void A(double localTensor[3][3], double dt, double detwei[6], double CG1[3][6])
   };
 }
 
-void RHS(double localTensor[3], double dt, double detwei[6], double c0[2][3], double CG1[3][6])
+void RHS(double localTensor[3], double dt, double detwei[6], double c0[3][2], double CG1[3][6])
 {
-  for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+  double CG1_v[2][6][6] = { { { CG1[0], CG1[6], CG1[12], 0.0, 0.0, 0.0 }, { CG1[1], CG1[7], CG1[13], 0.0, 0.0, 0.0 }, { CG1[2], CG1[8], CG1[14], 0.0, 0.0, 0.0 }, { CG1[3], CG1[9], CG1[15], 0.0, 0.0, 0.0 }, { CG1[4], CG1[10], CG1[16], 0.0, 0.0, 0.0 }, { CG1[5], CG1[11], CG1[17], 0.0, 0.0, 0.0 } }, { { 0.0, 0.0, 0.0, CG1[0], CG1[6], CG1[12] }, { 0.0, 0.0, 0.0, CG1[1], CG1[7], CG1[13] }, { 0.0, 0.0, 0.0, CG1[2], CG1[8], CG1[14] }, { 0.0, 0.0, 0.0, CG1[3], CG1[9], CG1[15] }, { 0.0, 0.0, 0.0, CG1[4], CG1[10], CG1[16] }, { 0.0, 0.0, 0.0, CG1[5], CG1[11], CG1[17] } } };
+  double c_q0[6][2];
+  for(int i_g = 0; i_g < 6; i_g++)
   {
-    double c_q0[6][2];
-    for(int i_g = 0; i_g < 6; i_g++)
+    for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
     {
-      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      c_q0[i_g][i_d_0] = 0.0;
+      for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
       {
-        c_q0[i_g][i_d_0] = 0.0;
-        for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
-        {
-          c_q0[i_g][i_d_0] += c0[i_d_0][i_r_0] * CG1[i_r_0][i_g];
-        };
+        c_q0[i_g][i_d_0] += c0[i_r_0][i_d_0] * CG1[i_r_0][i_g];
       };
     };
+  };
+  for(int i_r_0 = 0; i_r_0 < 6; i_r_0++)
+  {
     localTensor[i_r_0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {

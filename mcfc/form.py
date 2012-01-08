@@ -17,20 +17,16 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-
 """form.py - contains the code shared by different form backends, e.g.
 cudaform.py, op2form.py, etc."""
 
+# UFL libs
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 # MCFC libs
 from codegeneration import *
-from utilities import uniqify
-# UFL libs
-from ufl.argument import Argument
-from ufl.coefficient import Coefficient
-from ufl.algorithms.transformations import Transformer
-from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from formutils import *
 
-class FormBackend:
+class FormBackend(object):
     "Base class for generating form tabulation kernels."
 
     numNodesPerEle = 3
@@ -41,6 +37,63 @@ class FormBackend:
         self._expressionBuilder = None
         self._quadratureExpressionBuilder = None
         self._coefficientUseFinder = CoefficientUseFinder()
+
+    def compile(self, name, form, outerScope = None):
+        "Compile a form with a given name."
+
+        # FIXME what if we have multiple integrals?
+        integrand = form.integrals()[0].integrand()
+        form_data = form.form_data()
+        assert form_data, "Form has no form data attached!"
+        rank = form_data.rank
+
+        # Get parameter list for kernel declaration.
+        formalParameters, actualParameters = self._buildKernelParameters(integrand, form)
+        # Attach list of formal and actual kernel parameters to form data
+        form.form_data().formalParameters = formalParameters
+        form.form_data().actualParameters = actualParameters
+
+        # Initialise basis tensors if necessary
+        declarations = self._buildBasisTensors(form_data)
+
+        # Build the loop nest
+        loopNest = self.buildLoopNest(form)
+        statements = [loopNest]
+
+        # Initialise the local tensor values to 0
+        initialiser = self.buildLocalTensorInitialiser(form)
+        depth = rank
+        loopBody = getScopeFromNest(loopNest, depth)
+        loopBody.prepend(initialiser)
+
+        # Insert the expressions into the loop nest
+        partitions = findPartitions(integrand)
+        for (tree, depth) in partitions:
+            expression = self.buildExpression(form, tree)
+            exprDepth = depth + rank + 1 # add 1 for quadrature loop
+            loopBody = getScopeFromNest(loopNest, exprDepth)
+            loopBody.prepend(expression)
+
+        # If there's any coefficients, we need to build a loop nest
+        # that calculates their values at the quadrature points
+        # Note: this uses data generated during building of the expressions,
+        # hence needs to be done afterwards, though it comes first in the
+        # generated code
+        if form_data.num_coefficients > 0:
+            declarations += self.buildCoeffQuadDeclarations(form)
+            statements = [self.buildQuadratureLoopNest(form)] + statements
+
+        # If we are given an outer scope, append the statements to it
+        if outerScope:
+            for s in statements:
+                outerScope.append(s)
+            statements = [outerScope]
+
+        # Build the function with the loop nest inside
+        body = Scope(declarations + statements)
+        kernel = FunctionDefinition(Void(), name, formalParameters, body)
+
+        return kernel
 
     def buildBasisIndex(self, count):
         "Build index for a loop over basis function values."
@@ -74,6 +127,74 @@ class FormBackend:
         expr = PlusAssignmentOp(lhs, rhs)
 
         return expr
+
+    def buildLoopNest(self, form):
+        "Build the loop nest for evaluating a form expression."
+        rank = form.form_data().rank
+        numBasisFunctions = self._numBasisFunctions(form)
+
+        # FIXME what if we have multiple integrals?
+        integrand = form.integrals()[0].integrand()
+
+        # Build the loop over the first rank, which always exists
+        indVarName = self.buildBasisIndex(0).name()
+        loop = buildSimpleForLoop(indVarName, numBasisFunctions)
+        outerLoop = loop
+
+        # Add another loop for each rank of the form (probably no
+        # more than one more... )
+        for r in range(1,rank):
+            indVarName = self.buildBasisIndex(r).name()
+            basisLoop = buildSimpleForLoop(indVarName, numBasisFunctions)
+            loop.append(basisLoop)
+            loop = basisLoop
+
+        # Add a loop for the quadrature
+        indVarName = self.buildGaussIndex().name()
+        gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
+        loop.append(gaussLoop)
+        loop = gaussLoop
+
+        # Determine how many dimension loops we need by inspection.
+        # We count the nesting depth of IndexSums to determine
+        # how many dimension loops we need.
+        dimLoops = indexSumIndices(integrand)
+
+        # Add loops for each dimension as necessary.
+        for d in dimLoops:
+            indVarName = self.buildDimIndex(d['count']).name()
+            dimLoop = buildSimpleForLoop(indVarName, d['extent'])
+            loop.append(dimLoop)
+            loop = dimLoop
+
+        # Hand back the outer loop, so it can be inserted into some
+        # scope.
+        return outerLoop
+
+    def buildCoefficientLoopNest(self, coeff, rank, scope):
+        "Build loop nest evaluating a coefficient at a given quadrature point."
+
+        loop = scope
+
+        # Build loop over the correct number of dimensions
+        for r in range(rank):
+            indVar = self.buildDimIndex(r).name()
+            dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
+            loop.append(dimLoop)
+            loop = dimLoop
+
+        # Add initialiser here
+        initialiser = self.buildCoeffQuadratureInitialiser(coeff)
+        loop.append(initialiser)
+
+        # One loop over the basis functions
+        indVar = self.buildBasisIndex(0).name()
+        basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
+        loop.append(basisLoop)
+
+        # Add the expression to compute the value inside the basis loop
+        computation = self.buildQuadratureExpression(coeff)
+        basisLoop.append(computation)
 
     def buildQuadratureExpression(self, coeff):
         "Build the expression to evaluate a particular coefficient."
@@ -169,220 +290,56 @@ class FormBackend:
         spaceDimension = self._elementSpaceDim(form)
         return self.numNodesPerEle * pow(spaceDimension, elementRank)
 
-    def compile(self, form):
-        raise NotImplementedError("You're supposed to implement compile()!")
+    def _buildBasisTensors(self, form_data):
+        """When using a basis that is a tensor product of the scalar basis, we
+        need to create an array that holds the tensor product. This function
+        generates the code to declare and initialise that array."""
+        gp = self.numGaussPoints
+        nn = self.numNodesPerEle
+        nd = self.numDimensions
+        initialisers = []
+
+        for a in form_data.actualParameters['arguments']:
+            e = a.element()
+            # Ignore scalars
+            if isinstance(e, FiniteElement):
+                continue
+            elif isinstance(e, VectorElement):
+                n = buildVectorArgumentName(a)
+            else:
+                raise RuntimeError("Not supported.")
+
+            arg = buildArgumentName(a)
+            t = Array(Real(), [nd,gp,nn*nd])
+            var = Variable(n, t)
+
+            # Construct the initialiser lists for the tensor product of the scalar basis.
+            outer = []
+            for d1 in range(nd):
+                middle = []
+                for igp in range(gp):
+                    innermost = []
+                    for d2 in range(nd):
+                        for inn in range(nn):
+                            if d1 == d2:
+                                expr = Subscript(Variable(arg), Literal(inn*gp+igp))
+                            else:
+                                expr = Literal(0.0)
+                            innermost.append(expr)
+                    middle.append(InitialiserList(innermost))
+                outer.append(InitialiserList(middle))
+            initlist = InitialiserList(outer)
+
+            init = InitialisationOp(var, initlist)
+            initialisers.append(init)
+
+        return initialisers
 
     def _buildKernelParameters(self, tree, form):
         raise NotImplementedError("You're supposed to implement _buildKernelParameters()!")
 
     def subscript_detwei(self, tree):
         raise NotImplementedError("You're supposed to implement subscript_detwei()!")
-
-class CoefficientUseFinder(Transformer):
-    """Finds the nodes that 'use' a coefficient. This is either a Coefficient
-    itself, or a SpatialDerivative that has a Coefficient as its operand"""
-
-    def find(self, tree):
-        # We keep coefficients and spatial derivatives in separate lists
-        # because we need separate criteria to uniqify the lists.
-        self._coefficients = []
-        self._spatialDerivatives = []
-
-        self.visit(tree)
-
-        # Coefficients define __eq__ and __hash__ so the straight uniqify works.
-        # For spatial derivatives, we need to compare the coefficients.
-        coefficients = uniqify(self._coefficients)
-        spatialDerivatives = uniqify(self._spatialDerivatives, lambda x: x.operands()[0])
-
-        return coefficients, spatialDerivatives
-
-    # Most expressions are uninteresting.
-    def expr(self, tree, *ops):
-        pass
-
-    def argument(self, tree):
-        pass
-
-    def spatial_derivative(self, tree):
-        subject = tree.operands()[0]
-        if isinstance(subject, Coefficient):
-            self._spatialDerivatives.append(tree)
-
-    def coefficient(self, tree):
-        self._coefficients.append(tree)
-
-class IndexSumIndexFinder(Transformer):
-    "Find the count and extent of indices reduced by an IndexSum in a form."
-
-    def find(self, tree):
-        self._indices = []
-        self.visit(tree)
-        return self._indices
-
-    def index_sum(self, tree):
-
-        summand, mi = tree.operands()
-        indices = mi.index_dimensions()
-
-        for c, d in indices.items():
-            self._indices.append({"count": c.count(), "extent": d})
-
-        self.visit(summand)
-
-    # We don't care about any other node.
-    def expr(self, tree, *ops):
-        pass
-
-def indexSumIndices(tree):
-    ISIF = IndexSumIndexFinder()
-    return ISIF.find(tree)
-
-class IndexSumCounter(Transformer):
-    "Count how many IndexSums are nested inside a tree."
-
-    def count(self, tree):
-        self._indexSumDepth = 0
-        self._maxIndexSumDepth = 0
-        self.visit(tree)
-        return self._maxIndexSumDepth
-
-    def index_sum(self, tree):
-
-        summand, indices = tree.operands()
-
-        self._indexSumDepth = self._indexSumDepth + 1
-        if self._indexSumDepth > self._maxIndexSumDepth:
-            self._maxIndexSumDepth = self._indexSumDepth
-
-        self.visit(summand)
-
-        self._indexSumDepth = self._indexSumDepth - 1
-
-    # We don't care about any other node.
-    def expr(self, tree, *ops):
-        pass
-
-    def terminal(self, tree):
-        pass
-
-class Partitioner(Transformer):
-    """Partitions the expression up so that each partition fits inside
-    strictly on loop in the local assembly loop nest.
-    Returns a list of the partitions, and their depth (starting from
-    inside the quadrature loop)."""
-
-    def partition(self, tree):
-        self._partitions = []
-        self._ISC = IndexSumCounter()
-        self.visit(tree)
-        return self._partitions
-
-    def sum(self, tree):
-        ops = tree.operands()
-        lDepth = self._ISC.count(ops[0])
-        rDepth = self._ISC.count(ops[1])
-        # If both sides have the same nesting level:
-        if lDepth == rDepth:
-            self._partitions.append((tree,lDepth))
-            return
-        else:
-            self.visit(ops[0])
-            self.visit(ops[1])
-
-    # If it's not a sum, then there shouldn't be any partitioning
-    # of the tree anyway.
-    def expr(self, tree):
-        depth = self._ISC.count(tree)
-        self._partitions.append((tree,depth))
-
-def findPartitions(tree):
-    part = Partitioner()
-    return part.partition(tree)
-
-# Code indices represent induction variables in a loop. A list of CodeIndexes is
-# supplied to buildSubscript, in order for it to build the computation of a
-# subscript.
-
-class CodeIndex:
-
-    def __init__(self, extent, count=None):
-        self._extent = extent
-        self._count = count
-
-    def extent(self):
-        return Literal(self._extent)
-
-class BasisIndex(CodeIndex):
-
-    def name(self):
-        return "i_r_%d" % (self._count)
-
-class GaussIndex(CodeIndex):
-
-    def name(self):
-        return "i_g"
-
-class DimIndex(CodeIndex):
-
-    def name(self):
-        return "i_d_%d" % (self._count)
-
-class ConstIndex(CodeIndex):
-
-    def name(self):
-        return str(self._count)
-
-# Name builders
-
-def safe_shortstr(name):
-    return name[:name.find('(')]
-
-def buildArgumentName(tree):
-    element = tree.element()
-    if element.num_sub_elements() is not 0:
-        if element.family() == 'Mixed':
-            raise NotImplementedError("I can't digest mixed elements. They make me feel funny.")
-        else:
-            # Sub elements are all the same
-            sub_elements = element.sub_elements()
-            element = sub_elements[0]
-
-    return safe_shortstr(element.shortstr())
-
-def buildSpatialDerivativeName(tree):
-    operand = tree.operands()[0]
-    if isinstance(operand, Argument):
-        name = buildArgumentName(operand)
-    elif isinstance(operand, Coefficient):
-        name = buildCoefficientQuadName(operand)
-    else:
-        cls = operand.__class__.__name__
-        raise NotImplementedError("Unsupported SpatialDerivative of " + cls)
-    spatialDerivName = 'd_%s' % (name)
-    return spatialDerivName
-
-def buildCoefficientName(tree):
-    count = tree.count()
-    name = 'c%d' % (count)
-    return name
-
-def buildCoefficientQuadName(tree):
-    count = tree.count()
-    name = 'c_q%d' %(count)
-    return name
-
-def buildVectorArgumentName(tree):
-    return buildArgumentName(tree) + "_v"
-
-def buildVectorSpatialDerivativeName(tree):
-    return buildSpatialDerivativeName(tree) + "_v"
-
-def buildTensorArgumentName(tree):
-    return buildArgumentName(tree) + "_t"
-
-def buildTensorSpatialDerivativeName(tree):
-    return buildSpatialDerivativeName(tree) + "_t"
 
 # Variables used globally
 

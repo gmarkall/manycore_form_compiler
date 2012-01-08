@@ -40,13 +40,6 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def buildMultiArraySubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
-    def subscript(self, tree, depth=None):
-        meth = getattr(self, "subscript_"+tree.__class__.__name__)
-        if depth is None:
-            return meth(tree)
-        else:
-            return meth(tree, depth)
-
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         count = tree.count()
@@ -82,21 +75,6 @@ class Op2ExpressionBuilder(ExpressionBuilder):
 
         return indices
 
-    def subscript_CoeffQuadrature(self, coeff):
-        # Build the subscript based on the rank
-        indices = [self._formBackend.buildGaussIndex()]
-        rank = coeff.rank()
-
-        if isinstance(coeff, SpatialDerivative):
-            rank = rank + 1
-        if rank > 0:
-            dimIndices = self._indexStack.peek()
-            if len(dimIndices) != rank:
-                raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
-            indices.extend(dimIndices)
-
-        return indices
-
 class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def buildSubscript(self, variable, indices):
@@ -104,17 +82,10 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def subscript(self, tree):
         rank = tree.rank()
+        # Subscript order: basis index followed by dimension indices (if any)
         indices = [self._formBackend.buildBasisIndex(0)]
         for r in range(rank):
-            index = self._formBackend.buildDimIndex(r)
-            indices.insert(0, index)
-        return indices
-
-    def subscript_argument(self, tree):
-        # The count of the basis function induction variable is always
-        # 0 in the quadrature loops (i.e. i_r_0)
-        indices = [self._formBackend.buildBasisIndex(0),
-                   self._formBackend.buildGaussIndex()]
+            indices.append(self._formBackend.buildDimIndex(r))
         return indices
 
     def subscript_spatial_derivative(self, tree):

@@ -45,6 +45,28 @@ class ExpressionBuilder(Transformer):
 
         return expr
 
+    def subscript(self, tree, depth=None):
+        meth = getattr(self, "subscript_"+tree.__class__.__name__)
+        if depth is None:
+            return meth(tree)
+        else:
+            return meth(tree, depth)
+
+    def subscript_CoeffQuadrature(self, coeff):
+        # Build the subscript based on the rank
+        indices = [self._formBackend.buildGaussIndex()]
+        rank = coeff.rank()
+
+        if isinstance(coeff, SpatialDerivative):
+            rank = rank + 1
+        if rank > 0:
+            dimIndices = self._indexStack.peek()
+            if len(dimIndices) != rank:
+                raise RuntimeError("Number of indices does not match rank of coefficient. %d vs %d." % (len(dimIndices), rank))
+            indices.extend(dimIndices)
+
+        return indices
+
     def component_tensor(self, tree, *ops):
         pass
 
@@ -163,12 +185,6 @@ class ExpressionBuilder(Transformer):
     def subscript_LocalTensor(self, form):
         raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
 
-    def subscript_CoeffQuadrature(self, coeff):
-        raise NotImplementedError("You're supposed to implement subscript_CoeffQuadrature()!")
-
-    def subscript(self, tree):
-        raise NotImplementedError("You're supposed to implement subscript()!")
-
 class QuadratureExpressionBuilder:
 
     def __init__(self, formBackend):
@@ -213,7 +229,11 @@ class QuadratureExpressionBuilder:
         raise NotImplementedError("You're supposed to implement subscript()!")
 
     def subscript_argument(self, tree):
-        raise NotImplementedError("You're supposed to implement subscript_argument()!")
+        # The count of the basis function induction variable is always
+        # 0 in the quadrature loops (i.e. i_r_0)
+        indices = [self._formBackend.buildBasisIndex(0),
+                   self._formBackend.buildGaussIndex()]
+        return indices
 
     def subscript_spatial_derivative(self, tree):
         raise NotImplementedError("You're supposed to implement subscript_spatial_derivative()!")
