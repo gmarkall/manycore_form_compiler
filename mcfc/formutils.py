@@ -184,6 +184,28 @@ class ConstIndex(CodeIndex):
     def name(self):
         return str(self._count)
 
+# Index builders
+
+def buildBasisIndex(count, element):
+    "Build index for a loop over basis function values."
+    return BasisIndex(elementRank(element), count)
+
+def buildDimIndex(count, e):
+    "Build index for a loop over spatial dimensions."
+    if isinstance(e, int):
+        dim = e
+    else:
+        dim = elementSpaceDim(e)
+    return DimIndex(dim, count)
+
+def buildConstDimIndex(value, extent):
+    "Build literal subscript for a loop over spatial dimensions."
+    return ConstIndex(extent, count)
+
+def buildGaussIndex(n):
+    "Build index for a Gauss quadrature loop."
+    return GaussIndex(n)
+
 # Name builders
 
 def safe_shortstr(name):
