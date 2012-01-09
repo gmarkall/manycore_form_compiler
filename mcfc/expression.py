@@ -4,12 +4,12 @@
 # modify it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
-# 
+#
 # The Manycore Form Compiler is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # the Manycore Form Compiler.  If not, see <http://www.gnu.org/licenses>
 #
@@ -71,7 +71,7 @@ class ExpressionBuilder(Transformer):
     def component_tensor(self, tree, *ops):
         pass
 
-    # When entering an index, we need to memorise the indices that are attached 
+    # When entering an index, we need to memorise the indices that are attached
     # to it before descending into the sub-tree. The sub-tree handlers can make
     # use of these memorised indices in their code generation.
     def indexed(self, tree):
@@ -91,7 +91,7 @@ class ExpressionBuilder(Transformer):
             else:
                 raise RuntimeError('Other types of indices not yet implemented.')
         return tuple(indices)
-            
+
 
     # We need to keep track of how many IndexSums we passed through
     # so that we know which dim index we're dealing with.
@@ -127,11 +127,11 @@ class ExpressionBuilder(Transformer):
         indices = self.subscript(tree, dimIndices)
         spatialDerivExpr = self.buildSubscript(base, indices)
         self._exprStack.append(spatialDerivExpr)
- 
+
     def argument(self, tree):
         e = tree.element()
         indices = self.subscript(tree)
-        
+
         if isinstance(e, FiniteElement):
             base = Variable(buildArgumentName(tree))
             argExpr = self.buildSubscript(base, indices)
@@ -161,7 +161,7 @@ class ExpressionBuilder(Transformer):
             element = coeff.operands()[0].element()
         base = Variable(name)
         dim = element.cell().topological_dimension()
-        
+
         # If there are no indices present (e.g. in the quadrature evaluation loop) then
         # we need to fake indices for the coefficient based on its rank:
         if fake_indices:
@@ -179,7 +179,7 @@ class ExpressionBuilder(Transformer):
 
     def buildLocalTensorAccessor(self, form):
         indices = self.subscript_LocalTensor(form)
-        
+
         # Subscript the local tensor variable
         expr = self.buildSubscript(localTensor, indices)
         return expr
@@ -198,7 +198,7 @@ class QuadratureExpressionBuilder:
     def build(self, tree):
         # Build Accessor for values at nodes
         indices = self.subscript(tree)
-        
+
         if isinstance(tree, Coefficient):
             name = buildCoefficientName(tree)
         elif isinstance (tree, SpatialDerivative):
@@ -207,7 +207,7 @@ class QuadratureExpressionBuilder:
 
         coeffAtBasis = Variable(name)
         coeffExpr = self.buildSubscript(coeffAtBasis, indices)
-        
+
         # Build accessor for argument
         if isinstance(tree, Coefficient):
             name = buildArgumentName(tree)

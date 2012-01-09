@@ -4,12 +4,12 @@
 # modify it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
-# 
+#
 # The Manycore Form Compiler is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # the Manycore Form Compiler.  If not, see <http://www.gnu.org/licenses>
 #
@@ -52,19 +52,19 @@ def buildSubscript(variable, indices):
     # Start our expression with the first index
     name = indices[0].name()
     offset = Variable(name)
-    
+
     # Compute the expression for all indices
     for v in range(1,len(indices)):
         subindices = indices[:v]
         name = indices[v].name()
         expr = Variable(name)
-        
+
         # Find the correct offset for this index
         for u in range(len(subindices)):
             multiplier = subindices[u].extent()
             expr = MultiplyOp(multiplier, expr)
         offset = AddOp(offset, expr)
-    
+
     return Subscript(variable, offset)
 
 def buildMultiArraySubscript(variable, indices):
@@ -119,7 +119,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def subscript_LocalTensor(self, form):
         form_data = form.form_data()
         rank = form_data.rank
-        
+
         # First index is the element index
         indices = [ElementIndex()]
 

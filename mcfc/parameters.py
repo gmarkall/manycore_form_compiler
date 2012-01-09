@@ -4,12 +4,12 @@
 # modify it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or (at your
 # option) any later version.
-# 
+#
 # The Manycore Form Compiler is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 # or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # the Manycore Form Compiler.  If not, see <http://www.gnu.org/licenses>
 #
@@ -39,7 +39,7 @@ class KernelParameterGenerator(Transformer):
         # Initialise with parameters common to all kernels
         formalParameters = list(statutoryParameters)
         actualParameters = {'coefficients': [], 'arguments': [], 'argumentDerivatives': []}
-        
+
         # We need to map the coefficient and argument counts that
         # we see in the form back to the ones with their original
         # counts that are used earlier in the AST
@@ -59,7 +59,7 @@ class KernelParameterGenerator(Transformer):
         # SpatialDerivatives are tricky: if its a derivative of a basis function,
         # then we just need to pass the derivative of the basis function. If its a
         # derivative of a coefficient, we need the values of the coefficients and
-        # the derivatives of the trial functions. 
+        # the derivatives of the trial functions.
         for d in self._spatialDerivatives:
             subject = d.operands()[0]
             indices = d.operands()[1]
@@ -72,18 +72,18 @@ class KernelParameterGenerator(Transformer):
                 # The reasoning behind giving the argument a count of 0 is that
                 # there will always be at least one basis function, which will
                 # be numbered 0. Need to check if this is correct for the case
-                # where there is no basis function with the same basis as the 
+                # where there is no basis function with the same basis as the
                 # coefficient though.
                 argument = ufl.argument.Argument(element, 0)
                 argumentDeriv = ufl.differentiation.SpatialDerivative(argument, indices)
                 argumentDerivatives.append(argumentDeriv)
 
         # We don't want the same argument to appear twice, so we need to
-        # uniqify the lists. 
+        # uniqify the lists.
         coefficients = uniqify(coefficients)
         arguments = uniqify(arguments, lambda x: x.element())
         argumentDerivatives = uniqify(argumentDerivatives, lambda x: x.operands()[0].element())
-        
+
         # Build the lists of parameters based on what we have observed
         # in the form.
         for coeff in coefficients:
@@ -101,15 +101,15 @@ class KernelParameterGenerator(Transformer):
             i = formArguments.index(arg)
             originalArgument = originalArguments[i]
             actualParameters['arguments'].append(originalArgument)
-        
+
             # Formal parameter
             parameter = self._buildArgumentParameter(arg)
             formalParameters.append(parameter)
-        
+
         for argDeriv in argumentDerivatives:
             subject = argDeriv.operands()[0]
             indices = argDeriv.operands()[1]
-            
+
             # Actual parameter
             i = formArguments.index(subject)
             originalArgument = originalArguments[i]
