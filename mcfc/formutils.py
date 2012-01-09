@@ -240,21 +240,17 @@ def buildTensorSpatialDerivativeName(tree):
 def formElementRank(form):
     # Use the element from the first argument, which should be the TestFunction
     arg = form.form_data().arguments[0]
-    e = arg.element()
+    return elementRank(arg.element())
 
-    if isinstance(e, FiniteElement):
-        return 0
-    elif isinstance(e, VectorElement):
-        return 1
-    elif isinstance(e, TensorElement):
-        return 2
-    else:
-        raise RuntimeError("Not a recognised element.")
+def elementRank(e):
+    return len(e.value_shape())
 
 def formElementSpaceDim(form):
     # Use the element from the first argument, which should be the TestFunction
     arg = form.form_data().arguments[0]
-    e = arg.element()
+    return elementSpaceDim(arg.element())
+
+def elementSpaceDim(e):
     return e.cell().geometric_dimension()
 
 # vim:sw=4:ts=4:sts=4:et
