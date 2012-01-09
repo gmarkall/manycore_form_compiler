@@ -21,6 +21,7 @@
 cudaform.py, op2form.py, etc."""
 
 # UFL libs
+from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.coefficient import Coefficient
 # MCFC libs
@@ -231,7 +232,26 @@ class FormBackend(object):
         gp = self.numGaussPoints
         nn = self.numNodesPerEle
         nd = self.numDimensions
-        initialisers = []
+
+        # Build constant initialisers for shape functions/derivatives and
+        # quadrature weights
+        element = form_data.coordinates.element()
+        # We need to construct a fake argument and derivative to get the
+        # proper names for the shape functions and derivatives
+        from ufl.objects import i
+        fakeArgument = Argument(element)
+        fakeDerivative = SpatialDerivative(fakeArgument,i)
+        nName = buildArgumentName(fakeArgument)
+        dnName = buildSpatialDerivativeName(fakeDerivative)
+        # Initialiser for shape functions on coordinate reference element
+        nInit = buildConstArrayInitializer(nName, element._n)
+        # Initialiser for shape derivatives on coordinate reference element
+        dnInit = buildConstArrayInitializer(dnName, element._dn)
+        # Initialiser for quadrature points on coordinate reference element
+        # FIXME: rename to w
+        wInit = buildConstArrayInitializer("detwei", element._weight)
+
+        initialisers = [nInit, dnInit, wInit]
 
         for a in form_data.actualParameters['arguments']:
             e = a.element()
@@ -241,7 +261,7 @@ class FormBackend(object):
             elif isinstance(e, VectorElement):
                 n = buildVectorArgumentName(a)
             else:
-                raise RuntimeError("Not supported.")
+                raise RuntimeError("Tensor elements are not yet supported.")
 
             arg = buildArgumentName(a)
             t = Array(Real(), [nd,gp,nn*nd])
