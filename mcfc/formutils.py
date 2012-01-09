@@ -23,6 +23,8 @@
 from ufl.argument import Argument
 from ufl.coefficient import Coefficient
 from ufl.algorithms.transformations import Transformer
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+
 # MCFC libs
 from codegeneration import *
 from utilities import uniqify
@@ -232,5 +234,27 @@ def buildTensorArgumentName(tree):
 
 def buildTensorSpatialDerivativeName(tree):
     return buildSpatialDerivativeName(tree) + "_t"
+
+# Used by both the assembler generator and the form generator.
+
+def formElementRank(form):
+    # Use the element from the first argument, which should be the TestFunction
+    arg = form.form_data().arguments[0]
+    e = arg.element()
+
+    if isinstance(e, FiniteElement):
+        return 0
+    elif isinstance(e, VectorElement):
+        return 1
+    elif isinstance(e, TensorElement):
+        return 2
+    else:
+        raise RuntimeError("Not a recognised element.")
+
+def formElementSpaceDim(form):
+    # Use the element from the first argument, which should be the TestFunction
+    arg = form.form_data().arguments[0]
+    e = arg.element()
+    return e.cell().geometric_dimension()
 
 # vim:sw=4:ts=4:sts=4:et

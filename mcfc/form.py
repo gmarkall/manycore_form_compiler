@@ -25,7 +25,7 @@ from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 # MCFC libs
 from codegeneration import *
 from formutils import *
-from utilities import uniqify, formElementRank, formElementSpaceDim
+from utilities import uniqify
 
 class FormBackend(object):
     "Base class for generating form tabulation kernels."

@@ -1,5 +1,3 @@
-from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
-
 # From http://www.peterbe.com/plog/uniqifiers-benchmark. This is version f5.
 def uniqify_list(seq, idfun=None):
     idfun = idfun or (lambda x: x)
@@ -40,28 +38,6 @@ def uniqify_rec(seq, idfun=None, seen=None):
             if marker in seen: continue
             seen[marker] = 1
             yield item
-
-# Used by both the assembler generator and the form generator.
-
-def formElementRank(form):
-    # Use the element from the first argument, which should be the TestFunction
-    arg = form.form_data().arguments[0]
-    e = arg.element()
-
-    if isinstance(e, FiniteElement):
-        return 0
-    elif isinstance(e, VectorElement):
-        return 1
-    elif isinstance(e, TensorElement):
-        return 2
-    else:
-        raise RuntimeError("Not a recognised element.")
-
-def formElementSpaceDim(form):
-    # Use the element from the first argument, which should be the TestFunction
-    arg = form.form_data().arguments[0]
-    e = arg.element()
-    return e.cell().geometric_dimension()
 
 # From http://ipython.scipy.org/doc/manual/html/interactive/reference.html#embedding-ipython
 #
