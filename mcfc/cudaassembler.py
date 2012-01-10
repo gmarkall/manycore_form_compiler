@@ -26,7 +26,7 @@ cudaform.py, and the necessary solves."""
 # MCFC libs
 from assembler import *
 from codegeneration import *
-from utilities import uniqify, formElementRank, formElementSpaceDim
+from formutils import numBasisFunctions
 # FEniCS UFL libs
 import ufl.finiteelement
 from ufl.differentiation import SpatialDerivative
@@ -347,12 +347,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         return func
 
     def _numBasisExpr(self, form):
-        elementRank = formElementRank(form)
-        spaceDimension = formElementSpaceDim(form)
-        expr = nodesPerEle
-        for i in range(elementRank):
-            expr = MultiplyOp(expr, Literal(spaceDimension))
-        return expr
+        return Literal(numBasisFunctions(form))
 
     def extractCoefficient(self, func, coefficientName):
         varName = coefficientName + 'Coeff'
