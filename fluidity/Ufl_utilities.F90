@@ -238,6 +238,10 @@ contains
       FLAbort("Tried to extract non-existent/non-allocated vector field!")
     end if
 
+    ! Number of basis functions and dimensions
+    loc = field%mesh%shape%loc
+    dim = field%mesh%shape%dim
+
     ! AT Sparsity
     row_count = node_count(field%mesh)
     ele_count = element_count(field%mesh)
@@ -272,6 +276,7 @@ contains
     ! Connectivity sparsity
 
     ndglno_s => field%mesh%ndglno
+    allocate(ndglno_v(dim * size(ndglno_s)))
     ndglno_v = make_vector_numbering(ndglno_s, 3, ele_count, 2)
     conn_sparsity = make_sparsity_from_ndglno(ndglno_v, ndglno_v, row_count, 3, &
                   & ele_count, "vec")
@@ -293,9 +298,6 @@ contains
     ndglno = c_loc(tmp_int_ptr)
 
     ! Element
-    loc = field%mesh%shape%loc
-    dim = field%mesh%shape%dim
-
     tmp_real_ptr => field%mesh%shape%n(1,1)
     n = c_loc(tmp_real_ptr)
 
