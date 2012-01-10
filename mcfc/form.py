@@ -141,7 +141,7 @@ class FormBackend(object):
             loop = basisLoop
 
         # Add a loop for the quadrature
-        indVarName = self.buildGaussIndex().name()
+        indVarName = buildGaussIndex(self.numGaussPoints).name()
         gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
         loop.append(gaussLoop)
         loop = gaussLoop
@@ -206,7 +206,7 @@ class FormBackend(object):
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         # Outer loop over gauss points
-        indVar = self.buildGaussIndex().name()
+        indVar = buildGaussIndex(self.numGaussPoints).name()
         gaussLoop = buildSimpleForLoop(indVar, self.numGaussPoints)
 
         # Build a loop nest for each coefficient containing expressions
