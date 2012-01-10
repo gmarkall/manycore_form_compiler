@@ -140,20 +140,22 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         elif isinstance(tree, SpatialDerivative):
             element = tree.operands()[0].element()
         
+        dim = element.cell().topological_dimension()
         rank = tree.rank()
         indices = [ ElementIndex() ]
         for r in range(rank):
-            indices.append(self._formBackend.buildDimIndex(r))
+            indices.append(buildDimIndex(r,dim))
         indices.append(buildBasisIndex(0, element))
         return indices
 
     def subscript_spatial_derivative(self, tree):
         element = tree.operands()[0].element()
+        dim = element.cell().topological_dimension()
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
         indices = [ ElementIndex(),
-                    self._formBackend.buildDimIndex(0),
+                    buildDimIndex(0, dim),
                     self._formBackend.buildGaussIndex(),
                     buildBasisIndex(0, element) ]
         return indices
