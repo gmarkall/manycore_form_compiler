@@ -273,7 +273,6 @@ def numBasisFunctions(e):
     if isinstance(element, FFCMixedElement):
         return len(element.entity_dofs()) * element.num_components()
     else:
-        print element.get_nodal_basis()
         return element.get_nodal_basis().get_num_members()
 
 def elementRank(e):
