@@ -98,18 +98,6 @@ class FormBackend(object):
 
         return kernel
 
-    def buildBasisIndex(self, count):
-        "Build index for a loop over basis function values."
-        return BasisIndex(self.numNodesPerEle, count)
-
-    def buildDimIndex(self, count):
-        "Build index for a loop over spatial dimensions."
-        return DimIndex(self.numDimensions, count)
-
-    def buildConstDimIndex(self, count):
-        "Build literal subscript for a loop over spatial dimensions."
-        return ConstIndex(self.numDimensions, count)
-
     def buildGaussIndex(self):
         "Build index for a Gauss quadrature loop."
         return GaussIndex(self.numGaussPoints)
