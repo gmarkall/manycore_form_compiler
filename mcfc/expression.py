@@ -18,7 +18,6 @@
 # holders.
 
 from form import *
-from formutils import buildBasisIndex
 from symbolicvalue import SymbolicValue
 from ufl.argument import TrialFunction
 from ufl.coefficient import Coefficient
@@ -153,14 +152,15 @@ class ExpressionBuilder(Transformer):
         rank = coeff.rank()
         if isinstance(coeff, Coefficient):
             name = buildCoefficientQuadName(coeff)
-            dim = coeff.element().cell().topological_dimension()
+            element = coeff.element()
         else:
             # The spatial derivative adds an extra dim index so we need to
             # bump up the rank
             rank = rank + 1
             name = buildSpatialDerivativeName(coeff)
-            dim = coeff.operands()[0].element().cell().topological_dimension()
+            element = coeff.operands()[0].element()
         base = Variable(name)
+        dim = element.cell().topological_dimension()
         
         # If there are no indices present (e.g. in the quadrature evaluation loop) then
         # we need to fake indices for the coefficient based on its rank:

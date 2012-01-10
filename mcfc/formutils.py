@@ -262,12 +262,9 @@ def buildTensorArgumentName(tree):
 def buildTensorSpatialDerivativeName(tree):
     return buildSpatialDerivativeName(tree) + "_t"
 
-# This function provides a simple calculation of the number of basis
-# functions per element. This works for the tensor product of a scalar basis
-# only. 
-# It takes a form or an element - if a form is given, it uses the element of
-# the test function.
 def numBasisFunctions(e):
+    """Return the number of basis functions. e can be a form or an element - 
+    if e is a form, the element from the test function is used."""
     if isinstance(e, Form):
         # Use the element from the first argument, which should be the TestFunction
         e = e.form_data().arguments[0].element()
@@ -276,11 +273,5 @@ def numBasisFunctions(e):
         return len(element.entity_dofs()) * element.num_components()
     else:
         return element.get_nodal_basis().get_num_members()
-
-def elementRank(e):
-    return len(e.value_shape())
-
-def elementSpaceDim(e):
-    return e.cell().geometric_dimension()
 
 # vim:sw=4:ts=4:sts=4:et
