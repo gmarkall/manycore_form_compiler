@@ -88,8 +88,14 @@ class KernelParameterGenerator(Transformer):
         # in the form.
         for coeff in coefficients:
             # Actual parameter
-            i = formCoefficients.index(coeff)
-            originalCoefficient = originalCoefficients[i]
+            # Skip the Jacobian and pass the coordinate field instead
+            if isinstance(coeff.element().quadrature_scheme(), ufl.coefficient.Coefficient):
+                originalCoefficient = coeff.element().quadrature_scheme()
+                coeff = coeff.element().quadrature_scheme()
+            # Otherwise get the original coefficient
+            else:
+                i = formCoefficients.index(coeff)
+                originalCoefficient = originalCoefficients[i]
             actualParameters['coefficients'].append(originalCoefficient)
 
             # Formal parameter
