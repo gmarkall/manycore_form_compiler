@@ -157,7 +157,7 @@ class ExpressionBuilder(Transformer):
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
         indices = self.subscript(tree)
-        return self.buildSubscript(Variable(name), indices)
+        return self.buildMultiArraySubscript(Variable(name), indices)
 
     def argument(self, tree):
         e = tree.element()
@@ -165,13 +165,11 @@ class ExpressionBuilder(Transformer):
 
         if isinstance(e, FiniteElement):
             base = Variable(buildArgumentName(tree))
-            return self.buildSubscript(base, indices)
         elif isinstance(e, VectorElement):
             base = Variable(buildVectorArgumentName(tree))
-            return self.buildMultiArraySubscript(base, indices)
         else:
             base = Variable(buildTensorArgumentName(tree))
-            return self.buildMultiArraySubscript(base, indices)
+        return self.buildMultiArraySubscript(base, indices)
 
     def coefficient(self, tree):
         return self.buildCoeffQuadratureAccessor(tree)
@@ -199,7 +197,7 @@ class ExpressionBuilder(Transformer):
         if fake_indices:
             self._indexStack.pop()
 
-        coeffExpr = self.buildSubscript(base, indices)
+        coeffExpr = self.buildMultiArraySubscript(base, indices)
         return coeffExpr
 
     def buildLocalTensorAccessor(self, form):

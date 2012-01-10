@@ -54,10 +54,10 @@ __global__ void A(double* localTensor, int n_ele, double dt)
         localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] = 0.0;
         for(int i_g = 0; i_g < 6; i_g++)
         {
-          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += CG1[i_r_0 + 3 * i_g] * CG1[i_r_1 + 3 * i_g] * detwei[i_ele + n_ele * i_g];
+          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * detwei[i_ele + n_ele * i_g];
           for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
           {
-            localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += -1 * 0.5 * d_CG1[i_ele + n_ele * (i_d_1 + 2 * (i_g + 6 * i_r_0))] * d_CG1[i_ele + n_ele * (i_d_1 + 2 * (i_g + 6 * i_r_1))] * 0.1 * -1 * dt * detwei[i_ele + n_ele * i_g];
+            localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += -1 * 0.5 * d_CG1[i_ele][i_d_1][i_g][i_r_0] * d_CG1[i_ele][i_d_1][i_g][i_r_1] * 0.1 * -1 * dt * detwei[i_ele + n_ele * i_g];
           };
         };
       };
@@ -106,7 +106,7 @@ __global__ void d(double* localTensor, int n_ele, double dt)
         {
           for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
           {
-            localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += d_CG1[i_ele + n_ele * (i_d_1 + 2 * (i_g + 6 * i_r_0))] * d_CG1[i_ele + n_ele * (i_d_1 + 2 * (i_g + 6 * i_r_1))] * 0.1 * -1 * dt * detwei[i_ele + n_ele * i_g];
+            localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += d_CG1[i_ele][i_d_1][i_g][i_r_0] * d_CG1[i_ele][i_d_1][i_g][i_r_1] * 0.1 * -1 * dt * detwei[i_ele + n_ele * i_g];
           };
         };
       };
@@ -153,7 +153,7 @@ __global__ void M(double* localTensor, int n_ele, double dt)
         localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] = 0.0;
         for(int i_g = 0; i_g < 6; i_g++)
         {
-          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += CG1[i_r_0 + 3 * i_g] * CG1[i_r_1 + 3 * i_g] * detwei[i_ele + n_ele * i_g];
+          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * detwei[i_ele + n_ele * i_g];
         };
       };
     };
@@ -203,10 +203,10 @@ __global__ void rhs(double* localTensor, int n_ele, double dt, double* c0)
       };
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
-        d_c_q0[i_g + 6 * i_d_0] = 0.0;
+        d_c_q0[i_g][i_d_0] = 0.0;
         for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
         {
-          d_c_q0[i_g + 6 * i_d_0] += c0[i_ele + n_ele * i_r_0] * d_CG1[i_ele + n_ele * (i_d_0 + 2 * (i_g + 6 * i_r_0))];
+          d_c_q0[i_g][i_d_0] += c0[i_ele + n_ele * i_r_0] * d_CG1[i_ele + n_ele * (i_d_0 + 2 * (i_g + 6 * i_r_0))];
         };
       };
     };
@@ -215,10 +215,10 @@ __global__ void rhs(double* localTensor, int n_ele, double dt, double* c0)
       localTensor[i_ele + n_ele * i_r_0] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
-        localTensor[i_ele + n_ele * i_r_0] += CG1[i_r_0 + 3 * i_g] * c_q0[i_g] * detwei[i_ele + n_ele * i_g];
+        localTensor[i_ele + n_ele * i_r_0] += CG1[i_r_0][i_g] * c_q0[i_g] * detwei[i_ele + n_ele * i_g];
         for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
         {
-          localTensor[i_ele + n_ele * i_r_0] += 0.5 * d_CG1[i_ele + n_ele * (i_d_1 + 2 * (i_g + 6 * i_r_0))] * d_c_q0[i_g + 6 * i_d_1] * 0.1 * -1 * dt * detwei[i_ele + n_ele * i_g];
+          localTensor[i_ele + n_ele * i_r_0] += 0.5 * d_CG1[i_ele][i_d_1][i_g][i_r_0] * d_c_q0[i_g][i_d_1] * 0.1 * -1 * dt * detwei[i_ele + n_ele * i_g];
         };
       };
     };
