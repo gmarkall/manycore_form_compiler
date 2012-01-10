@@ -89,7 +89,15 @@ class ExpressionBuilder(Transformer):
         return indices
 
     def subscript_LocalTensor(self, form):
-        raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
+        form_data = form.form_data()
+        rank = form_data.rank
+
+        indices = []
+        # One rank index for each rank
+        for r in range(rank):
+            indices.append(buildBasisIndex(r, form))
+
+        return indices
 
     def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
         rank = coeff.rank()

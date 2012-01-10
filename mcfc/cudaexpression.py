@@ -84,17 +84,9 @@ class CudaExpressionBuilder(ExpressionBuilder):
         return buildMultiArraySubscript(variable, indices)
 
     def subscript_LocalTensor(self, form):
-        form_data = form.form_data()
-        rank = form_data.rank
-
+        indices = super(CudaExpressionBuilder,self).subscript_LocalTensor(form)
         # First index is the element index
-        indices = [ElementIndex()]
-
-        # One rank index for each rank
-        for r in range(rank):
-            indices.append(buildBasisIndex(r,form))
-
-        return indices
+        return [ElementIndex()] + indices
 
 class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 

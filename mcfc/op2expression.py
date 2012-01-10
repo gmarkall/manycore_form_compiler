@@ -41,17 +41,6 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def buildMultiArraySubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
-    def subscript_LocalTensor(self, form):
-        form_data = form.form_data()
-        rank = form_data.rank
-
-        indices = []
-        # One rank index for each rank
-        for r in range(rank):
-            indices.append(buildBasisIndex(r, form))
-
-        return indices
-
 class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def buildSubscript(self, variable, indices):
