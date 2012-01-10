@@ -43,16 +43,17 @@ class ExpressionBuilder(Transformer):
 
         return expr, self._subExprStack
 
-    def subscript(self, tree, depth=None):
+    def subscript(self, tree):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
-        if depth is None:
-            return meth(tree)
-        else:
-            return meth(tree, depth)
+        return meth(tree)
 
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         indices = []
+        # For vector valued function space we need to add an index
+        # over dimensions
+        # FIXME: Could we ever have mor indices on the stack and in
+        # this way pop too many (since we take all, not only the 1st)
         for dimIndices in self._indexStack:
             indices.extend(dimIndices)
         indices += [buildBasisIndex(tree.count(), tree.element()),
@@ -155,11 +156,8 @@ class ExpressionBuilder(Transformer):
 
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
-        base = Variable(name)
-
-        dimIndices = self._indexStack.peek()
-        indices = self.subscript(tree, dimIndices)
-        return self.buildSubscript(base, indices)
+        indices = self.subscript(tree)
+        return self.buildSubscript(Variable(name), indices)
 
     def argument(self, tree):
         e = tree.element()

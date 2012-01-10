@@ -83,12 +83,13 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def buildMultiArraySubscript(self, variable, indices):
         return buildMultiArraySubscript(variable, indices)
 
-    def subscript_SpatialDerivative(self,tree,dimIndices):
+    def subscript_SpatialDerivative(self,tree):
         # Build the subscript based on the argument count and the
         # indices
         operand, _ = tree.operands()
         element = operand.element()
         count = operand.count()
+        dimIndices = self._indexStack.peek()
 
         if isinstance(operand, Argument):
             indices = [ ElementIndex()]
