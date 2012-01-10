@@ -19,7 +19,7 @@ int* t_adv_colm;
 int t_adv_colm_size;
 
 
-__global__ void A(double* localTensor, int n_ele, double dt, double* CG1, double* d_CG1)
+__global__ void A(double* localTensor, int n_ele, double dt)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -69,7 +69,7 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* CG1, double
   };
 }
 
-__global__ void d(double* localTensor, int n_ele, double dt, double* d_CG1)
+__global__ void d(double* localTensor, int n_ele, double dt)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -118,7 +118,7 @@ __global__ void d(double* localTensor, int n_ele, double dt, double* d_CG1)
   };
 }
 
-__global__ void M(double* localTensor, int n_ele, double dt, double* CG1)
+__global__ void M(double* localTensor, int n_ele, double dt)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -164,7 +164,7 @@ __global__ void M(double* localTensor, int n_ele, double dt, double* CG1)
   };
 }
 
-__global__ void diff_rhs(double* localTensor, int n_ele, double dt, double* c0, double* CG1, double* d_CG1)
+__global__ void diff_rhs(double* localTensor, int n_ele, double dt, double* c0)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -229,7 +229,7 @@ __global__ void diff_rhs(double* localTensor, int n_ele, double dt, double* c0, 
   };
 }
 
-__global__ void adv_rhs(double* localTensor, int n_ele, double dt, double* c0, double* c1, double* CG1, double* d_CG1)
+__global__ void adv_rhs(double* localTensor, int n_ele, double dt, double* c0, double* c1)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },

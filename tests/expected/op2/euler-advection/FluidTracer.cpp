@@ -4,7 +4,7 @@
 
 
 
-void Mass(double localTensor[3][3], double dt, double CG1[3][6])
+void Mass(double localTensor[3][3], double dt)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -47,7 +47,7 @@ void Mass(double localTensor[3][3], double dt, double CG1[3][6])
   };
 }
 
-void rhs(double localTensor[3], double dt, double c0[3], double c1[3][2], double CG1[3][6], double d_CG1[2][6][3])
+void rhs(double localTensor[3], double dt, double c0[3], double c1[3][2])
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },

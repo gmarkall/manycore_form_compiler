@@ -17,11 +17,11 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-# MCFC libs
-from utilities import uniqify
 # FEniCS UFL libs
 import ufl
 from ufl.algorithms.transformations import Transformer
+# MCFC libs
+from utilities import uniqify
 
 class KernelParameterGenerator(Transformer):
     """Mirrors the functionality of the kernelparametercomputer
@@ -104,7 +104,6 @@ class KernelParameterGenerator(Transformer):
 
             # Formal parameter
             parameter = self._buildArgumentParameter(arg)
-            formalParameters.append(parameter)
 
         for argDeriv in argumentDerivatives:
             subject = argDeriv.operands()[0]
@@ -118,7 +117,6 @@ class KernelParameterGenerator(Transformer):
 
             # Formal parameter
             parameter = self._buildSpatialDerivativeParameter(argDeriv)
-            formalParameters.append(parameter)
 
         return formalParameters, actualParameters
 
