@@ -83,25 +83,6 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def buildMultiArraySubscript(self, variable, indices):
         return buildMultiArraySubscript(variable, indices)
 
-    def subscript_SpatialDerivative(self,tree):
-        # Build the subscript based on the argument count and the
-        # indices
-        operand, _ = tree.operands()
-        element = operand.element()
-        count = operand.count()
-        dimIndices = self._indexStack.peek()
-
-        if isinstance(operand, Argument):
-            indices = [ ElementIndex()]
-            indices.extend(dimIndices)
-            indices = indices + [ buildGaussIndex(self._formBackend.numGaussPoints),
-                                  buildBasisIndex(count, element) ]
-        elif isinstance(operand, Coefficient):
-            indices = [ buildGaussIndex(self._formBackend.numGaussPoints) ]
-            indices.extend(dimIndices)
-
-        return indices
-
     def subscript_LocalTensor(self, form):
         form_data = form.form_data()
         rank = form_data.rank

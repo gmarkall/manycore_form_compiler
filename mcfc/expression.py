@@ -52,15 +52,13 @@ class ExpressionBuilder(Transformer):
         indices = []
         # For vector valued function space we need to add an index
         # over dimensions
-        # FIXME: Could we ever have mor indices on the stack and in
-        # this way pop too many (since we take all, not only the 1st)
-        for dimIndices in self._indexStack:
-            indices.extend(dimIndices)
+        if len(self._indexStack) > 0:
+            indices.extend(self._indexStack.peek())
         indices += [buildBasisIndex(tree.count(), tree.element()),
                     buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 
-    def subscript_CoeffQuadrature(self, coeff):
+    def subscript_Coefficient(self, coeff):
         # Build the subscript based on the rank
         indices = [buildGaussIndex(self._formBackend.numGaussPoints)]
 
@@ -75,6 +73,59 @@ class ExpressionBuilder(Transformer):
             indices.extend(dimIndices)
 
         return indices
+
+    def subscript_SpatialDerivative(self,tree):
+        operand, _ = tree.operands()
+        # Take the topmost element of the index stack
+        dimIndices = self._indexStack.peek()
+        # Its first element is the dimension index corresponding to the derivative
+        indices = [dimIndices[0]]
+        # Push the remaining indices (which may be empty) on the stack
+        self._indexStack.push(dimIndices[1:])
+        # Append the indices of the operand (argument or coefficient)
+        indices += self.subscript(operand)
+        # Restore the stack
+        self._indexStack.pop()
+        return indices
+
+    def subscript_LocalTensor(self, form):
+        raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
+
+    def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
+        rank = coeff.rank()
+        if isinstance(coeff, Coefficient):
+            name = buildCoefficientQuadName(coeff)
+        else:
+            # The spatial derivative adds an extra dim index so we need to
+            # bump up the rank
+            rank = rank + 1
+            name = buildSpatialDerivativeName(coeff)
+        base = Variable(name)
+
+        # If there are no indices present (e.g. in the quadrature evaluation loop) then
+        # we need to fake indices for the coefficient based on its rank:
+        if fake_indices:
+            fake = [buildDimIndex(i, coeff) for i in range(rank)]
+            self._indexStack.push(tuple(fake))
+
+        indices = self.subscript_Coefficient(coeff)
+
+        # Remove the fake indices
+        if fake_indices:
+            self._indexStack.pop()
+
+        coeffExpr = self.buildMultiArraySubscript(base, indices)
+        return coeffExpr
+
+    def buildLocalTensorAccessor(self, form):
+        indices = self.subscript_LocalTensor(form)
+
+        # Subscript the local tensor variable
+        expr = self.buildSubscript(localTensor, indices)
+        return expr
+
+    def buildSubscript(self, variable, indices):
+        raise NotImplementedError("You're supposed to implement buildSubscript()!")
 
     def component_tensor(self, tree, *ops):
         # We ignore the 2nd operand (a MultiIndex)
@@ -173,45 +224,6 @@ class ExpressionBuilder(Transformer):
 
     def coefficient(self, tree):
         return self.buildCoeffQuadratureAccessor(tree)
-
-    def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
-        rank = coeff.rank()
-        if isinstance(coeff, Coefficient):
-            name = buildCoefficientQuadName(coeff)
-        else:
-            # The spatial derivative adds an extra dim index so we need to
-            # bump up the rank
-            rank = rank + 1
-            name = buildSpatialDerivativeName(coeff)
-        base = Variable(name)
-
-        # If there are no indices present (e.g. in the quadrature evaluation loop) then
-        # we need to fake indices for the coefficient based on its rank:
-        if fake_indices:
-            fake = [buildDimIndex(i, coeff) for i in range(rank)]
-            self._indexStack.push(tuple(fake))
-
-        indices = self.subscript_CoeffQuadrature(coeff)
-
-        # Remove the fake indices
-        if fake_indices:
-            self._indexStack.pop()
-
-        coeffExpr = self.buildMultiArraySubscript(base, indices)
-        return coeffExpr
-
-    def buildLocalTensorAccessor(self, form):
-        indices = self.subscript_LocalTensor(form)
-
-        # Subscript the local tensor variable
-        expr = self.buildSubscript(localTensor, indices)
-        return expr
-
-    def buildSubscript(self, variable, indices):
-        raise NotImplementedError("You're supposed to implement buildSubscript()!")
-
-    def subscript_LocalTensor(self, form):
-        raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
 
 class QuadratureExpressionBuilder:
 

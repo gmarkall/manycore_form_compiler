@@ -43,7 +43,7 @@ void A(double localTensor[3][3], double dt)
       {
         for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
         {
-          localTensor[i_r_0][i_r_1] += d_CG1[i_d_1][i_g][i_r_0] * d_CG1[i_d_1][i_g][i_r_1] * detwei[i_g];
+          localTensor[i_r_0][i_r_1] += d_CG1[i_d_1][i_r_0][i_g] * d_CG1[i_d_1][i_r_1][i_g] * detwei[i_g];
         };
       };
     };
