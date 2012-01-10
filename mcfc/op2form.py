@@ -37,11 +37,10 @@ class Op2FormBackend(FormBackend):
     def _buildKernelParameters(self, tree, form):
         KPG = Op2KernelParameterGenerator(self)
 
-        detwei = _buildArrayParameter("detwei", self.subscript_detwei())
         timestep = Variable("dt", Real() )
         localTensor = _buildArrayParameter("localTensor", KPG.expBuilder.subscript_LocalTensor(form))
 
-        statutoryParameters = [ localTensor, timestep, detwei ]
+        statutoryParameters = [ localTensor, timestep ]
 
         return KPG.generate(tree, form, statutoryParameters)
 

@@ -23,7 +23,7 @@ import form
 from codegeneration import Variable, Integer, Pointer, Real
 
 numElements = Variable("n_ele", Integer() )
-statutoryParameters = [ form.localTensor, numElements, form.timestep, form.detwei ]
+statutoryParameters = [ form.localTensor, numElements, form.timestep ]
 
 class CudaKernelParameterGenerator(KernelParameterGenerator):
 

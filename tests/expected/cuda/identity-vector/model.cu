@@ -15,7 +15,7 @@ int* Velocity_colm;
 int Velocity_colm_size;
 
 
-__global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
+__global__ void A(double* localTensor, int n_ele, double dt, double* CG1)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -65,7 +65,7 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
   };
 }
 
-__global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1)
+__global__ void RHS(double* localTensor, int n_ele, double dt, double* c0, double* CG1)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
