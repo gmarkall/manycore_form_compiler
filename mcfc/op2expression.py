@@ -43,7 +43,8 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         count = tree.count()
-        indices = [self._formBackend.buildBasisIndex(count),
+        element = tree.element()
+        indices = [buildBasisIndex(count, element),
                    self._formBackend.buildGaussIndex()]
         return indices
 
@@ -52,12 +53,13 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         # nesting depth of IndexSums of the expression.
         operand, _ = tree.operands()
         count = operand.count()
+        element = operand.element()
 
         if isinstance(operand, Argument):
             indices = []
             indices.extend(dimIndices)
             indices = indices + [ self._formBackend.buildGaussIndex(),
-                                  self._formBackend.buildBasisIndex(count) ]
+                                  buildBasisIndex(count, element) ]
         elif isinstance(operand, Coefficient):
             indices = [ self._formBackend.buildGaussIndex() ]
             indices.extend(dimIndices)
@@ -71,7 +73,7 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         indices = []
         # One rank index for each rank
         for r in range(rank):
-            indices.append(self._formBackend.buildBasisIndex(r))
+            indices.append(buildBasisIndex(r, form))
 
         return indices
 
@@ -81,20 +83,27 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         return buildSubscript(variable, indices)
 
     def subscript(self, tree):
+        if isinstance(tree, Coefficient):
+            element = tree.element()
+        elif isinstance(tree, SpatialDerivative):
+            element = tree.operands()[0].element()
+        
+        dim = element.cell().topological_dimension()
         rank = tree.rank()
         # Subscript order: basis index followed by dimension indices (if any)
-        indices = [self._formBackend.buildBasisIndex(0)]
+        indices = [buildBasisIndex(0, element)]
         for r in range(rank):
             indices.append(self._formBackend.buildDimIndex(r))
         return indices
 
     def subscript_spatial_derivative(self, tree):
+        element = tree.operands()[0].element()
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
         indices = [ self._formBackend.buildDimIndex(0),
                     self._formBackend.buildGaussIndex(),
-                    self._formBackend.buildBasisIndex(0) ]
+                    buildBasisIndex(0, element) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et
