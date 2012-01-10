@@ -82,11 +82,12 @@ class ExpressionBuilder(Transformer):
 
     def multi_index(self, tree):
         indices = []
+        dims = tree.index_dimensions()
         for i in tree:
             if isinstance(i, Index):
-                indices.append(self._formBackend.buildDimIndex(i.count()))
+                indices.append(buildDimIndex(i.count(), dims[i]))
             elif isinstance(i, FixedIndex):
-                indices.append(self._formBackend.buildConstDimIndex(i._value))
+                indices.append(buildConstDimIndex(i._value, dims[i]))
             else:
                 raise RuntimeError('Other types of indices not yet implemented.')
         return tuple(indices)
@@ -151,17 +152,19 @@ class ExpressionBuilder(Transformer):
         rank = coeff.rank()
         if isinstance(coeff, Coefficient):
             name = buildCoefficientQuadName(coeff)
+            dim = coeff.element().cell().topological_dimension()
         else:
             # The spatial derivative adds an extra dim index so we need to
             # bump up the rank
             rank = rank + 1
             name = buildSpatialDerivativeName(coeff)
+            dim = coeff.operands()[0].element().cell().topological_dimension()
         base = Variable(name)
         
         # If there are no indices present (e.g. in the quadrature evaluation loop) then
         # we need to fake indices for the coefficient based on its rank:
         if fake_indices:
-            fake = [self._formBackend.buildDimIndex(i) for i in range(rank)]
+            fake = [buildDimIndex(i, dim) for i in range(rank)]
             self._indexStack.push(tuple(fake))
 
         indices = self.subscript_CoeffQuadrature(coeff)
