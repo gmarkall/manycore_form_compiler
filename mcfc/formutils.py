@@ -22,8 +22,13 @@
 # UFL libs
 from ufl.argument import Argument
 from ufl.coefficient import Coefficient
+from ufl.form import Form
 from ufl.algorithms.transformations import Transformer
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+
+# FFC libs
+from ffc.fiatinterface import create_element
+from ffc.mixedelement import MixedElement as FFCMixedElement
 
 # MCFC libs
 from codegeneration import *
@@ -188,7 +193,7 @@ class ConstIndex(CodeIndex):
 
 def buildBasisIndex(count, element):
     "Build index for a loop over basis function values."
-    return BasisIndex(elementRank(element), count)
+    return BasisIndex(numBasisFunctions(element), count)
 
 def buildDimIndex(count, e):
     "Build index for a loop over spatial dimensions."
@@ -257,20 +262,22 @@ def buildTensorArgumentName(tree):
 def buildTensorSpatialDerivativeName(tree):
     return buildSpatialDerivativeName(tree) + "_t"
 
-# Used by both the assembler generator and the form generator.
-
-def formElementRank(form):
-    # Use the element from the first argument, which should be the TestFunction
-    arg = form.form_data().arguments[0]
-    return elementRank(arg.element())
+# This function provides a simple calculation of the number of basis
+# functions per element. This works for the tensor product of a scalar basis
+# only.
+def numBasisFunctions(e):
+    if isinstance(e, Form):
+        # Use the element from the first argument, which should be the TestFunction
+        e = e.form_data().arguments[0].element()
+    element = create_element(e)
+    if isinstance(element, FFCMixedElement):
+        return len(element.entity_dofs()) * element.num_components()
+    else:
+        print element.get_nodal_basis()
+        return element.get_nodal_basis().get_num_members()
 
 def elementRank(e):
     return len(e.value_shape())
-
-def formElementSpaceDim(form):
-    # Use the element from the first argument, which should be the TestFunction
-    arg = form.form_data().arguments[0]
-    return elementSpaceDim(arg.element())
 
 def elementSpaceDim(e):
     return e.cell().geometric_dimension()

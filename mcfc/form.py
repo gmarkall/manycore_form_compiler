@@ -132,21 +132,21 @@ class FormBackend(object):
     def buildLoopNest(self, form):
         "Build the loop nest for evaluating a form expression."
         rank = form.form_data().rank
-        numBasisFunctions = self._numBasisFunctions(form)
+        numBFs = numBasisFunctions(form)
 
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
         # Build the loop over the first rank, which always exists
         indVarName = self.buildBasisIndex(0).name()
-        loop = buildSimpleForLoop(indVarName, numBasisFunctions)
+        loop = buildSimpleForLoop(indVarName, numBFs)
         outerLoop = loop
 
         # Add another loop for each rank of the form (probably no
         # more than one more... )
         for r in range(1,rank):
             indVarName = self.buildBasisIndex(r).name()
-            basisLoop = buildSimpleForLoop(indVarName, numBasisFunctions)
+            basisLoop = buildSimpleForLoop(indVarName, numBFs)
             loop.append(basisLoop)
             loop = basisLoop
 
@@ -262,14 +262,6 @@ class FormBackend(object):
             declarations.append(decl)
 
         return declarations
-
-    # This function provides a simple calculation of the number of basis
-    # functions per element. This works for the tensor product of a scalar basis
-    # only.
-    def _numBasisFunctions(self, form):
-        elementRank = formElementRank(form)
-        spaceDimension = formElementSpaceDim(form)
-        return self.numNodesPerEle * pow(spaceDimension, elementRank)
 
     def _buildBasisTensors(self, form_data):
         """When using a basis that is a tensor product of the scalar basis, we

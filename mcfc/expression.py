@@ -18,6 +18,7 @@
 # holders.
 
 from form import *
+from formutils import buildBasisIndex
 from symbolicvalue import SymbolicValue
 from ufl.argument import TrialFunction
 from ufl.coefficient import Coefficient
@@ -229,9 +230,15 @@ class QuadratureExpressionBuilder:
         raise NotImplementedError("You're supposed to implement subscript()!")
 
     def subscript_argument(self, tree):
+        # FIXME: At present we make use of the scalar basis for the expression
+        # even if the coefficient is on a vector or tensor basis. So we need to
+        # extract a single element to use as the basis.
+        e = tree.element()
+        if isinstance(e, (VectorElement, TensorElement)):
+            e = e.sub_elements()[0]
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
-        indices = [self._formBackend.buildBasisIndex(0),
+        indices = [buildBasisIndex(0, e),
                    self._formBackend.buildGaussIndex()]
         return indices
 
