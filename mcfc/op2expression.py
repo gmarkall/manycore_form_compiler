@@ -41,14 +41,6 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def buildMultiArraySubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
-    def subscript_Argument(self, tree):
-        # Build the subscript based on the argument count
-        count = tree.count()
-        element = tree.element()
-        indices = [buildBasisIndex(count, element),
-                   buildGaussIndex(self._formBackend.numGaussPoints)]
-        return indices
-
     def subscript_SpatialDerivative(self,tree,dimIndices):
         # Build the subscript based on the argument count and the
         # nesting depth of IndexSums of the expression.

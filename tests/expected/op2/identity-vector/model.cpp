@@ -44,7 +44,7 @@ void A(double localTensor[6][6], double dt)
       {
         for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
         {
-          localTensor[i_r_0][i_r_1] += CG1_v[i_r_0][i_g] * CG1_v[i_r_1][i_g] * detwei[i_g];
+          localTensor[i_r_0][i_r_1] += CG1_v[i_d_0][i_r_0][i_g] * CG1_v[i_d_0][i_r_1][i_g] * detwei[i_g];
         };
       };
     };
@@ -101,7 +101,7 @@ void RHS(double localTensor[6], double dt, double c0[3][2])
     {
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
-        localTensor[i_r_0] += CG1_v[i_r_0][i_g] * c_q0[i_g][i_d_0] * detwei[i_g];
+        localTensor[i_r_0] += CG1_v[i_d_0][i_r_0][i_g] * c_q0[i_g][i_d_0] * detwei[i_g];
       };
     };
   };

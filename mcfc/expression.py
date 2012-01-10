@@ -50,6 +50,15 @@ class ExpressionBuilder(Transformer):
         else:
             return meth(tree, depth)
 
+    def subscript_Argument(self, tree):
+        # Build the subscript based on the argument count
+        indices = []
+        for dimIndices in self._indexStack:
+            indices.extend(dimIndices)
+        indices += [buildBasisIndex(tree.count(), tree.element()),
+                    buildGaussIndex(self._formBackend.numGaussPoints)]
+        return indices
+
     def subscript_CoeffQuadrature(self, coeff):
         # Build the subscript based on the rank
         indices = [buildGaussIndex(self._formBackend.numGaussPoints)]
