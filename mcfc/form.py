@@ -98,10 +98,6 @@ class FormBackend(object):
 
         return kernel
 
-    def buildGaussIndex(self):
-        "Build index for a Gauss quadrature loop."
-        return GaussIndex(self.numGaussPoints)
-
     def buildExpression(self, form, tree):
         "Build the expression represented by the subtree tree of form."
         # Build the rhs expression

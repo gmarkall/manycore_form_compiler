@@ -95,7 +95,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
         for dimIndices in self._indexStack:
             indices.extend(dimIndices)
         indices += [buildBasisIndex(count, element), 
-                    self._formBackend.buildGaussIndex()]
+                    buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 
     def subscript_SpatialDerivative(self,tree,dimIndices):
@@ -108,10 +108,10 @@ class CudaExpressionBuilder(ExpressionBuilder):
         if isinstance(operand, Argument):
             indices = [ ElementIndex()]
             indices.extend(dimIndices)
-            indices = indices + [ self._formBackend.buildGaussIndex(),
+            indices = indices + [ buildGaussIndex(self._formBackend.numGaussPoints),
                                   buildBasisIndex(count, element) ]
         elif isinstance(operand, Coefficient):
-            indices = [ self._formBackend.buildGaussIndex() ]
+            indices = [ buildGaussIndex(self._formBackend.numGaussPoints) ]
             indices.extend(dimIndices)
 
         return indices
@@ -156,7 +156,7 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # index should be used to subscript the derivative (I think).
         indices = [ ElementIndex(),
                     buildDimIndex(0, dim),
-                    self._formBackend.buildGaussIndex(),
+                    buildGaussIndex(self._formBackend.numGaussPoints),
                     buildBasisIndex(0, element) ]
         return indices
 

@@ -55,7 +55,8 @@ class ExpressionBuilder(Transformer):
 
     def subscript_CoeffQuadrature(self, coeff):
         # Build the subscript based on the rank
-        indices = [self._formBackend.buildGaussIndex()]
+        indices = [buildGaussIndex(self._formBackend.numGaussPoints)]
+
         rank = coeff.rank()
 
         if isinstance(coeff, SpatialDerivative):
@@ -242,7 +243,7 @@ class QuadratureExpressionBuilder:
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
         indices = [buildBasisIndex(0, e),
-                   self._formBackend.buildGaussIndex()]
+                   buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 
     def subscript_spatial_derivative(self, tree):

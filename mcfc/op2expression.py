@@ -45,7 +45,7 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         count = tree.count()
         element = tree.element()
         indices = [buildBasisIndex(count, element),
-                   self._formBackend.buildGaussIndex()]
+                   buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 
     def subscript_SpatialDerivative(self,tree,dimIndices):
@@ -58,10 +58,10 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         if isinstance(operand, Argument):
             indices = []
             indices.extend(dimIndices)
-            indices = indices + [ self._formBackend.buildGaussIndex(),
+            indices = indices + [ buildGaussIndex(self._formBackend.numGaussPoints),
                                   buildBasisIndex(count, element) ]
         elif isinstance(operand, Coefficient):
-            indices = [ self._formBackend.buildGaussIndex() ]
+            indices = [ buildGaussIndex(self._formBackend.numGaussPoints) ]
             indices.extend(dimIndices)
 
         return indices
@@ -103,7 +103,7 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
         indices = [ buildDimIndex(0,dim),
-                    self._formBackend.buildGaussIndex(),
+                    buildGaussIndex(self._formBackend.numGaussPoints),
                     buildBasisIndex(0, element) ]
         return indices
 
