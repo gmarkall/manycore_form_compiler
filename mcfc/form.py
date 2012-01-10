@@ -22,6 +22,8 @@ cudaform.py, op2form.py, etc."""
 
 # UFL libs
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from ufl.coefficient import Coefficient
+from ufl.differentiation import SpatialDerivative
 # MCFC libs
 from codegeneration import *
 from formutils import *
@@ -138,14 +140,14 @@ class FormBackend(object):
         integrand = form.integrals()[0].integrand()
 
         # Build the loop over the first rank, which always exists
-        indVarName = self.buildBasisIndex(0).name()
+        indVarName = buildBasisIndex(0, form).name()
         loop = buildSimpleForLoop(indVarName, numBFs)
         outerLoop = loop
 
         # Add another loop for each rank of the form (probably no
         # more than one more... )
         for r in range(1,rank):
-            indVarName = self.buildBasisIndex(r).name()
+            indVarName = buildBasisIndex(r, form).name()
             basisLoop = buildSimpleForLoop(indVarName, numBFs)
             loop.append(basisLoop)
             loop = basisLoop
@@ -156,14 +158,10 @@ class FormBackend(object):
         loop.append(gaussLoop)
         loop = gaussLoop
 
-        # Determine how many dimension loops we need by inspection.
-        # We count the nesting depth of IndexSums to determine
-        # how many dimension loops we need.
+        # Find the indices over dimensions and and loops for them.
         dimLoops = indexSumIndices(integrand)
-
-        # Add loops for each dimension as necessary.
         for d in dimLoops:
-            indVarName = self.buildDimIndex(d['count']).name()
+            indVarName = buildDimIndex(d['count'], d['extent']).name()
             dimLoop = buildSimpleForLoop(indVarName, d['extent'])
             loop.append(dimLoop)
             loop = dimLoop
@@ -177,9 +175,15 @@ class FormBackend(object):
 
         loop = scope
 
+        if isinstance(coeff, Coefficient):
+            element = coeff.element()
+        if isinstance(coeff, SpatialDerivative):
+            element = coeff.operands()[0].element()
+        dim = element.cell().topological_dimension()
+
         # Build loop over the correct number of dimensions
         for r in range(rank):
-            indVar = self.buildDimIndex(r).name()
+            indVar = buildDimIndex(r, dim).name()
             dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
@@ -189,7 +193,7 @@ class FormBackend(object):
         loop.append(initialiser)
 
         # One loop over the basis functions
-        indVar = self.buildBasisIndex(0).name()
+        indVar = buildBasisIndex(0, element).name()
         basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
         loop.append(basisLoop)
 

@@ -191,9 +191,9 @@ class ConstIndex(CodeIndex):
 
 # Index builders
 
-def buildBasisIndex(count, element):
+def buildBasisIndex(count, e):
     "Build index for a loop over basis function values."
-    return BasisIndex(numBasisFunctions(element), count)
+    return BasisIndex(numBasisFunctions(e), count)
 
 def buildDimIndex(count, e):
     "Build index for a loop over spatial dimensions."
@@ -264,7 +264,9 @@ def buildTensorSpatialDerivativeName(tree):
 
 # This function provides a simple calculation of the number of basis
 # functions per element. This works for the tensor product of a scalar basis
-# only.
+# only. 
+# It takes a form or an element - if a form is given, it uses the element of
+# the test function.
 def numBasisFunctions(e):
     if isinstance(e, Form):
         # Use the element from the first argument, which should be the TestFunction
