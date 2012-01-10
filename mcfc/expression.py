@@ -54,7 +54,8 @@ class ExpressionBuilder(Transformer):
 
     def subscript_CoeffQuadrature(self, coeff):
         # Build the subscript based on the rank
-        indices = [self._formBackend.buildGaussIndex()]
+        indices = [buildGaussIndex(self._formBackend.numGaussPoints)]
+
         rank = coeff.rank()
 
         if isinstance(coeff, SpatialDerivative):
@@ -81,11 +82,12 @@ class ExpressionBuilder(Transformer):
 
     def multi_index(self, tree):
         indices = []
+        dims = tree.index_dimensions()
         for i in tree:
             if isinstance(i, Index):
-                indices.append(self._formBackend.buildDimIndex(i.count()))
+                indices.append(buildDimIndex(i.count(), dims[i]))
             elif isinstance(i, FixedIndex):
-                indices.append(self._formBackend.buildConstDimIndex(i._value))
+                indices.append(buildConstDimIndex(i._value, dims[i]))
             else:
                 raise RuntimeError('Other types of indices not yet implemented.')
         return tuple(indices)
@@ -150,17 +152,20 @@ class ExpressionBuilder(Transformer):
         rank = coeff.rank()
         if isinstance(coeff, Coefficient):
             name = buildCoefficientQuadName(coeff)
+            element = coeff.element()
         else:
             # The spatial derivative adds an extra dim index so we need to
             # bump up the rank
             rank = rank + 1
             name = buildSpatialDerivativeName(coeff)
+            element = coeff.operands()[0].element()
         base = Variable(name)
+        dim = element.cell().topological_dimension()
         
         # If there are no indices present (e.g. in the quadrature evaluation loop) then
         # we need to fake indices for the coefficient based on its rank:
         if fake_indices:
-            fake = [self._formBackend.buildDimIndex(i) for i in range(rank)]
+            fake = [buildDimIndex(i, dim) for i in range(rank)]
             self._indexStack.push(tuple(fake))
 
         indices = self.subscript_CoeffQuadrature(coeff)
@@ -229,10 +234,16 @@ class QuadratureExpressionBuilder:
         raise NotImplementedError("You're supposed to implement subscript()!")
 
     def subscript_argument(self, tree):
+        # FIXME: At present we make use of the scalar basis for the expression
+        # even if the coefficient is on a vector or tensor basis. So we need to
+        # extract a single element to use as the basis.
+        e = tree.element()
+        if isinstance(e, (VectorElement, TensorElement)):
+            e = e.sub_elements()[0]
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
-        indices = [self._formBackend.buildBasisIndex(0),
-                   self._formBackend.buildGaussIndex()]
+        indices = [buildBasisIndex(0, e),
+                   buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 
     def subscript_spatial_derivative(self, tree):

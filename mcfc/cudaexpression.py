@@ -90,25 +90,28 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def subscript_Argument(self, tree):
         # Build the subscript based on the argument count
         count = tree.count()
+        element = tree.element()
         indices = []
         for dimIndices in self._indexStack:
             indices.extend(dimIndices)
-        indices += [self._formBackend.buildBasisIndex(count), self._formBackend.buildGaussIndex()]
+        indices += [buildBasisIndex(count, element), 
+                    buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 
     def subscript_SpatialDerivative(self,tree,dimIndices):
         # Build the subscript based on the argument count and the
         # indices
         operand, _ = tree.operands()
+        element = operand.element()
         count = operand.count()
 
         if isinstance(operand, Argument):
             indices = [ ElementIndex()]
             indices.extend(dimIndices)
-            indices = indices + [ self._formBackend.buildGaussIndex(),
-                                  self._formBackend.buildBasisIndex(count) ]
+            indices = indices + [ buildGaussIndex(self._formBackend.numGaussPoints),
+                                  buildBasisIndex(count, element) ]
         elif isinstance(operand, Coefficient):
-            indices = [ self._formBackend.buildGaussIndex() ]
+            indices = [ buildGaussIndex(self._formBackend.numGaussPoints) ]
             indices.extend(dimIndices)
 
         return indices
@@ -122,7 +125,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
 
         # One rank index for each rank
         for r in range(rank):
-            indices.append(self._formBackend.buildBasisIndex(r))
+            indices.append(buildBasisIndex(r,form))
 
         return indices
 
@@ -132,21 +135,29 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         return buildSubscript(variable, indices)
 
     def subscript(self, tree):
+        if isinstance(tree, Coefficient):
+            element = tree.element()
+        elif isinstance(tree, SpatialDerivative):
+            element = tree.operands()[0].element()
+        
+        dim = element.cell().topological_dimension()
         rank = tree.rank()
         indices = [ ElementIndex() ]
         for r in range(rank):
-            indices.append(self._formBackend.buildDimIndex(r))
-        indices.append(self._formBackend.buildBasisIndex(0))
+            indices.append(buildDimIndex(r,dim))
+        indices.append(buildBasisIndex(0, element))
         return indices
 
     def subscript_spatial_derivative(self, tree):
+        element = tree.operands()[0].element()
+        dim = element.cell().topological_dimension()
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
         indices = [ ElementIndex(),
-                    self._formBackend.buildDimIndex(0),
-                    self._formBackend.buildGaussIndex(),
-                    self._formBackend.buildBasisIndex(0) ]
+                    buildDimIndex(0, dim),
+                    buildGaussIndex(self._formBackend.numGaussPoints),
+                    buildBasisIndex(0, element) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et

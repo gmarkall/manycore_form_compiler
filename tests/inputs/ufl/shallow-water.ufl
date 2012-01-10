@@ -1,6 +1,10 @@
 # FIXME: this isn't updated for coefficients in state yet
-V = state.vector_fields["Velocity"] # Velocity space
-H = state.scalar_fields["Height"] # Height space
+v = state.vector_fields["Velocity"] # Velocity space
+h = state.scalar_fields["Height"] # Height space
+
+V = v.element()
+H = h.element()
+
 W = V*H                                # Mixed space of both.
 
 (v, q) = TestFunctions(W)
@@ -28,7 +32,8 @@ A_r=M_u+M_h-0.5*dt*(C+Ct+F)                  # Right hand side form
 rhs=action(A_r,fluidstate)
 
 # Solve the shallow water equations.
-(Vnew, Hnew) =  split(solve(A, rhs))
+new_state =  solve(A, rhs)
 
-state.scalar_fields["Height"] = Hnew
-state.vector_fields["Velocity"] = Vnew
+# How do we get Hnew and Vnew from new_state?
+#state.scalar_fields["Height"] = Hnew
+#state.vector_fields["Velocity"] = Vnew

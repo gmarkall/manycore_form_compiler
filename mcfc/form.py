@@ -22,9 +22,12 @@ cudaform.py, op2form.py, etc."""
 
 # UFL libs
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from ufl.coefficient import Coefficient
+from ufl.differentiation import SpatialDerivative
 # MCFC libs
 from codegeneration import *
 from formutils import *
+from utilities import uniqify
 
 class FormBackend(object):
     "Base class for generating form tabulation kernels."
@@ -95,22 +98,6 @@ class FormBackend(object):
 
         return kernel
 
-    def buildBasisIndex(self, count):
-        "Build index for a loop over basis function values."
-        return BasisIndex(self.numNodesPerEle, count)
-
-    def buildDimIndex(self, count):
-        "Build index for a loop over spatial dimensions."
-        return DimIndex(self.numDimensions, count)
-
-    def buildConstDimIndex(self, count):
-        "Build literal subscript for a loop over spatial dimensions."
-        return ConstIndex(self.numDimensions, count)
-
-    def buildGaussIndex(self):
-        "Build index for a Gauss quadrature loop."
-        return GaussIndex(self.numGaussPoints)
-
     def buildExpression(self, form, tree):
         "Build the expression represented by the subtree tree of form."
         # Build the rhs expression
@@ -131,38 +118,34 @@ class FormBackend(object):
     def buildLoopNest(self, form):
         "Build the loop nest for evaluating a form expression."
         rank = form.form_data().rank
-        numBasisFunctions = self._numBasisFunctions(form)
+        numBFs = numBasisFunctions(form)
 
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
         # Build the loop over the first rank, which always exists
-        indVarName = self.buildBasisIndex(0).name()
-        loop = buildSimpleForLoop(indVarName, numBasisFunctions)
+        indVarName = buildBasisIndex(0, form).name()
+        loop = buildSimpleForLoop(indVarName, numBFs)
         outerLoop = loop
 
         # Add another loop for each rank of the form (probably no
         # more than one more... )
         for r in range(1,rank):
-            indVarName = self.buildBasisIndex(r).name()
-            basisLoop = buildSimpleForLoop(indVarName, numBasisFunctions)
+            indVarName = buildBasisIndex(r, form).name()
+            basisLoop = buildSimpleForLoop(indVarName, numBFs)
             loop.append(basisLoop)
             loop = basisLoop
 
         # Add a loop for the quadrature
-        indVarName = self.buildGaussIndex().name()
+        indVarName = buildGaussIndex(self.numGaussPoints).name()
         gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
         loop.append(gaussLoop)
         loop = gaussLoop
 
-        # Determine how many dimension loops we need by inspection.
-        # We count the nesting depth of IndexSums to determine
-        # how many dimension loops we need.
+        # Find the indices over dimensions and and loops for them.
         dimLoops = indexSumIndices(integrand)
-
-        # Add loops for each dimension as necessary.
         for d in dimLoops:
-            indVarName = self.buildDimIndex(d['count']).name()
+            indVarName = buildDimIndex(d['count'], d['extent']).name()
             dimLoop = buildSimpleForLoop(indVarName, d['extent'])
             loop.append(dimLoop)
             loop = dimLoop
@@ -176,9 +159,15 @@ class FormBackend(object):
 
         loop = scope
 
+        if isinstance(coeff, Coefficient):
+            element = coeff.element()
+        if isinstance(coeff, SpatialDerivative):
+            element = coeff.operands()[0].element()
+        dim = element.cell().topological_dimension()
+
         # Build loop over the correct number of dimensions
         for r in range(rank):
-            indVar = self.buildDimIndex(r).name()
+            indVar = buildDimIndex(r, dim).name()
             dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
@@ -188,7 +177,7 @@ class FormBackend(object):
         loop.append(initialiser)
 
         # One loop over the basis functions
-        indVar = self.buildBasisIndex(0).name()
+        indVar = buildBasisIndex(0, element).name()
         basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
         loop.append(basisLoop)
 
@@ -213,7 +202,7 @@ class FormBackend(object):
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         # Outer loop over gauss points
-        indVar = self.buildGaussIndex().name()
+        indVar = buildGaussIndex(self.numGaussPoints).name()
         gaussLoop = buildSimpleForLoop(indVar, self.numGaussPoints)
 
         # Build a loop nest for each coefficient containing expressions
@@ -261,34 +250,6 @@ class FormBackend(object):
             declarations.append(decl)
 
         return declarations
-
-    def _elementRank(self, form):
-        # Use the element from the first argument, which should be the TestFunction
-        arg = form.form_data().arguments[0]
-        e = arg.element()
-
-        if isinstance(e, FiniteElement):
-            return 0
-        elif isinstance(e, VectorElement):
-            return 1
-        elif isinstance(e, TensorElement):
-            return 2
-        else:
-            raise RuntimeError("Not a recognised element.")
-
-    def _elementSpaceDim(self, form):
-        # Use the element from the first argument, which should be the TestFunction
-        arg = form.form_data().arguments[0]
-        e = arg.element()
-        return e.cell().geometric_dimension()
-
-    # This function provides a simple calculation of the number of basis
-    # functions per element. This works for the tensor product of a scalar basis
-    # only.
-    def _numBasisFunctions(self, form):
-        elementRank = self._elementRank(form)
-        spaceDimension = self._elementSpaceDim(form)
-        return self.numNodesPerEle * pow(spaceDimension, elementRank)
 
     def _buildBasisTensors(self, form_data):
         """When using a basis that is a tensor product of the scalar basis, we

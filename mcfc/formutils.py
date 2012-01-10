@@ -22,7 +22,14 @@
 # UFL libs
 from ufl.argument import Argument
 from ufl.coefficient import Coefficient
+from ufl.form import Form
 from ufl.algorithms.transformations import Transformer
+from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+
+# FFC libs
+from ffc.fiatinterface import create_element
+from ffc.mixedelement import MixedElement as FFCMixedElement
+
 # MCFC libs
 from codegeneration import *
 from utilities import uniqify
@@ -182,6 +189,28 @@ class ConstIndex(CodeIndex):
     def name(self):
         return str(self._count)
 
+# Index builders
+
+def buildBasisIndex(count, e):
+    "Build index for a loop over basis function values."
+    return BasisIndex(numBasisFunctions(e), count)
+
+def buildDimIndex(count, e):
+    "Build index for a loop over spatial dimensions."
+    if isinstance(e, int):
+        dim = e
+    else:
+        dim = elementSpaceDim(e)
+    return DimIndex(dim, count)
+
+def buildConstDimIndex(value, extent):
+    "Build literal subscript for a loop over spatial dimensions."
+    return ConstIndex(extent, count)
+
+def buildGaussIndex(n):
+    "Build index for a Gauss quadrature loop."
+    return GaussIndex(n)
+
 # Name builders
 
 def safe_shortstr(name):
@@ -232,5 +261,17 @@ def buildTensorArgumentName(tree):
 
 def buildTensorSpatialDerivativeName(tree):
     return buildSpatialDerivativeName(tree) + "_t"
+
+def numBasisFunctions(e):
+    """Return the number of basis functions. e can be a form or an element - 
+    if e is a form, the element from the test function is used."""
+    if isinstance(e, Form):
+        # Use the element from the first argument, which should be the TestFunction
+        e = e.form_data().arguments[0].element()
+    element = create_element(e)
+    if isinstance(element, FFCMixedElement):
+        return len(element.entity_dofs()) * element.num_components()
+    else:
+        return element.get_nodal_basis().get_num_members()
 
 # vim:sw=4:ts=4:sts=4:et
