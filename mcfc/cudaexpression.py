@@ -17,8 +17,9 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from expression import *
 from cudaparameters import numElements
+from expression import *
+from formutils import extract_element
 
 # Variables
 
@@ -94,7 +95,7 @@ class CudaExpressionBuilder(ExpressionBuilder):
         indices = []
         for dimIndices in self._indexStack:
             indices.extend(dimIndices)
-        indices += [buildBasisIndex(count, element), 
+        indices += [buildBasisIndex(count, element),
                     buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 
@@ -135,29 +136,20 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         return buildSubscript(variable, indices)
 
     def subscript(self, tree):
-        if isinstance(tree, Coefficient):
-            element = tree.element()
-        elif isinstance(tree, SpatialDerivative):
-            element = tree.operands()[0].element()
-        
-        dim = element.cell().topological_dimension()
-        rank = tree.rank()
         indices = [ ElementIndex() ]
-        for r in range(rank):
-            indices.append(buildDimIndex(r,dim))
-        indices.append(buildBasisIndex(0, element))
+        for r in range(tree.rank()):
+            indices.append(buildDimIndex(r,tree))
+        indices.append(buildBasisIndex(0, extract_element(tree)))
         return indices
 
     def subscript_spatial_derivative(self, tree):
-        element = tree.operands()[0].element()
-        dim = element.cell().topological_dimension()
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
         indices = [ ElementIndex(),
-                    buildDimIndex(0, dim),
+                    buildDimIndex(0, tree),
                     buildGaussIndex(self._formBackend.numGaussPoints),
-                    buildBasisIndex(0, element) ]
+                    buildBasisIndex(0, extract_element(tree)) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et

@@ -152,20 +152,17 @@ class ExpressionBuilder(Transformer):
         rank = coeff.rank()
         if isinstance(coeff, Coefficient):
             name = buildCoefficientQuadName(coeff)
-            element = coeff.element()
         else:
             # The spatial derivative adds an extra dim index so we need to
             # bump up the rank
             rank = rank + 1
             name = buildSpatialDerivativeName(coeff)
-            element = coeff.operands()[0].element()
         base = Variable(name)
-        dim = element.cell().topological_dimension()
 
         # If there are no indices present (e.g. in the quadrature evaluation loop) then
         # we need to fake indices for the coefficient based on its rank:
         if fake_indices:
-            fake = [buildDimIndex(i, dim) for i in range(rank)]
+            fake = [buildDimIndex(i, coeff) for i in range(rank)]
             self._indexStack.push(tuple(fake))
 
         indices = self.subscript_CoeffQuadrature(coeff)

@@ -23,7 +23,6 @@ cudaform.py, op2form.py, etc."""
 # UFL libs
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.coefficient import Coefficient
-from ufl.differentiation import SpatialDerivative
 # MCFC libs
 from codegeneration import *
 from formutils import *
@@ -159,15 +158,9 @@ class FormBackend(object):
 
         loop = scope
 
-        if isinstance(coeff, Coefficient):
-            element = coeff.element()
-        if isinstance(coeff, SpatialDerivative):
-            element = coeff.operands()[0].element()
-        dim = element.cell().topological_dimension()
-
         # Build loop over the correct number of dimensions
         for r in range(rank):
-            indVar = buildDimIndex(r, dim).name()
+            indVar = buildDimIndex(r, coeff).name()
             dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
             loop.append(dimLoop)
             loop = dimLoop
@@ -177,7 +170,7 @@ class FormBackend(object):
         loop.append(initialiser)
 
         # One loop over the basis functions
-        indVar = buildBasisIndex(0, element).name()
+        indVar = buildBasisIndex(0, extract_element(coeff)).name()
         basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
         loop.append(basisLoop)
 

@@ -18,6 +18,7 @@
 # holders.
 
 from expression import *
+from formutils import extract_element
 
 def buildSubscript(variable, indices):
     """Given a list of indices, return an AST that subscripts
@@ -83,28 +84,19 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         return buildSubscript(variable, indices)
 
     def subscript(self, tree):
-        if isinstance(tree, Coefficient):
-            element = tree.element()
-        elif isinstance(tree, SpatialDerivative):
-            element = tree.operands()[0].element()
-        
-        dim = element.cell().topological_dimension()
-        rank = tree.rank()
         # Subscript order: basis index followed by dimension indices (if any)
-        indices = [buildBasisIndex(0, element)]
-        for r in range(rank):
-            indices.append(buildDimIndex(r,dim))
+        indices = [buildBasisIndex(0, extract_element(tree))]
+        for r in range(tree.rank()):
+            indices.append(buildDimIndex(r,tree))
         return indices
 
     def subscript_spatial_derivative(self, tree):
-        element = tree.operands()[0].element()
-        dim = element.cell().topological_dimension()
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
         # index should be used to subscript the derivative (I think).
-        indices = [ buildDimIndex(0,dim),
+        indices = [ buildDimIndex(0,tree),
                     buildGaussIndex(self._formBackend.numGaussPoints),
-                    buildBasisIndex(0, element) ]
+                    buildBasisIndex(0, extract_element(tree)) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et

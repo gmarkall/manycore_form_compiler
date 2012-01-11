@@ -24,6 +24,7 @@ from ufl.argument import Argument
 from ufl.coefficient import Coefficient
 from ufl.form import Form
 from ufl.algorithms.transformations import Transformer
+from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 
 # FFC libs
@@ -191,16 +192,24 @@ class ConstIndex(CodeIndex):
 
 # Index builders
 
+def extract_element(expr):
+    if isinstance(expr, (Argument, Coefficient)):
+        return expr.element()
+    if isinstance(expr, SpatialDerivative):
+        return expr.operands()[0].element()
+
 def buildBasisIndex(count, e):
     "Build index for a loop over basis function values."
     return BasisIndex(numBasisFunctions(e), count)
 
 def buildDimIndex(count, e):
     "Build index for a loop over spatial dimensions."
+    # If passed an int, interpret it as the spatial dimension
     if isinstance(e, int):
         dim = e
+    # Otherwise we assume we're passed an element and extract the dimension
     else:
-        dim = elementSpaceDim(e)
+        dim = e.cell().topological_dimension()
     return DimIndex(dim, count)
 
 def buildConstDimIndex(value, extent):
@@ -263,7 +272,7 @@ def buildTensorSpatialDerivativeName(tree):
     return buildSpatialDerivativeName(tree) + "_t"
 
 def numBasisFunctions(e):
-    """Return the number of basis functions. e can be a form or an element - 
+    """Return the number of basis functions. e can be a form or an element -
     if e is a form, the element from the test function is used."""
     if isinstance(e, Form):
         # Use the element from the first argument, which should be the TestFunction
