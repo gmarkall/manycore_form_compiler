@@ -8,17 +8,17 @@ q=TestFunction(t)
 M=p*q*dx
 
 # Solve for T1-T4.
-rhs=dt*(dot(grad(q),u)*t-q*t*div(u))*dx
-t1=solve(M,rhs)
+rhs1=dt*(dot(grad(q),u)*t-q*t*div(u))*dx
+t1=solve(M,rhs1)
 
-rhs=dt*(dot(grad(q),u)*(t+0.5*t1)-q*(t+0.5*t1)*div(u))*dx
-t2=solve(M,rhs)
+rhs2=dt*(dot(grad(q),u)*(t+0.5*t1)-q*(t+0.5*t1)*div(u))*dx
+t2=solve(M,rhs2)
 
-rhs=dt*(dot(grad(q),u)*(t+0.5*t2)-q*(t+0.5*t2)*div(u))*dx
-t3=solve(M,rhs)
+rhs3=dt*(dot(grad(q),u)*(t+0.5*t2)-q*(t+0.5*t2)*div(u))*dx
+t3=solve(M,rhs3)
 
-rhs=dt*(dot(grad(q),u)*(t+t3)-q*(t+t3)*div(u))*dx
-t4=solve(M,rhs)
+rhs4=dt*(dot(grad(q),u)*(t+t3)-q*(t+t3)*div(u))*dx
+t4=solve(M,rhs4)
 
 # It's a little tricky to return something that isn't just a coefficient to
 # state at the moment. So we create a form and solve in order to work
