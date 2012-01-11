@@ -32,8 +32,8 @@ void A(double localTensor[3][3], double dt)
                                    { -1.,-1. },
                                    { -1.,-1. },
                                    { -1.,-1. } } };
-  const double detwei[6] = {  0.05497587, 0.05497587, 0.05497587,
-                              0.11169079, 0.11169079, 0.11169079 };
+  const double w[6] = {  0.05497587, 0.05497587, 0.05497587, 0.11169079,
+                         0.11169079, 0.11169079 };
   for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
   {
     for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
@@ -41,10 +41,10 @@ void A(double localTensor[3][3], double dt)
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
-        localTensor[i_r_0][i_r_1] += -1 * CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * detwei[i_g];
+        localTensor[i_r_0][i_r_1] += -1 * CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * w[i_g];
         for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
         {
-          localTensor[i_r_0][i_r_1] += d_CG1[i_d_1][i_r_0][i_g] * d_CG1[i_d_1][i_r_1][i_g] * detwei[i_g];
+          localTensor[i_r_0][i_r_1] += d_CG1[i_d_1][i_r_0][i_g] * d_CG1[i_d_1][i_r_1][i_g] * w[i_g];
         };
       };
     };
@@ -79,8 +79,8 @@ void RHS(double localTensor[3], double dt, double c0[3])
                                    { -1.,-1. },
                                    { -1.,-1. },
                                    { -1.,-1. } } };
-  const double detwei[6] = {  0.05497587, 0.05497587, 0.05497587,
-                              0.11169079, 0.11169079, 0.11169079 };
+  const double w[6] = {  0.05497587, 0.05497587, 0.05497587, 0.11169079,
+                         0.11169079, 0.11169079 };
   double c_q0[6];
   for(int i_g = 0; i_g < 6; i_g++)
   {
@@ -95,7 +95,7 @@ void RHS(double localTensor[3], double dt, double c0[3])
     localTensor[i_r_0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
-      localTensor[i_r_0] += CG1[i_r_0][i_g] * c_q0[i_g] * detwei[i_g];
+      localTensor[i_r_0] += CG1[i_r_0][i_g] * c_q0[i_g] * w[i_g];
     };
   };
 }

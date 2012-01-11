@@ -103,11 +103,10 @@ class FormBackend(object):
         # Build the rhs expression
         rhs, subexpr = self._expressionBuilder.build(tree)
 
-        # The rhs of a form needs to be multiplied by detwei
-        indices = self.subscript_detwei()
-        detwei = Variable("detwei")
-        detweiExpr = self._expressionBuilder.buildSubscript(detwei, indices)
-        rhs = MultiplyOp(rhs, detweiExpr)
+        # The rhs of a form needs to be multiplied by the quadrature weights
+        indices = self.subscript_weights()
+        weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
+        rhs = MultiplyOp(rhs, weightsExpr)
 
         # Assign expression to the local tensor value
         lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
@@ -248,8 +247,7 @@ class FormBackend(object):
         # Initialiser for shape derivatives on coordinate reference element
         dnInit = buildConstArrayInitializer(dnName, element._dn)
         # Initialiser for quadrature points on coordinate reference element
-        # FIXME: rename to w
-        wInit = buildConstArrayInitializer("detwei", element._weight)
+        wInit = buildConstArrayInitializer("w", element._weight)
 
         initialisers = [nInit, dnInit, wInit]
 
@@ -292,12 +290,13 @@ class FormBackend(object):
     def _buildKernelParameters(self, tree, form):
         raise NotImplementedError("You're supposed to implement _buildKernelParameters()!")
 
-    def subscript_detwei(self, tree):
-        raise NotImplementedError("You're supposed to implement subscript_detwei()!")
+    def subscript_weights(self):
+        indices = [buildGaussIndex(self.numGaussPoints)]
+        return indices
 
 # Variables used globally
 
-detwei = Variable("detwei", Pointer(Real()) )
+weights = Variable("w", Pointer(Real()) )
 timestep = Variable("dt", Real() )
 localTensor = Variable("localTensor", Pointer(Real()) )
 

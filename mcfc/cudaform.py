@@ -54,8 +54,4 @@ class CudaFormBackend(FormBackend):
         KPG = CudaKernelParameterGenerator()
         return KPG.generate(tree, form, statutoryParameters)
 
-    def subscript_detwei(self):
-        indices = [ElementIndex(), buildGaussIndex(self.numGaussPoints)]
-        return indices
-
 # vim:sw=4:ts=4:sts=4:et
