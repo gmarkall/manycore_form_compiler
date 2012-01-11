@@ -22,6 +22,7 @@ from utilities import uniqify
 # FEniCS UFL libs
 import ufl
 from ufl.algorithms.transformations import Transformer
+from ufl.finiteelement import VectorElement, TensorElement
 
 class KernelParameterGenerator(Transformer):
     """Mirrors the functionality of the kernelparametercomputer
@@ -69,6 +70,11 @@ class KernelParameterGenerator(Transformer):
             elif isinstance(subject, ufl.coefficient.Coefficient):
                 coefficients.append(subject)
                 element = subject.element()
+                # Since we only pass a scalar basis, extract the scalar
+                # basis from vector and tensor bases.
+                if isinstance(element, (VectorElement, TensorElement)):
+                    element = element.sub_elements()[0]
+                print element
                 # The reasoning behind giving the argument a count of 0 is that
                 # there will always be at least one basis function, which will
                 # be numbered 0. Need to check if this is correct for the case
