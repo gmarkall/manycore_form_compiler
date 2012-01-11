@@ -224,6 +224,10 @@ class FormBackend(object):
 
         return declarations
 
+    def _buildCoeffQuadDeclaration(self, name, rank):
+        extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
+        return Declaration(Variable(name, Array(Real(), extents)))
+
     def _buildBasisTensors(self, form_data):
         """When using a basis that is a tensor product of the scalar basis, we
         need to create an array that holds the tensor product. This function

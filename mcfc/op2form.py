@@ -30,10 +30,6 @@ class Op2FormBackend(FormBackend):
         self._expressionBuilder = Op2ExpressionBuilder(self)
         self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder(self)
 
-    def _buildCoeffQuadDeclaration(self, name, rank):
-        extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
-        return Declaration(Variable(name, Array(Real(), extents)))
-
     def _buildKernelParameters(self, tree, form):
         KPG = Op2KernelParameterGenerator(self)
 

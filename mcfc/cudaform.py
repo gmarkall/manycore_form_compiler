@@ -46,10 +46,6 @@ class CudaFormBackend(FormBackend):
         kernel.setCudaKernel(True)
         return kernel
 
-    def _buildCoeffQuadDeclaration(self, name, rank):
-        length = self.numGaussPoints * pow(self.numDimensions, rank)
-        return Declaration(Variable(name, Array(Real(), Literal(length))))
-
     def _buildKernelParameters(self, tree, form):
         KPG = CudaKernelParameterGenerator()
         return KPG.generate(tree, form, statutoryParameters)

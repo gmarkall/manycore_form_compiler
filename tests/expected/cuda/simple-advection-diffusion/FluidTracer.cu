@@ -195,7 +195,7 @@ __global__ void diff_rhs(double* localTensor, int n_ele, double dt, double* c0)
   const double w[6] = {  0.05497587, 0.05497587, 0.05497587, 0.11169079,
                          0.11169079, 0.11169079 };
   double c_q0[6];
-  double d_c_q0[12];
+  double d_c_q0[6][2];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
     for(int i_g = 0; i_g < 6; i_g++)
@@ -260,7 +260,7 @@ __global__ void adv_rhs(double* localTensor, int n_ele, double dt, double* c0, d
   const double w[6] = {  0.05497587, 0.05497587, 0.05497587, 0.11169079,
                          0.11169079, 0.11169079 };
   double c_q0[6];
-  double c_q1[12];
+  double c_q1[6][2];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
     for(int i_g = 0; i_g < 6; i_g++)
