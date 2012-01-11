@@ -277,9 +277,9 @@ contains
 
     ndglno_s => field%mesh%ndglno
     allocate(ndglno_v(dim * size(ndglno_s)))
-    ndglno_v = make_vector_numbering(ndglno_s, 3, ele_count, 2)
-    conn_sparsity = make_sparsity_from_ndglno(ndglno_v, ndglno_v, row_count, 3, &
-                  & ele_count, "vec")
+    ndglno_v = make_vector_numbering(ndglno_s, loc, ele_count, dim)
+    conn_sparsity = make_sparsity_from_ndglno(ndglno_v, ndglno_v, row_count*dim, loc*dim, &
+                  & ele_count, "vec") ! One row per node per dimension
 
     tmp_int_ptr => conn_sparsity%findrm(1)
     conn_findrm = c_loc(tmp_int_ptr)
@@ -365,8 +365,8 @@ contains
     list_matrix%length=0
 
     do ele=1,ele_count
-       lb = ((ele-1)*ele_count)+1
-       ub = lb + ele_count - 1
+       lb = ((ele-1)*nodes_per_ele)+1
+       ub = lb + nodes_per_ele - 1
        row_ele=>rowmesh(lb:ub)
        col_ele=>colmesh(lb:ub)
 
