@@ -74,7 +74,6 @@ class KernelParameterGenerator(Transformer):
                 # basis from vector and tensor bases.
                 if isinstance(element, (VectorElement, TensorElement)):
                     element = element.sub_elements()[0]
-                print element
                 # The reasoning behind giving the argument a count of 0 is that
                 # there will always be at least one basis function, which will
                 # be numbered 0. Need to check if this is correct for the case
