@@ -31,12 +31,4 @@ class CudaKernelParameterGenerator(KernelParameterGenerator):
         name = form.buildCoefficientName(coeff)
         return Variable(name, Pointer(Real()))
 
-    def _buildArgumentParameter(self,arg):
-        name = form.buildArgumentName(arg)
-        return Variable(name, Pointer(Real()))
-
-    def _buildSpatialDerivativeParameter(self,argDeriv):
-        name = form.buildSpatialDerivativeName(argDeriv)
-        return Variable(name, Pointer(Real()))
-
 # vim:sw=4:ts=4:sts=4:et

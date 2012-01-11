@@ -34,7 +34,7 @@ class Op2FormBackend(FormBackend):
         KPG = Op2KernelParameterGenerator(self)
 
         timestep = Variable("dt", Real() )
-        localTensor = _buildArrayParameter("localTensor", KPG.expBuilder.subscript_LocalTensor(form))
+        localTensor = _buildArrayParameter("localTensor", self._expressionBuilder.subscript_LocalTensor(form))
 
         statutoryParameters = [ localTensor, timestep ]
 

@@ -21,28 +21,17 @@
 from parameters import KernelParameterGenerator
 import form
 from codegeneration import Variable, Pointer, Real, Array
-from op2expression import Op2ExpressionBuilder, Op2QuadratureExpressionBuilder
+from op2expression import Op2QuadratureExpressionBuilder
 
 class Op2KernelParameterGenerator(KernelParameterGenerator):
 
     def __init__(self, form):
         KernelParameterGenerator.__init__(self)
-        self.expBuilder = Op2ExpressionBuilder(form)
         self.quadExpBuilder = Op2QuadratureExpressionBuilder(form)
 
     def _buildCoefficientParameter(self,coeff):
         indices = self.quadExpBuilder.subscript(coeff)
         name = form.buildCoefficientName(coeff)
-        return _buildArrayParameter(name, indices)
-
-    def _buildArgumentParameter(self,arg):
-        indices = self.quadExpBuilder.subscript_argument(arg)
-        name = form.buildArgumentName(arg)
-        return _buildArrayParameter(name, indices)
-
-    def _buildSpatialDerivativeParameter(self,argDeriv):
-        indices = self.quadExpBuilder.subscript_argument_derivative(argDeriv)
-        name = form.buildSpatialDerivativeName(argDeriv)
         return _buildArrayParameter(name, indices)
 
 def _buildArrayParameter(name, indices):

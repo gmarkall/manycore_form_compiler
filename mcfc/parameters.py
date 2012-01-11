@@ -108,9 +108,6 @@ class KernelParameterGenerator(Transformer):
             originalArgument = originalArguments[i]
             actualParameters['arguments'].append(originalArgument)
 
-            # Formal parameter
-            parameter = self._buildArgumentParameter(arg)
-
         for argDeriv in argumentDerivatives:
             subject = argDeriv.operands()[0]
             indices = argDeriv.operands()[1]
@@ -121,19 +118,10 @@ class KernelParameterGenerator(Transformer):
             actualParam = ufl.differentiation.SpatialDerivative(originalArgument,indices)
             actualParameters['argumentDerivatives'].append(actualParam)
 
-            # Formal parameter
-            parameter = self._buildSpatialDerivativeParameter(argDeriv)
-
         return formalParameters, actualParameters
 
     def _buildCoefficientParameter(self,coeff):
         raise NotImplementedError("You're supposed to implement _buildCoefficientParameter()!")
-
-    def _buildArgumentParameter(self,arg):
-        raise NotImplementedError("You're supposed to implement _buildArgumentParameter()!")
-
-    def _buildSpatialDerivativeParameter(self,argDeriv):
-        raise NotImplementedError("You're supposed to implement _buildSpatialDerivativeParameter()!")
 
     def expr(self, tree, *ops):
         pass
