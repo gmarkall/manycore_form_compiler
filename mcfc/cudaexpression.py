@@ -63,25 +63,12 @@ def buildSubscript(variable, indices):
 
     return Subscript(variable, expr)
 
-def buildMultiArraySubscript(variable, indices):
-    """Given a list of indices, return an AST of the variable
-    subscripted by the indices as if it were a multidimensional
-    array."""
-
-    for i in indices:
-        variable = Subscript(variable, Variable(i.name()))
-
-    return variable
-
 # Expression builders
 
 class CudaExpressionBuilder(ExpressionBuilder):
 
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
-
-    def buildMultiArraySubscript(self, variable, indices):
-        return buildMultiArraySubscript(variable, indices)
 
     def subscript_LocalTensor(self, form):
         indices = super(CudaExpressionBuilder,self).subscript_LocalTensor(form)
@@ -92,9 +79,6 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
-
-    def buildMultiArraySubscript(self, variable, indices):
-        return buildMultiArraySubscript(variable, indices)
 
     def subscript(self, tree):
         # We index vector/tensor valued coefficients by separate indices for

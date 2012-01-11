@@ -26,6 +26,15 @@ from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.indexing import Index, FixedIndex
 
+def buildMultiArraySubscript(variable, indices):
+    """Given a list of indices, return an AST of the variable subscripted by
+    the indices as a multidimensional array. The index order is important."""
+
+    for i in indices:
+        variable = Subscript(variable, Variable(i.name()))
+
+    return variable
+
 class ExpressionBuilder(Transformer):
 
     def __init__(self, formBackend):
@@ -122,7 +131,7 @@ class ExpressionBuilder(Transformer):
         if fake_indices:
             self._indexStack.pop()
 
-        coeffExpr = self.buildMultiArraySubscript(base, indices)
+        coeffExpr = buildMultiArraySubscript(base, indices)
         return coeffExpr
 
     def buildLocalTensorAccessor(self, form):
@@ -193,7 +202,7 @@ class ExpressionBuilder(Transformer):
 
             # Build a subscript for the temporary Array and push that on the
             # expression stack
-            return self.buildMultiArraySubscript(tmpTensor, subscriptIndices)
+            return buildMultiArraySubscript(tmpTensor, subscriptIndices)
         # Otherwise we're operand of a higher rank ListTensor
         else:
             return init
@@ -216,7 +225,7 @@ class ExpressionBuilder(Transformer):
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
         indices = self.subscript(tree)
-        return self.buildMultiArraySubscript(Variable(name), indices)
+        return buildMultiArraySubscript(Variable(name), indices)
 
     def argument(self, tree):
         e = tree.element()
@@ -228,7 +237,7 @@ class ExpressionBuilder(Transformer):
             base = Variable(buildVectorArgumentName(tree))
         else:
             base = Variable(buildTensorArgumentName(tree))
-        return self.buildMultiArraySubscript(base, indices)
+        return buildMultiArraySubscript(base, indices)
 
     def coefficient(self, tree):
         return self.buildCoeffQuadratureAccessor(tree)
@@ -276,7 +285,7 @@ class QuadratureExpressionBuilder:
                 raise RuntimeError("Oops, the Jacobian shouldn't appear under a derivative.")
 
         coeffExpr = self.buildSubscript(Variable(coeffName), coeffIndices)
-        argExpr = self.buildMultiArraySubscript(Variable(argName), argIndices)
+        argExpr = buildMultiArraySubscript(Variable(argName), argIndices)
 
         # Combine to form the expression
         expr = MultiplyOp(coeffExpr, argExpr)
