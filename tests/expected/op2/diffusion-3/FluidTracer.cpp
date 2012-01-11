@@ -184,7 +184,7 @@ void rhs(double localTensor[3], double dt, double c0[3])
       d_c_q0[i_g][i_d_0] = 0.0;
       for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
       {
-        d_c_q0[i_g][i_d_0] += c0[i_r_0] * d_CG1[i_d_0][i_g][i_r_0];
+        d_c_q0[i_g][i_d_0] += c0[i_r_0] * d_CG1[i_r_0][i_g][i_d_0];
       };
     };
   };

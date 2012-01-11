@@ -93,6 +93,9 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
+    def buildMultiArraySubscript(self, variable, indices):
+        return buildMultiArraySubscript(variable, indices)
+
     def subscript(self, tree):
         # We index vector/tensor valued coefficients by separate indices for
         # the scalar basis and the spatial dimension(s). Hence we need to
@@ -101,16 +104,6 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         for r in range(tree.rank()):
             indices.append(buildDimIndex(r,tree))
         indices.append(buildBasisIndex(0, extract_subelement(tree)))
-        return indices
-
-    def subscript_spatial_derivative(self, tree):
-        # The count of the basis function induction variable is always
-        # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
-        # index should be used to subscript the derivative (I think).
-        indices = [ ElementIndex(),
-                    buildDimIndex(0, tree),
-                    buildGaussIndex(self._formBackend.numGaussPoints),
-                    buildBasisIndex(0, extract_subelement(tree)) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et

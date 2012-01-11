@@ -269,14 +269,14 @@ class QuadratureExpressionBuilder:
             basis = TrialFunction(operand.element())
             basisDerivative = SpatialDerivative(basis, indices)
             argName = buildSpatialDerivativeName(basisDerivative)
-            argIndices = self.subscript_spatial_derivative(basisDerivative)
+            argIndices = self.subscript_argument_derivative(basisDerivative)
 
             # Check if we are dealing with the Jacobian
             if isinstance(operand.element().quadrature_scheme(), Coefficient):
                 raise RuntimeError("Oops, the Jacobian shouldn't appear under a derivative.")
 
         coeffExpr = self.buildSubscript(Variable(coeffName), coeffIndices)
-        argExpr = self.buildSubscript(Variable(argName), argIndices)
+        argExpr = self.buildMultiArraySubscript(Variable(argName), argIndices)
 
         # Combine to form the expression
         expr = MultiplyOp(coeffExpr, argExpr)
@@ -295,12 +295,17 @@ class QuadratureExpressionBuilder:
         # at the quadrature points even if the coefficient is on a vector or
         # tensor basis since that is (in UFL) by definition a tensor product of
         # the scalar basis. So we need to extract the sub element.
+        # FIXME: This will break for mixed elements
         indices = [buildBasisIndex(0, extract_subelement(tree)),
                    buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 
-    def subscript_spatial_derivative(self, tree):
-        raise NotImplementedError("You're supposed to implement subscript_spatial_derivative()!")
+    def subscript_argument_derivative(self, tree):
+        # The count of the basis function induction variable is always
+        # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
+        # index should be used to subscript the derivative (I think).
+        return self.subscript_argument(tree.operands()[0]) \
+                + [ buildDimIndex(0,tree) ]
 
 def buildListTensorVar(indices):
     # FIXME: is that a stable naming scheme?

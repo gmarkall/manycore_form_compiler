@@ -46,6 +46,9 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
+    def buildMultiArraySubscript(self, variable, indices):
+        return buildSubscript(variable, indices)
+
     def subscript(self, tree):
         # The OP2 specification states that a vector-valued coefficient be
         # indexed by separate indices for the scalar basis and the spatial

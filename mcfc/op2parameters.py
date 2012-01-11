@@ -41,7 +41,7 @@ class Op2KernelParameterGenerator(KernelParameterGenerator):
         return _buildArrayParameter(name, indices)
 
     def _buildSpatialDerivativeParameter(self,argDeriv):
-        indices = self.quadExpBuilder.subscript_spatial_derivative(argDeriv)
+        indices = self.quadExpBuilder.subscript_argument_derivative(argDeriv)
         name = form.buildSpatialDerivativeName(argDeriv)
         return _buildArrayParameter(name, indices)
 

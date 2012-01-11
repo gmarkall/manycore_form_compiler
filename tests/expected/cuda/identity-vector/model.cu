@@ -106,7 +106,7 @@ __global__ void RHS(double* localTensor, int n_ele, double dt, double* c0)
         c_q0[i_g][i_d_0] = 0.0;
         for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
         {
-          c_q0[i_g][i_d_0] += c0[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0 + 3 * i_g];
+          c_q0[i_g][i_d_0] += c0[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0][i_g];
         };
       };
     };
