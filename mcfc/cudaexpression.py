@@ -17,7 +17,6 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from cudaparameters import numElements
 from expression import *
 from formutils import extract_element
 
@@ -25,6 +24,7 @@ from formutils import extract_element
 
 threadCount = Variable("THREAD_COUNT")
 threadId = Variable("THREAD_ID")
+numElements = Variable("n_ele", Integer() )
 
 # The ElementIndex is here and not form.py because not all backends need
 # an element index (e.g. OP2).

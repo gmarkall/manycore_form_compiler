@@ -89,7 +89,7 @@ class FormBackend(object):
             statements = [outerScope]
 
         # Get parameter list for kernel declaration.
-        formalParameters, _ = self._buildKernelParameters(integrand, form)
+        formalParameters = self._buildKernelParameters(form)
 
         # Build the function with the loop nest inside
         body = Scope(declarations + statements)
@@ -269,8 +269,22 @@ class FormBackend(object):
 
         return initialisers
 
-    def _buildKernelParameters(self, tree, form):
-        raise NotImplementedError("You're supposed to implement _buildKernelParameters()!")
+    def _buildKernelParameters(self, form, statutoryParameters = None):
+
+        formalParameters = statutoryParameters or []
+        # We always have local tensor to tabulate and timestep as parameters
+        formalParameters += [self._buildLocalTensorParameter(form), timestep]
+
+        # Build a parameter for each coefficient encoutered in the form
+        for coeff in form.form_data().coefficients:
+            # Skip the Jacobian and pass the coordinate field instead
+            if isinstance(coeff.element().quadrature_scheme(), Coefficient):
+                coeff = coeff.element().quadrature_scheme()
+
+            # Formal parameter
+            formalParameters.append(self._buildCoefficientParameter(coeff))
+
+        return formalParameters
 
     def subscript_weights(self):
         indices = [buildGaussIndex(self.numGaussPoints)]

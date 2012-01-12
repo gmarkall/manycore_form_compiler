@@ -15,7 +15,7 @@ int* Tracer_colm;
 int Tracer_colm_size;
 
 
-__global__ void Mass(double* localTensor, int n_ele, double dt)
+__global__ void Mass(int n_ele, double* localTensor, double dt)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -61,7 +61,7 @@ __global__ void Mass(double* localTensor, int n_ele, double dt)
   };
 }
 
-__global__ void rhs(double* localTensor, int n_ele, double dt, double* c0, double* c1)
+__global__ void rhs(int n_ele, double* localTensor, double dt, double* c0, double* c1)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -168,10 +168,10 @@ extern "C" void run_model_(double* dt_pointer)
   int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
-  Mass<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt);
+  Mass<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt);
   double* TracerCoeff = state->getElementValue("Tracer");
   double* VelocityCoeff = state->getElementValue("Velocity");
-  rhs<<<gridXDim,blockXDim>>>(localVector, numEle, dt, TracerCoeff, VelocityCoeff);
+  rhs<<<gridXDim,blockXDim>>>(numEle, localVector, dt, TracerCoeff, VelocityCoeff);
   cudaMemset(globalMatrix, 0, sizeof(double) * Tracer_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
   matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);

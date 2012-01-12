@@ -20,7 +20,6 @@
 
 # MCFC libs
 from form import *
-from op2parameters import Op2KernelParameterGenerator, _buildArrayParameter
 from op2expression import Op2ExpressionBuilder, Op2QuadratureExpressionBuilder
 
 class Op2FormBackend(FormBackend):
@@ -30,14 +29,16 @@ class Op2FormBackend(FormBackend):
         self._expressionBuilder = Op2ExpressionBuilder(self)
         self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder(self)
 
-    def _buildKernelParameters(self, tree, form):
-        KPG = Op2KernelParameterGenerator(self)
+    def _buildCoefficientParameter(self, coeff):
+        indices = self._quadratureExpressionBuilder.subscript(coeff)
+        name = buildCoefficientName(coeff)
+        return buildArrayParameter(name, indices)
 
-        timestep = Variable("dt", Real() )
-        localTensor = _buildArrayParameter("localTensor", self._expressionBuilder.subscript_LocalTensor(form))
+    def _buildLocalTensorParameter(self, form):
+        return buildArrayParameter(localTensor.name(), \
+                self._expressionBuilder.subscript_LocalTensor(form))
 
-        statutoryParameters = [ localTensor, timestep ]
-
-        return KPG.generate(tree, form, statutoryParameters)
+def buildArrayParameter(name, indices):
+    return Variable(name, Array(Real(), [i.extent() for i in indices]))
 
 # vim:sw=4:ts=4:sts=4:et

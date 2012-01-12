@@ -252,8 +252,8 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         # These parameters will be needed by every matrix/vector assembly
         # see also the KernelParameterComputer in cudaform.py.
-        matrixParameters = [localMatrix, numEle, dt]
-        vectorParameters = [localVector, numEle, dt]
+        matrixParameters = [numEle, localMatrix, dt]
+        vectorParameters = [numEle, localVector, dt]
 
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want

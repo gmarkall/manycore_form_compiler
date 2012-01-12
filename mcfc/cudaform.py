@@ -20,10 +20,8 @@
 
 # MCFC libs
 from form import *
-from cudaparameters import CudaKernelParameterGenerator, numElements, statutoryParameters
-from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop, ElementIndex
-# UFL libs
-from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop, numElements
+
 
 class CudaFormBackend(FormBackend):
 
@@ -46,8 +44,15 @@ class CudaFormBackend(FormBackend):
         kernel.setCudaKernel(True)
         return kernel
 
-    def _buildKernelParameters(self, tree, form):
-        KPG = CudaKernelParameterGenerator()
-        return KPG.generate(tree, form, statutoryParameters)
+    def _buildCoefficientParameter(self, coeff):
+        name = buildCoefficientName(coeff)
+        return Variable(name, Pointer(Real()))
+
+    def _buildLocalTensorParameter(self, form):
+        return localTensor
+
+    def _buildKernelParameters(self, form):
+        # We need the number of elements as an additional parameter
+        return super(CudaFormBackend,self)._buildKernelParameters(form, [numElements])
 
 # vim:sw=4:ts=4:sts=4:et
