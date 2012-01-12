@@ -329,12 +329,13 @@ class CudaAssemblerBackend(AssemblerBackend):
         return var
 
     def _makeParameterListAndGetters(self, func, tree, form, staticParameters):
-        assert form.form_data().actualParameters, "actual kernel parameters have not been attached to form data"
-        paramUFL = form.form_data().actualParameters
         # Figure out which parameters to pass
         params = list(staticParameters)
 
-        for coeff in paramUFL['coefficients']:
+        for coeff in form.form_data().original_coefficients:
+            # Skip the Jacobian and pass the coordinate field instead
+            if isinstance(coeff.element().quadrature_scheme(), ufl.coefficient.Coefficient):
+                coeff = coeff.element().quadrature_scheme()
             # find which field this coefficient came from, then extract from that field.
             var = self.extractCoefficient(func, self._eq.getInputCoeffName(coeff.count()))
             params.append(var)

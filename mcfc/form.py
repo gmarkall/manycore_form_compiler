@@ -52,12 +52,6 @@ class FormBackend(object):
         assert form_data, "Form has no form data attached!"
         rank = form_data.rank
 
-        # Get parameter list for kernel declaration.
-        formalParameters, actualParameters = self._buildKernelParameters(integrand, form)
-        # Attach list of formal and actual kernel parameters to form data
-        form.form_data().formalParameters = formalParameters
-        form.form_data().actualParameters = actualParameters
-
         # Initialise basis tensors if necessary
         declarations = self._buildBasisTensors(form_data)
 
@@ -93,6 +87,9 @@ class FormBackend(object):
             for s in statements:
                 outerScope.append(s)
             statements = [outerScope]
+
+        # Get parameter list for kernel declaration.
+        formalParameters, _ = self._buildKernelParameters(integrand, form)
 
         # Build the function with the loop nest inside
         body = Scope(declarations + statements)
