@@ -254,7 +254,7 @@ class FormBackend(object):
 
         initialisers = [nInit, dnInit, wInit]
 
-        for argument in form_data.actualParameters['arguments']:
+        for argument in uniqify(form_data.arguments, lambda x: x.element()):
             # Ignore scalars
             if isinstance(argument.element(), FiniteElement):
                 continue
