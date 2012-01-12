@@ -281,11 +281,8 @@ class FormBackend(object):
         # Build a parameter for each coefficient encoutered in the form
         for coeff in form.form_data().coefficients:
             # Skip the Jacobian and pass the coordinate field instead
-            if isinstance(coeff.element().quadrature_scheme(), Coefficient):
-                coeff = coeff.element().quadrature_scheme()
-
-            # Formal parameter
-            formalParameters.append(self._buildCoefficientParameter(coeff))
+            param = self._buildCoefficientParameter(extractCoordinates(coeff))
+            formalParameters.append(param)
 
         return formalParameters
 

@@ -268,6 +268,17 @@ def buildTensorArgumentName(tree):
 def buildTensorSpatialDerivativeName(tree):
     return buildSpatialDerivativeName(tree) + "_t"
 
+def isJacobian(coeff):
+    "Detect whether a coefficient represents the Jacobian."
+    return isinstance(coeff.element().quadrature_scheme(), Coefficient)
+
+def extractCoordinates(coeff):
+    """Extract the coordinate coefficient from the Jacobian coefficient. Does
+    nothing if the coefficient doesn't represent the Jacobian."""
+    if isJacobian(coeff):
+        return coeff.element().quadrature_scheme()
+    return coeff
+
 def numBasisFunctions(e):
     """Return the number of basis functions. e can be a form or an element -
     if e is a form, the element from the test function is used."""

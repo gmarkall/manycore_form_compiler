@@ -26,6 +26,7 @@ cudaform.py, and the necessary solves."""
 # MCFC libs
 from assembler import *
 from codegeneration import *
+from formutils import extractCoordinates
 from utilities import uniqify
 # FEniCS UFL libs
 import ufl.finiteelement
@@ -333,11 +334,11 @@ class CudaAssemblerBackend(AssemblerBackend):
         params = list(staticParameters)
 
         for coeff in form.form_data().original_coefficients:
+            # Find which field this coefficient came from, then extract from
+            # that field.
             # Skip the Jacobian and pass the coordinate field instead
-            if isinstance(coeff.element().quadrature_scheme(), ufl.coefficient.Coefficient):
-                coeff = coeff.element().quadrature_scheme()
-            # find which field this coefficient came from, then extract from that field.
-            var = self.extractCoefficient(func, self._eq.getInputCoeffName(coeff.count()))
+            name = self._eq.getInputCoeffName(extractCoordinates(coeff).count())
+            var = self.extractCoefficient(func, name)
             params.append(var)
          
         return params

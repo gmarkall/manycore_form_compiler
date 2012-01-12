@@ -257,8 +257,8 @@ class QuadratureExpressionBuilder:
             argIndices = self.subscript_argument(tree)
 
             # Check if we are dealing with the Jacobian
-            if isinstance(tree.element().quadrature_scheme(), Coefficient):
-                coordinates = tree.element().quadrature_scheme()
+            if isJacobian(tree):
+                coordinates = extractCoordinates(tree)
                 # Subscript the coordinate field
                 coeffIndices = self.subscript(coordinates)
                 # We actually need to pass a SpatialDerivative to build its name
@@ -268,8 +268,7 @@ class QuadratureExpressionBuilder:
                 argName = buildSpatialDerivativeName(fakeDerivative)
                 # Add an index over dimensions, since we're dealing with shape derivatives
                 # FIXME: should there be a separate function like 'subscript_dn'?
-                dim = coordinates.element().cell().topological_dimension()
-                argIndices += [self._formBackend.buildDimIndex(1)]
+                argIndices += [buildDimIndex(1,coordinates)]
 
         elif isinstance (tree, SpatialDerivative):
             operand, indices = tree.operands()
