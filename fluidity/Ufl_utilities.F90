@@ -152,7 +152,6 @@ contains
     num_ele = ele_count
     num_nodes = node_count(field%mesh)
 
-    tmp_int_ptr => ndglno_v(1)
     ndglno = c_loc(tmp_int_ptr)
 
     ! Element
