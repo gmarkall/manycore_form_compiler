@@ -571,8 +571,10 @@ void VectorField::transferHtoD()
 
 void VectorField::transferDtoH()
 {
-  cerr << "Oh no, I haven't implemented this yet. " << __FUNCTION__ << endl;
-  exit(-1);
+  cout << "Copying vector field " << getName() << " to host." << endl;
+  contract_data<<<grid,block>>>(cuda_compact_val, cuda_expanded_val, mesh->getCudaNdglno(), mesh->getNumEle(), mesh->getShape()->getDim(), mesh->getNumNodesPerEle());
+  check(cudaGetLastError());
+  copyDtoH(cuda_compact_val, host_val, sizeof(double)*getCompactValSize());
 }
 
 int VectorField::getCompactValSize() const
