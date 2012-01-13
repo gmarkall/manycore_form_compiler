@@ -231,15 +231,13 @@ class QuadratureExpressionBuilder:
         raise NotImplementedError("You're supposed to implement subscript()!")
 
     def subscript_argument(self, tree):
-        # FIXME: At present we make use of the scalar basis for the expression
-        # even if the coefficient is on a vector or tensor basis. So we need to
-        # extract a single element to use as the basis.
-        e = tree.element()
-        if isinstance(e, (VectorElement, TensorElement)):
-            e = e.sub_elements()[0]
         # The count of the basis function induction variable is always
         # 0 in the quadrature loops (i.e. i_r_0)
-        indices = [buildBasisIndex(0, e),
+        # We use the scalar basis for the expression evaluating a coefficient
+        # at the quadrature points even if the coefficient is on a vector or
+        # tensor basis since that is (in UFL) by definition a tensor product of
+        # the scalar basis. So we need to extract the sub element.
+        indices = [buildBasisIndex(0, extract_subelement(tree)),
                    buildGaussIndex(self._formBackend.numGaussPoints)]
         return indices
 

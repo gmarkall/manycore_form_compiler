@@ -23,7 +23,7 @@ void A(double localTensor[6][6], double dt, double detwei[6], double CG1[3][6])
   };
 }
 
-void RHS(double localTensor[6], double dt, double detwei[6], double c0[6][2], double CG1[3][6])
+void RHS(double localTensor[6], double dt, double detwei[6], double c0[3][2], double CG1[3][6])
 {
   double CG1_v[2][6][6] = { { { CG1[0], CG1[6], CG1[12], 0.0, 0.0, 0.0 }, { CG1[1], CG1[7], CG1[13], 0.0, 0.0, 0.0 }, { CG1[2], CG1[8], CG1[14], 0.0, 0.0, 0.0 }, { CG1[3], CG1[9], CG1[15], 0.0, 0.0, 0.0 }, { CG1[4], CG1[10], CG1[16], 0.0, 0.0, 0.0 }, { CG1[5], CG1[11], CG1[17], 0.0, 0.0, 0.0 } }, { { 0.0, 0.0, 0.0, CG1[0], CG1[6], CG1[12] }, { 0.0, 0.0, 0.0, CG1[1], CG1[7], CG1[13] }, { 0.0, 0.0, 0.0, CG1[2], CG1[8], CG1[14] }, { 0.0, 0.0, 0.0, CG1[3], CG1[9], CG1[15] }, { 0.0, 0.0, 0.0, CG1[4], CG1[10], CG1[16] }, { 0.0, 0.0, 0.0, CG1[5], CG1[11], CG1[17] } } };
   double c_q0[6][2];
