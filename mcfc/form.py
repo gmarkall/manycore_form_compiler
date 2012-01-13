@@ -59,7 +59,7 @@ class FormBackend(object):
         declarations = self._buildBasisTensors(form_data)
 
         # Build the loop nest
-        loopNest = self.buildLoopNest(form)
+        loopNest = self.buildExpressionLoopNest(form)
         statements = [loopNest]
 
         # Initialise the local tensor values to 0
@@ -114,38 +114,30 @@ class FormBackend(object):
 
         return expr
 
-    def buildLoopNest(self, form):
+    def buildExpressionLoopNest(self, form):
         "Build the loop nest for evaluating a form expression."
-        rank = form.form_data().rank
-        numBFs = numBasisFunctions(form)
 
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
         # Build the loop over the first rank, which always exists
-        indVarName = buildBasisIndex(0, form).name()
-        loop = buildSimpleForLoop(indVarName, numBFs)
+        loop = buildIndexForLoop(buildBasisIndex(0, form))
         outerLoop = loop
 
-        # Add another loop for each rank of the form (probably no
-        # more than one more... )
-        for r in range(1,rank):
-            indVarName = buildBasisIndex(r, form).name()
-            basisLoop = buildSimpleForLoop(indVarName, numBFs)
+        # Add a loop over basis functions for each rank of the form
+        for r in range(1,form.form_data().rank):
+            basisLoop = buildIndexForLoop(buildBasisIndex(r, form))
             loop.append(basisLoop)
             loop = basisLoop
 
         # Add a loop for the quadrature
-        indVarName = buildGaussIndex(self.numGaussPoints).name()
-        gaussLoop = buildSimpleForLoop(indVarName, self.numGaussPoints)
+        gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
         loop.append(gaussLoop)
         loop = gaussLoop
 
         # Find the indices over dimensions and and loops for them.
-        dimLoops = indexSumIndices(integrand)
-        for d in dimLoops:
-            indVarName = buildDimIndex(d['count'], d['extent']).name()
-            dimLoop = buildSimpleForLoop(indVarName, d['extent'])
+        for index in indexSumIndices(integrand):
+            dimLoop = buildIndexForLoop(index)
             loop.append(dimLoop)
             loop = dimLoop
 
@@ -153,30 +145,25 @@ class FormBackend(object):
         # scope.
         return outerLoop
 
-    def buildCoefficientLoopNest(self, coeff, rank, scope):
+    def buildCoefficientLoopNest(self, coeff, rank, loop):
         "Build loop nest evaluating a coefficient at a given quadrature point."
-
-        loop = scope
 
         # Build loop over the correct number of dimensions
         for r in range(rank):
-            indVar = buildDimIndex(r, coeff).name()
-            dimLoop = buildSimpleForLoop(indVar, self.numDimensions)
+            dimLoop = buildIndexForLoop(buildDimIndex(r, coeff))
             loop.append(dimLoop)
             loop = dimLoop
 
         # Add initialiser here
-        initialiser = self.buildCoeffQuadratureInitialiser(coeff)
-        loop.append(initialiser)
+        loop.append(self.buildCoeffQuadratureInitialiser(coeff))
 
         # One loop over the basis functions
-        indVar = buildBasisIndex(0, extract_element(coeff)).name()
-        basisLoop = buildSimpleForLoop(indVar, self.numNodesPerEle)
+        # FIXME: We fall back to the basis of the scalar element
+        basisLoop = buildIndexForLoop(buildBasisIndex(0, extract_subelement(coeff)))
         loop.append(basisLoop)
 
         # Add the expression to compute the value inside the basis loop
-        computation = self.buildQuadratureExpression(coeff)
-        basisLoop.append(computation)
+        basisLoop.append(self.buildQuadratureExpression(coeff))
 
     def buildQuadratureExpression(self, coeff):
         "Build the expression to evaluate a particular coefficient."
@@ -195,8 +182,7 @@ class FormBackend(object):
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         # Outer loop over gauss points
-        indVar = buildGaussIndex(self.numGaussPoints).name()
-        gaussLoop = buildSimpleForLoop(indVar, self.numGaussPoints)
+        gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
 
         # Build a loop nest for each coefficient containing expressions
         # to compute its value

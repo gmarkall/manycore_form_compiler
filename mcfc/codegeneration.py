@@ -554,6 +554,9 @@ def as_list(item):
     except TypeError:
         return [item]
 
+def buildIndexForLoop(index):
+    return buildSimpleForLoop(index.name(), index.extent())
+
 def buildSimpleForLoop(indVarName, upperBound):
     var = Variable(indVarName, Integer())
     init = InitialisationOp(var, Literal(0))

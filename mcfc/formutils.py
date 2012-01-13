@@ -83,7 +83,7 @@ class IndexSumIndexFinder(Transformer):
         indices = mi.index_dimensions()
 
         for c, d in indices.items():
-            self._indices.append({"count": c.count(), "extent": d})
+            self._indices.append(buildDimIndex(c.count(), d))
 
         self.visit(summand)
 
@@ -193,10 +193,19 @@ class ConstIndex(CodeIndex):
 # Index builders
 
 def extract_element(expr):
+    "Extract the element of a UFL expression."
     if isinstance(expr, (Argument, Coefficient)):
         return expr.element()
     if isinstance(expr, SpatialDerivative):
         return expr.operands()[0].element()
+
+def extract_subelement(expr):
+    """Extract the scalar element of a UFL expression (i.e. for a vector or
+    tensor element, extract the finite element it is composed from)."""
+    e = extract_element(expr)
+    if e.num_sub_elements() > 0:
+        return e.sub_elements()[0]
+    return e
 
 def buildBasisIndex(count, e):
     "Build index for a loop over basis function values."
