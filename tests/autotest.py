@@ -14,7 +14,9 @@ usage: autotest.py [OPTIONS] [INPUT-FILE]
         --no-op2               Do not test the OP2 backend
         --no-optionfile        Do not test the option file parser
         --no-visualiser        Do not test the PDF visualiser
-        --with-objvis          Also test the PDF object visualiser
+        --with-objvis[ualiser] Also test the PDF object visualiser
+        -r, --replace-all      Replace all changed expected results
+                               (Implies --non-interactive)
 """
 
 # Python modules
@@ -38,14 +40,17 @@ def main():
 
     opts, args = get_options()
     keys = opts.keys()
- 
+    tester = AutoTester()
+
     # Check for non-interactive execution (e.g. on the
     # buildbot).
     if 'non-interactive' in keys or 'n' in keys:
         print "Running in non-interactive mode."
-        tester = AutoTester(False)
-    else:
-        tester = AutoTester()
+        tester.interactive = False
+    if 'replace-all' in keys or 'r' in keys:
+        print "Replacing all changed expected results."
+        tester.interactive = False
+        tester.replaceall = True
 
     check_cuda =  'no-cuda' not in keys
     check_op2 =  'no-op2' not in keys
@@ -86,7 +91,7 @@ def main():
         # Create the cuda outputs folder
         os.mkdir('outputs/cuda', 0755)
 
-        tester.test(frontend.testHook, 
+        tester.test(frontend.testHook,
             lambda name: "inputs/ufl/" + name + ".ufl",
             lambda name: "outputs/cuda/" + name + ".cu",
             lambda name: "expected/cuda/" + name + ".cu",
@@ -98,7 +103,7 @@ def main():
         # Create the cuda outputs folder
         os.mkdir('outputs/op2', 0755)
 
-        tester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'), 
+        tester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
             lambda name: "inputs/ufl/" + name + ".ufl",
             lambda name: "outputs/op2/" + name + ".cpp",
             lambda name: "expected/op2/" + name + ".cpp",
@@ -110,7 +115,7 @@ def main():
         # Create the option file outputs folder
         os.mkdir('outputs/optionfile', 0755)
 
-        tester.test(optionfileparser.testHook, 
+        tester.test(optionfileparser.testHook,
             lambda name: "inputs/flml/" + name + ".flml",
             lambda name: "outputs/optionfile/" + name + ".dat",
             lambda name: "expected/optionfile/" + name + ".dat",
@@ -135,7 +140,7 @@ def main():
             # Create the visualiser outputs folder
             os.mkdir('outputs/objvisualiser', 0755)
 
-            tester.test(lambda infile, outfile: frontend.testHookVisualiser(infile, outfile, True), 
+            tester.test(lambda infile, outfile: frontend.testHookVisualiser(infile, outfile, True),
                 lambda name: "inputs/ufl/" + name + ".ufl",
                 lambda name: "outputs/objvisualiser/" + name,
                 lambda name: None,
@@ -147,13 +152,14 @@ def main():
 
 def get_options():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "n", [ "non-interactive",
-                                                        "no-cuda",
-                                                        "no-op2",
-                                                        "no-optionfile",
-                                                        "no-visualiser",
-                                                        "with-objvis",
-                                                        "with-objvisualise" ])
+        opts, args = getopt.getopt(sys.argv[1:], "nr", [ "non-interactive",
+                                                         "no-cuda",
+                                                         "no-op2",
+                                                         "no-optionfile",
+                                                         "no-visualiser",
+                                                         "with-objvis",
+                                                         "with-objvisualise",
+                                                         "replace-all"])
     except getopt.error, msg:
         print msg
         print __doc__
@@ -169,8 +175,9 @@ def get_options():
 
 class AutoTester:
 
-    def __init__(self, interactive = True):
+    def __init__(self, interactive = True, replaceall = False):
         self.interactive = interactive
+        self.replaceall = replaceall
         self.failed = 0
 
     def test(self, testhook, infile, outfile, expectfile, sources, message = None):
@@ -215,12 +222,20 @@ class AutoTester:
         if diff:
             print "    Difference detected in %s." % sourcefile
             self.failed = 1
-            
-            if self.interactive:
+
+            if self.replaceall:
+                self.replace(sourcefile)
+            elif self.interactive:
                 self.diffmenu(sourcefile, diff)
 
+    def replace(self, sourcefile):
+        src = self.outfile(sourcefile)
+        dst = self.expectfile(sourcefile)
+        print "    Replacing '%s' with '%s'." % (dst, src)
+        shutil.copy(src, dst)
+
     def diffmenu(self, sourcefile, diffout):
-        
+
         print "    [Continue, Abort, View, Replace, Show IR?] ",
         response = sys.stdin.readline()
         rchar = response[0].upper()
@@ -233,14 +248,12 @@ class AutoTester:
             print highlight(diffout, DiffLexer(), TerminalFormatter(bg="dark"))
             self.diffmenu(sourcefile, diffout)
         elif rchar=='R':
-            src = self.outfile(sourcefile)
-            dest = self.expectfile(sourcefile)
-            shutil.copy(src, dest)
+            self.replace(sourcefile)
         elif rchar=='S':
             frontend.showGraph()
             self.diffmenu(sourcefile, diffout)
         else:
-            print "    Please enter a valid option: ", 
+            print "    Please enter a valid option: ",
             self.diffmenu(sourcefile, diffout)
 
 # Execute main
