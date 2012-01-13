@@ -69,10 +69,13 @@ def transform(coordinates):
     # - shape functions
     # - shape function derivatives
     element._weight, element._l, element._n, element._dn \
-        = get_element( element.cell()._topological_dimension,
+        = get_element( element.cell().topological_dimension(),
                        domain2num_vertices[domain],
                        element.quadrature_scheme(),
                        element.degree() )
+    # Set the quadrature scheme of the coordinate element to the
+    # number of quadrature points for query by the form backend
+    element._quad_scheme = len(element._weight)
     J = Jacobian(coordinates)
     invJ = Inverse(J)
     detJ = Determinant(J)

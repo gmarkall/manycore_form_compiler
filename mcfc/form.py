@@ -29,14 +29,11 @@ from ufl.coefficient import Coefficient
 # MCFC libs
 from codegeneration import *
 from formutils import *
+from uflnamespace import domain2num_vertices as d2v
 from utilities import uniqify
 
 class FormBackend(object):
     "Base class for generating form tabulation kernels."
-
-    numNodesPerEle = 3
-    numDimensions = 2
-    numGaussPoints = 6
 
     def __init__(self):
         self._expressionBuilder = None
@@ -51,6 +48,12 @@ class FormBackend(object):
         form_data = form.form_data()
         assert form_data, "Form has no form data attached!"
         rank = form_data.rank
+
+        # Set basic properties of the element
+        # FIXME: We only look at the element of the coordinate field for now
+        self.numNodesPerEle = d2v[form_data.coordinates.cell().domain()]
+        self.numDimensions = form_data.coordinates.cell().topological_dimension()
+        self.numGaussPoints = form_data.coordinates.element().quadrature_scheme()
 
         # Initialise basis tensors if necessary
         declarations = self._buildBasisTensors(form_data)
