@@ -50,23 +50,18 @@ def buildSubscript(variable, indices):
     the offset into the given array using those indices. The order is
     important."""
 
-    # Start our expression with the first index
-    name = indices[0].name()
-    offset = Variable(name)
+    # Compute the correct subscript using the Horner scheme, starting with
+    # the slowest varying index (last in the list)
+    expr = Variable(indices[-1].name())
 
-    # Compute the expression for all indices
-    for v in range(1,len(indices)):
-        subindices = indices[:v]
-        name = indices[v].name()
-        expr = Variable(name)
+    # Iteratively build the expression by multiplying the the existing
+    # expression with the extent of the next faster varying index and
+    # adding the index' iteration variable
+    for i in reversed(indices[:-1]):
+        expr = MultiplyOp(i.extent(), Bracketed(expr))
+        expr = AddOp(Variable(i.name()), expr)
 
-        # Find the correct offset for this index
-        for u in range(len(subindices)):
-            multiplier = subindices[u].extent()
-            expr = MultiplyOp(multiplier, expr)
-        offset = AddOp(offset, expr)
-
-    return Subscript(variable, offset)
+    return Subscript(variable, expr)
 
 def buildMultiArraySubscript(variable, indices):
     """Given a list of indices, return an AST of the variable
