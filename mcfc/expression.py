@@ -82,12 +82,12 @@ class ExpressionBuilder(Transformer):
 
     def multi_index(self, tree):
         indices = []
-        dims = tree.index_dimensions()
         for i in tree:
             if isinstance(i, Index):
+                dims = tree.index_dimensions()
                 indices.append(buildDimIndex(i.count(), dims[i]))
             elif isinstance(i, FixedIndex):
-                indices.append(buildConstDimIndex(i._value, dims[i]))
+                indices.append(buildConstDimIndex(i._value))
             else:
                 raise RuntimeError('Other types of indices not yet implemented.')
         return tuple(indices)

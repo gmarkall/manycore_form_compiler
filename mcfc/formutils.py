@@ -212,9 +212,12 @@ def buildDimIndex(count, e):
         dim = e.cell().topological_dimension()
     return DimIndex(dim, count)
 
-def buildConstDimIndex(value, extent):
+def buildConstDimIndex(count):
     "Build literal subscript for a loop over spatial dimensions."
-    return ConstIndex(extent, count)
+    # FIXME: We pass a constant extent of 1 since the actual extent is
+    # non-trivial to extracted from the context and is not required when the
+    # index is used to subscript a multi-dimensional array
+    return ConstIndex(1, count)
 
 def buildGaussIndex(n):
     "Build index for a Gauss quadrature loop."
