@@ -41,6 +41,17 @@ class ModifierMixin:
 class BackendASTNode:
     pass
 
+class Bracketed(BackendASTNode):
+
+    def __init__(self, op):
+        self._op = op
+
+    def unparse(self):
+        # Only bracketing binary ops makes sense
+        if isinstance(self._op, BinaryOp):
+            return '(' + self._op.unparse() + ')'
+        return self._op.unparse()
+
 class Subscript(BackendASTNode):
 
     def __init__(self, base, offset):
@@ -157,7 +168,7 @@ class ForLoop(BackendASTNode):
 
     def unparse(self):
         init = self._init.unparse()
-        test = self._test.unparse(False)
+        test = self._test.unparse()
         inc = self._inc.unparse()
         header = 'for(%s; %s; %s)\n' % (init, test, inc)
         body = self._body.unparse()
@@ -327,31 +338,32 @@ class Delete(BackendASTNode):
 
 class BinaryOp(BackendASTNode):
 
-    def __init__(self, lhs, rhs, op, bracketed=False):
+    def __init__(self, lhs, rhs, op):
         self._lhs = lhs
         self._rhs = rhs
         self._op = op
-        self._bracketed = bracketed
 
-    def unparse(self, bracketed=False):
+    def unparse(self):
         lhs = self._lhs.unparse()
         rhs = self._rhs.unparse()
-        code = '%s%s%s' % (lhs, self._op, rhs)
-        if self._bracketed or bracketed:
-            code = '(' + code + ')'
-        return code
+        return '%s%s%s' % (lhs, self._op, rhs)
 
     __str__ = unparse
 
 class MultiplyOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, lhs, rhs, ' * ')
+        BinaryOp.__init__(self, self.fixup(lhs), self.fixup(rhs), ' * ')
+
+    def fixup(self, op):
+        if isinstance(op, AddOp):
+            return Bracketed(op)
+        return op
 
 class AddOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, lhs, rhs, ' + ', True)
+        BinaryOp.__init__(self, lhs, rhs, ' + ')
 
 class AssignmentOp(BinaryOp):
 
@@ -365,7 +377,7 @@ class PlusAssignmentOp(BinaryOp):
 
 class InitialisationOp(AssignmentOp):
 
-    def unparse(self, bracketed=False):
+    def unparse(self):
         lhs = self._lhs.unparse_declaration()
         rhs = self._rhs.unparse()
         return '%s%s%s' % (lhs, self._op, rhs)
