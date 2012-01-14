@@ -18,7 +18,6 @@
 # holders.
 
 from expression import *
-from formutils import extract_element
 
 def buildSubscript(variable, indices):
     """Given a list of indices, return an AST that subscripts

@@ -18,7 +18,6 @@
 # holders.
 
 from expression import *
-from formutils import extract_element
 
 # Variables
 

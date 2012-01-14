@@ -153,8 +153,7 @@ class FormBackend(object):
         # Add initialiser here
         loop.append(self.buildCoeffQuadratureInitialiser(coeff))
 
-        # One loop over the basis functions
-        # FIXME: We fall back to the basis of the scalar element
+        # One loop over the basis functions of the scalar element
         basisLoop = buildIndexForLoop(buildBasisIndex(0, extract_subelement(coeff)))
         loop.append(basisLoop)
 

@@ -258,17 +258,17 @@ class QuadratureExpressionBuilder:
 
             # Check if we are dealing with the Jacobian
             if isJacobian(tree):
-                coordinates = extractCoordinates(tree)
-                # Subscript the coordinate field
-                coeffIndices = self.subscript(coordinates)
+                # Subscript coordinate field if we are dealing with the Jacobian
+                coeffIndices = self.subscript(extractCoordinates(tree))
                 # We actually need to pass a SpatialDerivative to build its name
                 # FIXME: can this be done any nicer?
                 from ufl.objects import i
-                fakeDerivative = SpatialDerivative(TrialFunction(coordinates.element()),i)
+                fakeArg = TrialFunction(extract_element(tree))
+                fakeDerivative = SpatialDerivative(fakeArg,i)
                 argName = buildSpatialDerivativeName(fakeDerivative)
-                # Add an index over dimensions, since we're dealing with shape derivatives
-                # FIXME: should there be a separate function like 'subscript_dn'?
-                argIndices += [buildDimIndex(1,coordinates)]
+                # Add an index over dimensions, since we're dealing with shape
+                # derivatives (Important: build an index over the 2nd dimension)
+                argIndices += [buildDimIndex(1,tree)]
 
         elif isinstance (tree, SpatialDerivative):
             operand, indices = tree.operands()

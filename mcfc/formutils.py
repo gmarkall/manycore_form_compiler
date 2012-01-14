@@ -179,10 +179,9 @@ class ConstIndex(CodeIndex):
 
 def extract_element(expr):
     "Extract the element of a UFL expression."
-    if isinstance(expr, (Argument, Coefficient)):
-        return expr.element()
     if isinstance(expr, SpatialDerivative):
-        return expr.operands()[0].element()
+        expr = expr.operands()[0]
+    return extractCoordinates(expr).element()
 
 def extract_subelement(expr):
     """Extract the scalar element of a UFL expression (i.e. for a vector or
