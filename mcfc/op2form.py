@@ -30,7 +30,11 @@ class Op2FormBackend(FormBackend):
         self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder(self)
 
     def _buildCoefficientParameter(self, coeff):
-        indices = self._quadratureExpressionBuilder.subscript(coeff)
+        # Use the coordinate field instead of the Jacobian when building the
+        # subscript.
+        indices = self._quadratureExpressionBuilder.subscript(extractCoordinates(coeff))
+        # Do however use the Jacobian coefficent when building the name, since
+        # the coordinate coefficient doesn't get renumbered!
         name = buildCoefficientName(coeff)
         return buildArrayParameter(name, indices)
 
