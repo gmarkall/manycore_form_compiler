@@ -15,7 +15,7 @@ int* Velocity_colm;
 int Velocity_colm_size;
 
 
-__global__ void A(int n_ele, double* localTensor, double dt)
+__global__ void A(int n_ele, double* localTensor, double dt, double* c0)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -70,8 +70,23 @@ __global__ void A(int n_ele, double* localTensor, double dt)
                                      0.44594849, 0.10810302, 0.44594849 },
                                    {  0.81684757, 0.09157621, 0.09157621,
                                      0.10810302, 0.44594849, 0.44594849 } } };
+  double c_q0[6][2][2];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
+    for(int i_g = 0; i_g < 6; i_g++)
+    {
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          c_q0[i_g][i_d_0][i_d_1] = 0.0;
+          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+          {
+            c_q0[i_g][i_d_0][i_d_1] += c0[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * d_CG1[i_r_0][i_g][i_d_1];
+          };
+        };
+      };
+    };
     for(int i_r_0 = 0; i_r_0 < 6; i_r_0++)
     {
       for(int i_r_1 = 0; i_r_1 < 6; i_r_1++)
@@ -81,7 +96,7 @@ __global__ void A(int n_ele, double* localTensor, double dt)
         {
           for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
           {
-            localTensor[i_ele + n_ele * (i_r_0 + 6 * i_r_1)] += CG1_v[i_d_0][i_r_0][i_g] * CG1_v[i_d_0][i_r_1][i_g] * w[i_g];
+            localTensor[i_ele + n_ele * (i_r_0 + 6 * i_r_1)] += CG1_v[i_d_0][i_r_0][i_g] * CG1_v[i_d_0][i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
           };
         };
       };
@@ -89,7 +104,7 @@ __global__ void A(int n_ele, double* localTensor, double dt)
   };
 }
 
-__global__ void RHS(int n_ele, double* localTensor, double dt, double* c0)
+__global__ void RHS(int n_ele, double* localTensor, double dt, double* c0, double* c1)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -144,17 +159,29 @@ __global__ void RHS(int n_ele, double* localTensor, double dt, double* c0)
                                      0.44594849, 0.10810302, 0.44594849 },
                                    {  0.81684757, 0.09157621, 0.09157621,
                                      0.10810302, 0.44594849, 0.44594849 } } };
-  double c_q0[6][2];
+  double c_q1[6][2];
+  double c_q0[6][2][2];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
     for(int i_g = 0; i_g < 6; i_g++)
     {
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
-        c_q0[i_g][i_d_0] = 0.0;
+        c_q1[i_g][i_d_0] = 0.0;
         for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
         {
-          c_q0[i_g][i_d_0] += c0[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0][i_g];
+          c_q1[i_g][i_d_0] += c1[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0][i_g];
+        };
+      };
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          c_q0[i_g][i_d_0][i_d_1] = 0.0;
+          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+          {
+            c_q0[i_g][i_d_0][i_d_1] += c0[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * d_CG1[i_r_0][i_g][i_d_1];
+          };
         };
       };
     };
@@ -165,7 +192,7 @@ __global__ void RHS(int n_ele, double* localTensor, double dt, double* c0)
       {
         for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
         {
-          localTensor[i_ele + n_ele * i_r_0] += CG1_v[i_d_0][i_r_0][i_g] * c_q0[i_g][i_d_0] * w[i_g];
+          localTensor[i_ele + n_ele * i_r_0] += CG1_v[i_d_0][i_r_0][i_g] * c_q1[i_g][i_d_0] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         };
       };
     };
@@ -213,9 +240,10 @@ extern "C" void run_model_(double* dt_pointer)
   int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
-  A<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt);
+  double* CoordinateCoeff = state->getElementValue("Coordinate");
+  A<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   double* VelocityCoeff = state->getElementValue("Velocity");
-  RHS<<<gridXDim,blockXDim>>>(numEle, localVector, dt, VelocityCoeff);
+  RHS<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff);
   cudaMemset(globalMatrix, 0, sizeof(double) * Velocity_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Velocity") * numNodes);
   matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);

@@ -97,6 +97,9 @@ class FluidityEquation(UflEquation):
         self.visualise(outputFile, objvis)
 
     def preprocessCode(self):
+        # Pre-multiply dx by the Jacobian determinant (FIXME: hack!)
+        import re
+        self.code = re.sub(r'\bdx\b', 'detJ*dx', self.code)
         self.code = "x = state.vector_fields['Coordinate']\nJ, invJ, detJ = transform(x)\n" + self.code
 
     def getInputCoeffName(self, count):
