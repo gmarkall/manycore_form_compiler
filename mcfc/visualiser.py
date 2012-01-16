@@ -228,12 +228,15 @@ class ObjectVisualiser(DOTVisualiser):
                 self._handle_exception(obj, a, sys.exc_info()[1])
                 continue
             attrtype = objattr.__class__.__name__
-            # We have to ignore 'Transposed' to prevent an infinite recursion
-            # on a rank 2 tensor (i.e. taking the transpose of a transpose of
-            # a transpose... - you get the picture)
+            # Don't recurse into built-in or instance methods
             if attrtype not in [ "builtin_function_or_method", "instancemethod" ]:
                 self._dispatch(objattr)
         self._edgeLabel = savedLabel
+
+    def _visit_module(self, obj):
+        # Ignore modules, so we we append a dummy value to the history stack
+        # which immediately gets popped again
+        self._history.append(-1)
 
     def _generic_visit_number(self, obj):
         self._build_node(str(obj), self._edgeLabel)
@@ -249,6 +252,10 @@ class ObjectVisualiser(DOTVisualiser):
         else:
             short = printable
         self._build_node(short, self._edgeLabel)
+
+    def _visit_ndarray(self, obj):
+        # Do not recurse into an ndarray since that triggers an infinite loop
+        self._build_node('ndarray'+str(obj.shape), self._edgeLabel)
 
     def _visit_list(self, obj):
         self._generic_visit_array(obj, "list")

@@ -25,9 +25,10 @@ ReprVisualiser = visualiser.ReprVisualiser
 class ObjectVisualiser(visualiser.ObjectVisualiser):
 
     def _ignoreattr(self, attr):
-        # Ignore attribute 'T' which is expected to fail under some
-        # circumstances and all attributes ending in *_domains since they are
-        # deprecated
+        # We have to ignore 'Transposed' to prevent an infinite recursion
+        # on a rank 2 tensor (i.e. taking the transpose of a transpose of
+        # a transpose... - you get the picture), so ignore attribute 'T'
+        # Ignore attributes ending in *_domains since they are deprecated
         return attr == 'T' or attr.endswith('_domains')
 
 # vim:sw=4:ts=4:sts=4:et
