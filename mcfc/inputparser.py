@@ -54,7 +54,7 @@ class FlmlParser(InputParser):
     
     def parse(self, filename):
         "Return a list of one FluidityEquation for each equation in the flml input file"
-        p = OptionFileParser(inputFile)
+        p = OptionFileParser(filename)
         return [FluidityEquation(equationname, data[0], data[1], p.states) for equationname, data in p.uflinput.items()]
 
 # FIXME flufl files should have extension .flufl
