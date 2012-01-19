@@ -93,7 +93,7 @@ def main():
         os.mkdir('outputs/cuda', 0755)
 
         tester.test(frontend.testHook,
-            lambda name: "inputs/backend/" + name + ".flml",
+            lambda name: "inputs/flml/" + name + ".flml",
             lambda name: "outputs/cuda/" + name,
             lambda name: "expected/cuda/" + name,
             ufl_sources,
