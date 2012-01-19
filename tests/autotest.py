@@ -57,10 +57,10 @@ def main():
     check_optionfile = 'no-optionfile' not in keys
     check_visualiser = 'no-visualiser' not in keys
 
-    ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3',
-            'identity', 'laplacian', 'helmholtz', 'euler-advection', \
-            'swapped-advection', 'identity-vector', \
-            'simple-advection-diffusion' ]
+    ufl_sources = ['identity']
+    #ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
+    #        'laplacian', 'helmholtz', 'euler-advection', 'identity-vector', \
+    #        'simple-advection-diffusion' ]
     optionfile_sources = ['test', 'cdisk_adv_diff']
 
     # Check a single file if specified. Otherwise check
@@ -93,9 +93,9 @@ def main():
         os.mkdir('outputs/cuda', 0755)
 
         tester.test(frontend.testHook,
-            lambda name: "inputs/ufl/" + name + ".ufl",
-            lambda name: "outputs/cuda/" + name + ".cu",
-            lambda name: "expected/cuda/" + name + ".cu",
+            lambda name: "inputs/backend/" + name + ".flml",
+            lambda name: "outputs/cuda/" + name,
+            lambda name: "expected/cuda/" + name,
             ufl_sources,
             'Running form compiler tests (CUDA backend)...')
 
@@ -105,7 +105,7 @@ def main():
         os.mkdir('outputs/op2', 0755)
 
         tester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
-            lambda name: "inputs/ufl/" + name + ".ufl",
+            lambda name: "inputs/backend/" + name + ".flml",
             lambda name: "outputs/op2/" + name + ".cpp",
             lambda name: "expected/op2/" + name + ".cpp",
             ufl_sources,
@@ -200,7 +200,12 @@ class AutoTester:
         inputfile = self.infile(sourcefile)
         outputfile = self.outfile(sourcefile)
         expectedfile = self.expectfile(sourcefile)
-
+ 
+        # Create the output folder if it doesn't exist
+        print outputfile
+        if not os.path.exists(outputfile):
+            os.mkdir(outputfile, 0755)
+  
         # Test hook returns 0 if successful, 1 if failed
         self.failed = self.testhook(inputfile, outputfile)
 
@@ -209,14 +214,15 @@ class AutoTester:
             print "    test hook failed."
         # Otherwise, if we have an expected output, diff against it
         elif expectedfile:
-            cmd = "diff -u " + expectedfile + " " + outputfile
-            diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-            diffout, differr = diff.communicate()
-            if differr:
-                print differr
-                self.failed = 1
-            else:
-                self.check_diff(sourcefile, diffout)
+            for currfile in os.listdir(expectedfile):
+                cmd = "diff -u " + expectedfile + "/" + currfile + " " + outputfile + "/" + currfile
+                diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+                diffout, differr = diff.communicate()
+                if differr:
+                    print differr
+                    self.failed = 1
+                else:
+                    self.check_diff(sourcefile, diffout)
 
     def check_diff(self, sourcefile, diff):
 
