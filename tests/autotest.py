@@ -207,8 +207,19 @@ class AutoTester:
         # Print a message if the test hook failed
         if self.failed:
             print "    test hook failed."
+
         # Otherwise, if we have an expected output, diff against it
         elif expectedfile:
+            
+            # Did we generate the right files?
+            expectedfiles = os.listdir(expectedfile)
+            outputfiles = os.listdir(outputfile)
+            if expectedfiles != outputfiles:
+                self.failed = 1
+                print "    Expected list of files does not match generated list of files."
+                return
+
+            # Are those files what we expect?
             for currfile in os.listdir(expectedfile):
                 cmd = "diff -u " + expectedfile + "/" + currfile + " " + outputfile + "/" + currfile
                 diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
