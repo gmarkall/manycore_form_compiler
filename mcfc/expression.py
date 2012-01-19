@@ -35,6 +35,7 @@ class ExpressionBuilder(Transformer):
     def build(self, tree):
         "Build the rhs for evaluating an expression tree."
         self._exprStack = []
+        self._subExprStack = []
         self._indexStack = Stack()
         self.visit(tree)
 
@@ -43,7 +44,7 @@ class ExpressionBuilder(Transformer):
         assert len(self._exprStack) == 0, "Expression stack not empty."
         assert len(self._indexStack) == 0, "Index stack not empty."
 
-        return expr
+        return expr, self._subExprStack
 
     def subscript(self, tree, depth=None):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
@@ -99,6 +100,23 @@ class ExpressionBuilder(Transformer):
         summand, mi = tree.operands()
 
         self.visit(summand)
+
+    def list_tensor(self, tree, *ops):
+        dimIndices = self._indexStack.peek()
+        # FIXME: is that a stable naming scheme?
+        tmpTensor = buildListTensorVar(dimIndices[0])
+
+        # Build the expressions populating the components of the list tensor
+        decl = Declaration(tmpTensor)
+        # Get expressions for all operands of the ListTensor in right order
+        # Since we're popping from the expression stack, need to reverse
+        init = InitialiserList(reversed([self._exprStack.pop() for i in ops]))
+        self._subExprStack.append(AssignmentOp(decl, init))
+
+        # Build a subscript for the temporary Array and push that on the
+        # expression stack
+        listTensorExpr = self.buildMultiArraySubscript(tmpTensor, dimIndices)
+        self._exprStack.append(listTensorExpr)
 
     def constant_value(self, tree):
         if isinstance(tree, SymbolicValue):
@@ -243,5 +261,10 @@ class QuadratureExpressionBuilder:
 
     def subscript_spatial_derivative(self, tree):
         raise NotImplementedError("You're supposed to implement subscript_spatial_derivative()!")
+
+def buildListTensorVar(index):
+    name = 'l'+str(index._count)
+    t = Array(Real(), index.extent())
+    return Variable(name, t)
 
 # vim:sw=4:ts=4:sts=4:et
