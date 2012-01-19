@@ -40,8 +40,8 @@ class ExpressionBuilder(Transformer):
 
         expr = self._exprStack.pop()
 
-        if len(self._exprStack) is not 0:
-            raise RuntimeError("Expression stack not empty.")
+        assert len(self._exprStack) == 0, "Expression stack not empty."
+        assert len(self._indexStack) == 0, "Index stack not empty."
 
         return expr
 
