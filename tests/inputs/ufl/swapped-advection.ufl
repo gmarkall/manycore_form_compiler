@@ -1,0 +1,13 @@
+t=state.scalar_fields["Tracer"]
+u=state.vector_fields["Velocity"]
+
+p=TrialFunction(t)
+q=TestFunction(t)
+
+Mass=q*p*dx
+
+rhs = (q*t+dt*dot(grad(q),as_vector([u[1],u[0]]))*t)*dx
+
+tnew=solve(Mass,rhs)
+
+state.scalar_fields["Tracer"]=tnew
