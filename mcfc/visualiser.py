@@ -97,7 +97,9 @@ class ASTVisualiser(DOTVisualiser):
         try:
             meth = getattr(self, "_"+tree.__class__.__name__)
         except AttributeError:
-            raise NotImplementedError("Not implemented yet.")
+            raise NotImplementedError(
+                    "Support for %s nodes no implemented yet."
+                    % tree.__class__.__name__)
         meth(tree)
         self._history.pop()
 
@@ -105,6 +107,14 @@ class ASTVisualiser(DOTVisualiser):
         self._build_node("Module")
         for stmt in tree.body:
             self._dispatch(stmt)
+
+    def _FunctionDef(self, tree):
+        # Ignore function definitions
+        self._history.append(-1)
+
+    def _ImportFrom(self, tree):
+        # Ignore import statements
+        self._history.append(-1)
 
     def _Expr(self, tree):
         self._build_node("Expr")
