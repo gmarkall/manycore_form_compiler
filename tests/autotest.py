@@ -201,11 +201,6 @@ class AutoTester:
         outputfile = self.outfile(sourcefile)
         expectedfile = self.expectfile(sourcefile)
  
-        # Create the output folder if it doesn't exist
-        print outputfile
-        if not os.path.exists(outputfile):
-            os.mkdir(outputfile, 0755)
-  
         # Test hook returns 0 if successful, 1 if failed
         self.failed = self.testhook(inputfile, outputfile)
 

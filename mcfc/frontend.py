@@ -68,11 +68,15 @@ def run(inputFile, opts = None):
         vis = True
         objvis = True
 
+    # Create the output directory if it does not yet exist
+    if not os.path.exists(outputFileBase):
+        os.mkdir(outputFileBase, 0755)
+    
     # Parse input and trigger the pipeline for each UFL equation
     parser = inputparsers[os.path.splitext(inputFile)[1]]
     for equation in parser.parse(inputFile):
+        
         outputFile = outputFileBase + "/" + equation.name
-        print "output file is ", outputFile
 
         if vis:
             equation.execVisualisePipeline(outputFile, objvis)
