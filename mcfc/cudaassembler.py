@@ -377,7 +377,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         return params
 
 def buildAppendCudaMemsetZero(func, base, length):
-    t = base.getType().getBaseType()
+    t = base.type().getBaseType()
     size = MultiplyOp(SizeOf(t), length)
     params = [ base, Literal(0), size ]
     memset = FunctionCall('cudaMemset', params)
@@ -385,7 +385,7 @@ def buildAppendCudaMemsetZero(func, base, length):
 
 def buildAppendCudaMalloc(scope, var, size):
     cast = Cast(Pointer(Pointer(Void())), AddressOfOp(var))
-    sizeof = SizeOf(var.getType().getBaseType())
+    sizeof = SizeOf(var.type().getBaseType())
     sizeArg = MultiplyOp(sizeof, size)
     params = [ cast, sizeArg ]
     malloc = FunctionCall('cudaMalloc', params)

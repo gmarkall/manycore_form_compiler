@@ -91,15 +91,15 @@ class Variable(BackendASTNode):
         return self._name.__hash__()
 
     def __eq__(self, other):
-        return self._name == other._name
+        return self.name() == other.name()
 
     def setCudaShared(self, isCudaShared):
         self._t.setCudaShared(isCudaShared)
 
-    def getType(self):
+    def type(self):
         return self._t
 
-    def getName(self):
+    def name(self):
         return self._name
 
     def unparse(self):
