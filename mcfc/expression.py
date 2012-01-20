@@ -34,14 +34,10 @@ class ExpressionBuilder(Transformer):
 
     def build(self, tree):
         "Build the rhs for evaluating an expression tree."
-        self._exprStack = []
         self._subExprStack = []
         self._indexStack = Stack()
-        self.visit(tree)
+        expr = self.visit(tree)
 
-        expr = self._exprStack.pop()
-
-        assert len(self._exprStack) == 0, "Expression stack not empty."
         assert len(self._indexStack) == 0, "Index stack not empty."
 
         return expr, self._subExprStack
@@ -70,7 +66,8 @@ class ExpressionBuilder(Transformer):
         return indices
 
     def component_tensor(self, tree, *ops):
-        pass
+        # We ignore the 2nd operand (a MultiIndex)
+        return ops[0]
 
     # When entering an index, we need to memorise the indices that are attached
     # to it before descending into the sub-tree. The sub-tree handlers can make
@@ -78,8 +75,9 @@ class ExpressionBuilder(Transformer):
     def indexed(self, tree):
         o, i = tree.operands()
         self._indexStack.push(self.visit(i))
-        self.visit(o)
+        op = self.visit(o)
         self._indexStack.pop()
+        return op
 
     def multi_index(self, tree):
         indices = []
@@ -99,7 +97,7 @@ class ExpressionBuilder(Transformer):
     def index_sum(self, tree):
         summand, mi = tree.operands()
 
-        self.visit(summand)
+        return self.visit(summand)
 
     def list_tensor(self, tree, *ops):
         dimIndices = self._indexStack.peek()
@@ -110,32 +108,24 @@ class ExpressionBuilder(Transformer):
         decl = Declaration(tmpTensor)
         # Get expressions for all operands of the ListTensor in right order
         # Since we're popping from the expression stack, need to reverse
-        init = InitialiserList(reversed([self._exprStack.pop() for i in ops]))
+        init = InitialiserList(ops)
         self._subExprStack.append(AssignmentOp(decl, init))
 
         # Build a subscript for the temporary Array and push that on the
         # expression stack
-        listTensorExpr = self.buildMultiArraySubscript(tmpTensor, dimIndices)
-        self._exprStack.append(listTensorExpr)
+        return self.buildMultiArraySubscript(tmpTensor, dimIndices)
 
     def constant_value(self, tree):
         if isinstance(tree, SymbolicValue):
-            value = Variable(tree.value())
+            return Variable(tree.value())
         else:
-            value = Literal(tree.value())
-        self._exprStack.append(value)
+            return Literal(tree.value())
 
     def sum(self, tree, *ops):
-        rhs = self._exprStack.pop()
-        lhs = self._exprStack.pop()
-        add = AddOp(lhs, rhs)
-        self._exprStack.append(add)
+        return AddOp(*ops)
 
     def product(self, tree, *ops):
-        rhs = self._exprStack.pop()
-        lhs = self._exprStack.pop()
-        multiply = MultiplyOp(lhs, rhs)
-        self._exprStack.append(multiply)
+        return MultiplyOp(*ops)
 
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
@@ -143,8 +133,7 @@ class ExpressionBuilder(Transformer):
 
         dimIndices = self._indexStack.peek()
         indices = self.subscript(tree, dimIndices)
-        spatialDerivExpr = self.buildSubscript(base, indices)
-        self._exprStack.append(spatialDerivExpr)
+        return self.buildSubscript(base, indices)
 
     def argument(self, tree):
         e = tree.element()
@@ -152,19 +141,16 @@ class ExpressionBuilder(Transformer):
 
         if isinstance(e, FiniteElement):
             base = Variable(buildArgumentName(tree))
-            argExpr = self.buildSubscript(base, indices)
+            return self.buildSubscript(base, indices)
         elif isinstance(e, VectorElement):
             base = Variable(buildVectorArgumentName(tree))
-            argExpr = self.buildMultiArraySubscript(base, indices)
+            return self.buildMultiArraySubscript(base, indices)
         else:
             base = Variable(buildTensorArgumentName(tree))
-            argExpr = self.buildMultiArraySubscript(base, indices)
-
-        self._exprStack.append(argExpr)
+            return self.buildMultiArraySubscript(base, indices)
 
     def coefficient(self, tree):
-        coeffExpr = self.buildCoeffQuadratureAccessor(tree)
-        self._exprStack.append(coeffExpr)
+        return self.buildCoeffQuadratureAccessor(tree)
 
     def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
         rank = coeff.rank()
