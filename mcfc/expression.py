@@ -134,6 +134,9 @@ class ExpressionBuilder(Transformer):
     def product(self, tree, *ops):
         return MultiplyOp(*ops)
 
+    def division(self, tree, *ops):
+        return DivideOp(*ops)
+
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
         base = Variable(name)
