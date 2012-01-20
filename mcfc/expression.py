@@ -99,21 +99,28 @@ class ExpressionBuilder(Transformer):
 
         return self.visit(summand)
 
-    def list_tensor(self, tree, *ops):
+    def list_tensor(self, tree):
         dimIndices = self._indexStack.peek()
-        # FIXME: is that a stable naming scheme?
-        tmpTensor = buildListTensorVar(dimIndices[0])
 
-        # Build the expressions populating the components of the list tensor
-        decl = Declaration(tmpTensor)
         # Get expressions for all operands of the ListTensor in right order
-        # Since we're popping from the expression stack, need to reverse
-        init = InitialiserList(ops)
-        self._subExprStack.append(AssignmentOp(decl, init))
+        self._indexStack.push(())
+        init = InitialiserList([self.visit(o) for o in tree.operands()])
+        self._indexStack.pop()
 
-        # Build a subscript for the temporary Array and push that on the
-        # expression stack
-        return self.buildMultiArraySubscript(tmpTensor, dimIndices)
+        # If we have dimension indices on the stack we're right below an indexed
+        if len(dimIndices) > 0:
+            tmpTensor = buildListTensorVar(dimIndices)
+
+            # Build the expressions populating the components of the list tensor
+            decl = Declaration(tmpTensor)
+            self._subExprStack.append(AssignmentOp(decl, init))
+
+            # Build a subscript for the temporary Array and push that on the
+            # expression stack
+            return self.buildMultiArraySubscript(tmpTensor, dimIndices)
+        # Otherwise we're operand of a higher rank ListTensor
+        else:
+            return init
 
     def constant_value(self, tree):
         if isinstance(tree, SymbolicValue):
@@ -248,9 +255,10 @@ class QuadratureExpressionBuilder:
     def subscript_spatial_derivative(self, tree):
         raise NotImplementedError("You're supposed to implement subscript_spatial_derivative()!")
 
-def buildListTensorVar(index):
-    name = 'l'+str(index._count)
-    t = Array(Real(), index.extent())
+def buildListTensorVar(indices):
+    # FIXME: is that a stable naming scheme?
+    name = 'l'+''.join([str(i._count) for i in indices])
+    t = Array(Real(), [i.extent() for i in indices])
     return Variable(name, t)
 
 # vim:sw=4:ts=4:sts=4:et
