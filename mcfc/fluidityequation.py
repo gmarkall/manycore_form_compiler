@@ -100,7 +100,14 @@ class FluidityEquation(UflEquation):
         # Pre-multiply dx by the Jacobian determinant (FIXME: hack!)
         import re
         self.code = re.sub(r'\bdx\b', 'detJ*dx', self.code)
-        self.code = "x = state.vector_fields['Coordinate']\nJ, invJ, detJ = transform(x)\n" + self.code
+        self.code = """
+x = state.vector_fields['Coordinate']
+J, invJ, detJ = transform(x)
+def grad(u):
+    return ufl.dot(invJ, ufl.grad(u))
+def div(u):
+    ufl.div(ufl.inner(invJ, u))
+""" + self.code
 
     def getInputCoeffName(self, count):
         "Get the name of an input coefficient from the coefficient count"
