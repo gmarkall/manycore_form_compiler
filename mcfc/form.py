@@ -64,17 +64,17 @@ class FormBackend(object):
 
         # Initialise the local tensor values to 0
         initialiser = self.buildLocalTensorInitialiser(form)
-        depth = rank
-        loopBody = getScopeFromNest(loopNest, depth)
+        loopBody = getScopeFromNest(loopNest, rank)
         loopBody.prepend(initialiser)
 
         # Insert the expressions into the loop nest
         partitions = findPartitions(integrand)
-        for (tree, depth) in partitions:
-            expression = self.buildExpression(form, tree)
-            exprDepth = depth + rank + 1 # add 1 for quadrature loop
-            loopBody = getScopeFromNest(loopNest, exprDepth)
-            loopBody.prepend(expression)
+        loopBody = getScopeFromNest(loopNest, rank + 1)
+        for (tree, indices) in partitions:
+            expression, subexpressions = self.buildExpression(form, tree)
+            buildLoopNest(loopBody, indices).prepend(expression)
+            for expr in subexpressions:
+                loopBody.prepend(expr)
 
         # If there's any coefficients, we need to build a loop nest
         # that calculates their values at the quadrature points
@@ -100,7 +100,7 @@ class FormBackend(object):
     def buildExpression(self, form, tree):
         "Build the expression represented by the subtree tree of form."
         # Build the rhs expression
-        rhs = self._expressionBuilder.build(tree)
+        rhs, subexpr = self._expressionBuilder.build(tree)
 
         # The rhs of a form needs to be multiplied by detwei
         indices = self.subscript_detwei()
@@ -112,7 +112,7 @@ class FormBackend(object):
         lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
         expr = PlusAssignmentOp(lhs, rhs)
 
-        return expr
+        return expr, subexpr
 
     def buildExpressionLoopNest(self, form):
         "Build the loop nest for evaluating a form expression."
@@ -134,12 +134,6 @@ class FormBackend(object):
         gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
         loop.append(gaussLoop)
         loop = gaussLoop
-
-        # Find the indices over dimensions and and loops for them.
-        for index in indexSumIndices(integrand):
-            dimLoop = buildIndexForLoop(index)
-            loop.append(dimLoop)
-            loop = dimLoop
 
         # Hand back the outer loop, so it can be inserted into some
         # scope.

@@ -350,15 +350,20 @@ class BinaryOp(BackendASTNode):
 
     __str__ = unparse
 
+def _fixup(op):
+    if isinstance(op, (AddOp, DivideOp)):
+        return Bracketed(op)
+    return op
+
 class MultiplyOp(BinaryOp):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, self.fixup(lhs), self.fixup(rhs), ' * ')
+        BinaryOp.__init__(self, _fixup(lhs), _fixup(rhs), ' * ')
 
-    def fixup(self, op):
-        if isinstance(op, AddOp):
-            return Bracketed(op)
-        return op
+class DivideOp(BinaryOp):
+
+    def __init__(self, lhs, rhs):
+        BinaryOp.__init__(self, _fixup(lhs), _fixup(rhs), ' / ')
 
 class AddOp(BinaryOp):
 

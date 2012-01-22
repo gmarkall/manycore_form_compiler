@@ -57,8 +57,9 @@ def main():
     check_optionfile = 'no-optionfile' not in keys
     check_visualiser = 'no-visualiser' not in keys
 
-    ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
-            'laplacian', 'helmholtz', 'euler-advection', 'identity-vector', \
+    ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3',
+            'identity', 'laplacian', 'helmholtz', 'euler-advection', \
+            'swapped-advection', 'identity-vector', \
             'simple-advection-diffusion' ]
     optionfile_sources = ['test', 'cdisk_adv_diff']
 

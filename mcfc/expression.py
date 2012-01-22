@@ -34,16 +34,14 @@ class ExpressionBuilder(Transformer):
 
     def build(self, tree):
         "Build the rhs for evaluating an expression tree."
-        self._exprStack = []
+        self._subExprStack = []
         self._indexStack = Stack()
-        self.visit(tree)
+        self._indices = []
+        expr = self.visit(tree)
 
-        expr = self._exprStack.pop()
-
-        assert len(self._exprStack) == 0, "Expression stack not empty."
         assert len(self._indexStack) == 0, "Index stack not empty."
 
-        return expr
+        return expr, self._subExprStack
 
     def subscript(self, tree, depth=None):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
@@ -69,7 +67,8 @@ class ExpressionBuilder(Transformer):
         return indices
 
     def component_tensor(self, tree, *ops):
-        pass
+        # We ignore the 2nd operand (a MultiIndex)
+        return ops[0]
 
     # When entering an index, we need to memorise the indices that are attached
     # to it before descending into the sub-tree. The sub-tree handlers can make
@@ -77,8 +76,9 @@ class ExpressionBuilder(Transformer):
     def indexed(self, tree):
         o, i = tree.operands()
         self._indexStack.push(self.visit(i))
-        self.visit(o)
+        op = self.visit(o)
         self._indexStack.pop()
+        return op
 
     def multi_index(self, tree):
         indices = []
@@ -98,26 +98,51 @@ class ExpressionBuilder(Transformer):
     def index_sum(self, tree):
         summand, mi = tree.operands()
 
-        self.visit(summand)
+        for c, d in mi.index_dimensions().items():
+            self._indices.append(buildDimIndex(c.count(), d))
+
+        return self.visit(summand)
+
+    def list_tensor(self, tree):
+        dimIndices = self._indexStack.peek()
+
+        # Get expressions for all operands of the ListTensor in right order
+        self._indexStack.push(())
+        init = InitialiserList([self.visit(o) for o in tree.operands()])
+        self._indexStack.pop()
+
+        # If we have dimension indices on the stack we're right below an indexed
+        if len(dimIndices) > 0:
+            # Use IndexSum indices to build and subscript ListTensor, s.t.
+            # indices match those of the loop nest
+            subscriptIndices = self._indices[-len(dimIndices):]
+            tmpTensor = buildListTensorVar(subscriptIndices)
+
+            # Build the expressions populating the components of the list tensor
+            decl = Declaration(tmpTensor)
+            self._subExprStack.append(AssignmentOp(decl, init))
+
+            # Build a subscript for the temporary Array and push that on the
+            # expression stack
+            return self.buildMultiArraySubscript(tmpTensor, subscriptIndices)
+        # Otherwise we're operand of a higher rank ListTensor
+        else:
+            return init
 
     def constant_value(self, tree):
         if isinstance(tree, SymbolicValue):
-            value = Variable(tree.value())
+            return Variable(tree.value())
         else:
-            value = Literal(tree.value())
-        self._exprStack.append(value)
+            return Literal(tree.value())
 
     def sum(self, tree, *ops):
-        rhs = self._exprStack.pop()
-        lhs = self._exprStack.pop()
-        add = AddOp(lhs, rhs)
-        self._exprStack.append(add)
+        return AddOp(*ops)
 
     def product(self, tree, *ops):
-        rhs = self._exprStack.pop()
-        lhs = self._exprStack.pop()
-        multiply = MultiplyOp(lhs, rhs)
-        self._exprStack.append(multiply)
+        return MultiplyOp(*ops)
+
+    def division(self, tree, *ops):
+        return DivideOp(*ops)
 
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
@@ -125,8 +150,7 @@ class ExpressionBuilder(Transformer):
 
         dimIndices = self._indexStack.peek()
         indices = self.subscript(tree, dimIndices)
-        spatialDerivExpr = self.buildSubscript(base, indices)
-        self._exprStack.append(spatialDerivExpr)
+        return self.buildSubscript(base, indices)
 
     def argument(self, tree):
         e = tree.element()
@@ -134,19 +158,16 @@ class ExpressionBuilder(Transformer):
 
         if isinstance(e, FiniteElement):
             base = Variable(buildArgumentName(tree))
-            argExpr = self.buildSubscript(base, indices)
+            return self.buildSubscript(base, indices)
         elif isinstance(e, VectorElement):
             base = Variable(buildVectorArgumentName(tree))
-            argExpr = self.buildMultiArraySubscript(base, indices)
+            return self.buildMultiArraySubscript(base, indices)
         else:
             base = Variable(buildTensorArgumentName(tree))
-            argExpr = self.buildMultiArraySubscript(base, indices)
-
-        self._exprStack.append(argExpr)
+            return self.buildMultiArraySubscript(base, indices)
 
     def coefficient(self, tree):
-        coeffExpr = self.buildCoeffQuadratureAccessor(tree)
-        self._exprStack.append(coeffExpr)
+        return self.buildCoeffQuadratureAccessor(tree)
 
     def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
         rank = coeff.rank()
@@ -243,5 +264,11 @@ class QuadratureExpressionBuilder:
 
     def subscript_spatial_derivative(self, tree):
         raise NotImplementedError("You're supposed to implement subscript_spatial_derivative()!")
+
+def buildListTensorVar(indices):
+    # FIXME: is that a stable naming scheme?
+    name = 'l'+''.join([str(i._count) for i in indices])
+    t = Array(Real(), [i.extent() for i in indices])
+    return Variable(name, t)
 
 # vim:sw=4:ts=4:sts=4:et
