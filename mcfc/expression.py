@@ -45,7 +45,7 @@ class ExpressionBuilder(Transformer):
         "Build the rhs for evaluating an expression tree."
         self._subExprStack = []
         self._indexStack = Stack()
-        self._indices = []
+        self._sumIndexStack = Stack()
         expr = self.visit(tree)
 
         assert len(self._indexStack) == 0, "Index stack not empty."
@@ -174,12 +174,11 @@ class ExpressionBuilder(Transformer):
     # We need to keep track of how many IndexSums we passed through
     # so that we know which dim index we're dealing with.
     def index_sum(self, tree):
-        summand, mi = tree.operands()
-
-        for c, d in mi.index_dimensions().items():
-            self._indices.append(buildDimIndex(c.count(), d))
-
-        return self.visit(summand)
+        o, i = tree.operands()
+        self._sumIndexStack.push(self.visit(i))
+        op = self.visit(o)
+        self._sumIndexStack.pop()
+        return op
 
     def list_tensor(self, tree):
         dimIndices = self._indexStack.peek()
@@ -193,7 +192,7 @@ class ExpressionBuilder(Transformer):
         if len(dimIndices) > 0:
             # Use IndexSum indices to build and subscript ListTensor, s.t.
             # indices match those of the loop nest
-            subscriptIndices = self._indices[-len(dimIndices):]
+            subscriptIndices = [i[0] for i in self._sumIndexStack[-len(dimIndices):]]
             tmpTensor = buildListTensorVar(subscriptIndices)
 
             # Build the expressions populating the components of the list tensor
