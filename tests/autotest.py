@@ -57,7 +57,8 @@ def main():
     check_optionfile = 'no-optionfile' not in keys
     check_visualiser = 'no-visualiser' not in keys
 
-    ufl_sources = ['identity', 'helmholtz', 'euler-advection' ]
+    ufl_sources = ['identity', 'helmholtz', 'euler-advection', 'diffusion-3',
+                   'simple-advection-diffusion']
     #ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
     #        'laplacian', 'helmholtz', 'euler-advection', 'identity-vector', \
     #        'simple-advection-diffusion' ]
