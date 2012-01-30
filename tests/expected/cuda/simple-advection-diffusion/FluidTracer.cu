@@ -165,7 +165,7 @@ extern "C" void initialise_gpu_()
   state->transferAllFields();
   int numEle = state->getNumEle();
   int numNodes = state->getNumNodes();
-  state->insertTemporaryField("t_adv", "AbsoluteDifference");
+  state->insertTemporaryField("t_adv", "Tracer");
   CsrSparsity* t_adv_sparsity = state->getSparsity("t_adv");
   t_adv_colm = t_adv_sparsity->getCudaColm();
   t_adv_findrm = t_adv_sparsity->getCudaFindrm();

@@ -4,7 +4,7 @@
 
 
 
-void A(double localTensor[3][3], double dt, double detwei[6], double CG1[3][6])
+void a(double localTensor[3][3], double dt, double detwei[6], double CG1[3][6])
 {
   for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
   {
@@ -19,7 +19,7 @@ void A(double localTensor[3][3], double dt, double detwei[6], double CG1[3][6])
   };
 }
 
-void RHS(double localTensor[3], double dt, double detwei[6], double c0[3], double CG1[3][6])
+void L(double localTensor[3], double dt, double detwei[6], double c0[3], double CG1[3][6])
 {
   double c_q0[6];
   for(int i_g = 0; i_g < 6; i_g++)

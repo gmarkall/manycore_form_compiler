@@ -58,7 +58,7 @@ def main():
     check_visualiser = 'no-visualiser' not in keys
 
     ufl_sources = ['identity', 'helmholtz', 'euler-advection', 'diffusion-3',
-                   'simple-advection-diffusion']
+                   'simple-advection-diffusion', 'noop']
     #ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
     #        'laplacian', 'helmholtz', 'euler-advection', 'identity-vector', \
     #        'simple-advection-diffusion' ]
@@ -106,9 +106,9 @@ def main():
         os.mkdir('outputs/op2', 0755)
 
         tester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
-            lambda name: "inputs/backend/" + name + ".flml",
-            lambda name: "outputs/op2/" + name + ".cpp",
-            lambda name: "expected/op2/" + name + ".cpp",
+            lambda name: "inputs/flml/" + name + ".flml",
+            lambda name: "outputs/op2/" + name,
+            lambda name: "expected/op2/" + name,
             ufl_sources,
             'Running form compiler tests (OP2 backend)...')
 
