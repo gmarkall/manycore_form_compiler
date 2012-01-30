@@ -174,7 +174,7 @@ def main():
                 'Running PDF object visualiser tests...')
 
     # Exit code is 0 if no tests failed.
-    sys.exit(multiTester.failed)
+    sys.exit(multiTester.failed or singleTester.failed)
 
 def get_options():
     try:
@@ -269,11 +269,12 @@ class SingleFileTester(AutoTester):
         expectedfile = self.expectfile(sourcefile)
 
         # Test hook returns 0 if successful, 1 if failed
-        self.failed = self.testhook(inputfile, outputfile)
+        hookfailed = self.testhook(inputfile, outputfile)
 
         # Print a message if the test hook failed
         if self.failed:
             print "    test hook failed."
+            self.failed = 1
         # Otherwise, if we have an expected output, diff against it
         elif expectedfile:
             cmd = "diff -u " + expectedfile + " " + outputfile
@@ -296,11 +297,12 @@ class MultiFileTester(AutoTester):
         expectedfile = self.expectfile(sourcefile)
  
         # Test hook returns 0 if successful, 1 if failed
-        self.failed = self.testhook(inputfile, outputfile)
+        hookfailed = self.testhook(inputfile, outputfile)
 
         # Print a message if the test hook failed
-        if self.failed:
+        if hookfailed:
             print "    test hook failed."
+            self.failed = 1
 
         # Otherwise, if we have an expected output, diff against it
         elif expectedfile:
