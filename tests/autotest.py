@@ -146,11 +146,19 @@ def main():
         os.mkdir('outputs/visualiser', 0755)
 
         multiTester.test(frontend.testHookVisualiser,
-            lambda name: "inputs/ufl/" + name + ".ufl",
+            lambda name: "inputs/flml/" + name + ".flml",
             lambda name: "outputs/visualiser/" + name,
             lambda name: None,
             flml_sources,
-            'Running PDF visualiser tests...')
+            'Running PDF visualiser tests (flml input)...')
+
+
+        multiTester.test(frontend.testHookVisualiser,
+            lambda name: "inputs/ufl/" + name + ".ufl",
+            lambda name: "outputs/visualiser/" + name,
+            lambda name: None,
+            ufl_sources,
+            'Running PDF visualiser tests (ufl input)...')
 
         # If object visualiser tests have been requested
         if 'with-objvis' in keys:
@@ -162,7 +170,7 @@ def main():
                 lambda name: "inputs/ufl/" + name + ".ufl",
                 lambda name: "outputs/objvisualiser/" + name,
                 lambda name: None,
-                flml_sources,
+                ufl_sources,
                 'Running PDF object visualiser tests...')
 
     # Exit code is 0 if no tests failed.
