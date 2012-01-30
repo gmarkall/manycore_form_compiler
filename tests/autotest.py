@@ -40,7 +40,7 @@ def main():
 
     opts, args = get_options()
     keys = opts.keys()
-    tester = AutoTester()
+    tester = MultiFileTester()
 
     # Check for non-interactive execution (e.g. on the
     # buildbot).
@@ -180,6 +180,9 @@ class AutoTester:
         self.replaceall = replaceall
         self.failed = 0
 
+    def check(self, sourcefile):
+        raise NotImplementedError("The check method must be implemented.")
+
     def test(self, testhook, infile, outfile, expectfile, sources, message = None):
         self.testhook = testhook
         self.infile = infile
@@ -191,6 +194,44 @@ class AutoTester:
 
         for sourcefile in sources:
             self.check(sourcefile)
+
+    def diffmenu(self, sourcefile, diffout):
+
+        print "    [Continue, Abort, View, Replace, Show IR?] ",
+        response = sys.stdin.readline()
+        rchar = response[0].upper()
+
+        if rchar=='C':
+            return
+        elif rchar=='A':
+            sys.exit(-1)
+        elif rchar=='V':
+            print highlight(diffout, DiffLexer(), TerminalFormatter(bg="dark"))
+            self.diffmenu(sourcefile, diffout)
+        elif rchar=='R':
+            self.replace(sourcefile)
+        elif rchar=='S':
+            frontend.showGraph()
+            self.diffmenu(sourcefile, diffout)
+        else:
+            print "    Please enter a valid option: ",
+            self.diffmenu(sourcefile, diffout)
+    
+    def check_diff(self, sourcefile, diff):
+
+        if diff:
+            print "    Difference detected in %s." % sourcefile
+            self.failed = 1
+
+            if self.replaceall:
+                self.replace(sourcefile)
+            elif self.interactive:
+                self.diffmenu(sourcefile, diff)
+
+class SingleFileTester(AutoTester):
+    pass
+
+class MultiFileTester(AutoTester):
 
     def check(self, sourcefile):
 
@@ -229,44 +270,11 @@ class AutoTester:
                 else:
                     self.check_diff(sourcefile, diffout)
 
-    def check_diff(self, sourcefile, diff):
-
-        if diff:
-            print "    Difference detected in %s." % sourcefile
-            self.failed = 1
-
-            if self.replaceall:
-                self.replace(sourcefile)
-            elif self.interactive:
-                self.diffmenu(sourcefile, diff)
-
     def replace(self, sourcefile):
         src = self.outfile(sourcefile)
         dst = self.expectfile(sourcefile)
         print "    Replacing '%s' with '%s'." % (dst, src)
         shutil.copy(src, dst)
-
-    def diffmenu(self, sourcefile, diffout):
-
-        print "    [Continue, Abort, View, Replace, Show IR?] ",
-        response = sys.stdin.readline()
-        rchar = response[0].upper()
-
-        if rchar=='C':
-            return
-        elif rchar=='A':
-            sys.exit(-1)
-        elif rchar=='V':
-            print highlight(diffout, DiffLexer(), TerminalFormatter(bg="dark"))
-            self.diffmenu(sourcefile, diffout)
-        elif rchar=='R':
-            self.replace(sourcefile)
-        elif rchar=='S':
-            frontend.showGraph()
-            self.diffmenu(sourcefile, diffout)
-        else:
-            print "    Please enter a valid option: ",
-            self.diffmenu(sourcefile, diffout)
 
 # Execute main
 
