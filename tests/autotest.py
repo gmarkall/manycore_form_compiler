@@ -221,7 +221,7 @@ class AutoTester:
         for sourcefile in sources:
             self.check(sourcefile)
 
-    def diffmenu(self, sourcefile, diffout):
+    def diffmenu(self, sourcefile, destfile, diffout):
 
         print "    [Continue, Abort, View, Replace, Show IR?] ",
         response = sys.stdin.readline()
@@ -233,30 +233,28 @@ class AutoTester:
             sys.exit(-1)
         elif rchar=='V':
             print highlight(diffout, DiffLexer(), TerminalFormatter(bg="dark"))
-            self.diffmenu(sourcefile, diffout)
+            self.diffmenu(sourcefile, destfile, diffout)
         elif rchar=='R':
-            self.replace(sourcefile)
+            self.replace(sourcefile, destfile)
         elif rchar=='S':
             frontend.showGraph()
-            self.diffmenu(sourcefile, diffout)
+            self.diffmenu(sourcefile, destfile, diffout)
         else:
             print "    Please enter a valid option: ",
-            self.diffmenu(sourcefile, diffout)
+            self.diffmenu(sourcefile, destfile, diffout)
     
-    def check_diff(self, sourcefile, diff):
+    def check_diff(self, sourcefile, destfile, diff):
 
         if diff:
             print "    Difference detected in %s." % sourcefile
             self.failed = 1
 
             if self.replaceall:
-                self.replace(sourcefile)
+                self.replace(sourcefile, destfile)
             elif self.interactive:
-                self.diffmenu(sourcefile, diff)
+                self.diffmenu(sourcefile, destfile, diff)
 
-    def replace(self, sourcefile):
-        src = self.outfile(sourcefile)
-        dst = self.expectfile(sourcefile)
+    def replace(self, src, dst):
         print "    Replacing '%s' with '%s'." % (dst, src)
         shutil.copy(src, dst)
 
@@ -285,7 +283,7 @@ class SingleFileTester(AutoTester):
                 print differr
                 self.failed = 1
             else:
-                self.check_diff(sourcefile, diffout)
+                self.check_diff(outputfile, expectedfile, diffout)
 
 class MultiFileTester(AutoTester):
 
@@ -317,14 +315,16 @@ class MultiFileTester(AutoTester):
 
             # Are those files what we expect?
             for currfile in os.listdir(expectedfile):
-                cmd = "diff -u " + expectedfile + "/" + currfile + " " + outputfile + "/" + currfile
+                currentoutput = outputfile + "/" + currfile
+                currentexpect = expectedfile + "/" + currfile
+                cmd = "diff -u " + currentexpect + " " + currentoutput
                 diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
                 diffout, differr = diff.communicate()
                 if differr:
                     print differr
                     self.failed = 1
                 else:
-                    self.check_diff(sourcefile, diffout)
+                    self.check_diff(currentoutput, currentexpect, diffout)
 
 # Execute main
 
