@@ -219,10 +219,23 @@ class AutoTester:
             print message
 
         for sourcefile in sources:
-            self.check(sourcefile)
+            print "  Testing " + sourcefile
+            inputfile = self.infile(sourcefile)
+            outputfile = self.outfile(sourcefile)
+            expectedfile = self.expectfile(sourcefile)
+
+            # Test hook returns 0 if successful, 1 if failed
+            hookfailed = self.testhook(inputfile, outputfile)
+
+            # Print a message if the test hook failed
+            if hookfailed:
+                print "    test hook failed."
+                self.failed = 1
+            # Otherwise, if we have an expected output, diff against it
+            elif expectedfile:
+                self.check(inputfile, outputfile, expectedfile)
 
     def diffmenu(self, sourcefile, destfile, diffout):
-
         print "    [Continue, Abort, View, Replace, Show IR?] ",
         response = sys.stdin.readline()
         rchar = response[0].upper()
@@ -260,73 +273,39 @@ class AutoTester:
 
 class SingleFileTester(AutoTester):
 
-    def check(self, sourcefile):
-
-        print "  Testing " + sourcefile
-
-        inputfile = self.infile(sourcefile)
-        outputfile = self.outfile(sourcefile)
-        expectedfile = self.expectfile(sourcefile)
-
-        # Test hook returns 0 if successful, 1 if failed
-        hookfailed = self.testhook(inputfile, outputfile)
-
-        # Print a message if the test hook failed
-        if self.failed:
-            print "    test hook failed."
+    def check(self, inputfile, outputfile, expectedfile):
+        cmd = "diff -u " + expectedfile + " " + outputfile
+        diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+        diffout, differr = diff.communicate()
+        if differr:
+            print differr
             self.failed = 1
-        # Otherwise, if we have an expected output, diff against it
-        elif expectedfile:
-            cmd = "diff -u " + expectedfile + " " + outputfile
+        else:
+            self.check_diff(outputfile, expectedfile, diffout)
+
+class MultiFileTester(AutoTester):
+
+    def check(self, inputfile, outputfile, expectedfile):
+        # Did we generate the right files?
+        expectedfiles = os.listdir(expectedfile)
+        outputfiles = os.listdir(outputfile)
+        if expectedfiles != outputfiles:
+            self.failed = 1
+            print "    Expected list of files does not match generated list of files."
+            return
+
+        # Are those files what we expect?
+        for currfile in os.listdir(expectedfile):
+            currentoutput = outputfile + "/" + currfile
+            currentexpect = expectedfile + "/" + currfile
+            cmd = "diff -u " + currentexpect + " " + currentoutput
             diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
             diffout, differr = diff.communicate()
             if differr:
                 print differr
                 self.failed = 1
             else:
-                self.check_diff(outputfile, expectedfile, diffout)
-
-class MultiFileTester(AutoTester):
-
-    def check(self, sourcefile):
-
-        print "  Testing " + sourcefile
-
-        inputfile = self.infile(sourcefile)
-        outputfile = self.outfile(sourcefile)
-        expectedfile = self.expectfile(sourcefile)
- 
-        # Test hook returns 0 if successful, 1 if failed
-        hookfailed = self.testhook(inputfile, outputfile)
-
-        # Print a message if the test hook failed
-        if hookfailed:
-            print "    test hook failed."
-            self.failed = 1
-
-        # Otherwise, if we have an expected output, diff against it
-        elif expectedfile:
-            
-            # Did we generate the right files?
-            expectedfiles = os.listdir(expectedfile)
-            outputfiles = os.listdir(outputfile)
-            if expectedfiles != outputfiles:
-                self.failed = 1
-                print "    Expected list of files does not match generated list of files."
-                return
-
-            # Are those files what we expect?
-            for currfile in os.listdir(expectedfile):
-                currentoutput = outputfile + "/" + currfile
-                currentexpect = expectedfile + "/" + currfile
-                cmd = "diff -u " + currentexpect + " " + currentoutput
-                diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-                diffout, differr = diff.communicate()
-                if differr:
-                    print differr
-                    self.failed = 1
-                else:
-                    self.check_diff(currentoutput, currentexpect, diffout)
+                self.check_diff(currentoutput, currentexpect, diffout)
 
 # Execute main
 
