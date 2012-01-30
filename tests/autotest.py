@@ -63,7 +63,8 @@ def main():
 
     flml_sources = ['identity', 'helmholtz', 'euler-advection', 'diffusion-3',
                    'simple-advection-diffusion', 'noop']
-    ufl_sources = ['diffusion-1', 'diffusion-2', 'laplacian', 'identity-vector']
+    ufl_sources = ['diffusion-1', 'diffusion-2', 'laplacian',
+                   'identity-vector', 'swapped-advection']
     optionfile_sources = ['test', 'cdisk_adv_diff']
 
     # Check a single file if specified. Otherwise check
