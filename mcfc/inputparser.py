@@ -47,7 +47,7 @@ class FluflParser(InputParser):
         state.insert_field('TracerDiffusivity',2)
         # Build a fake states dict
         states = {phase: state}
-        return [FluidityEquation(phase, ufl_input, state, states)]
+        return [FluidityEquation("model", ufl_input, state, states)]
 
 class FlmlParser(InputParser):
     "An input parser for Fluidity flml files"

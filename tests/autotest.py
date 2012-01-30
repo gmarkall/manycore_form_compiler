@@ -100,7 +100,14 @@ def main():
             lambda name: "outputs/cuda/" + name,
             lambda name: "expected/cuda/" + name,
             flml_sources,
-            'Running form compiler tests (CUDA backend)...')
+            'Running form compiler tests (CUDA backend, flml input)...')
+
+        multiTester.test(frontend.testHook,
+            lambda name: "inputs/ufl/" + name + ".ufl",
+            lambda name: "outputs/cuda/" + name,
+            lambda name: "expected/cuda/" + name,
+            ufl_sources,
+            'Running form compiler tests (CUDA backend, ufl input)...')
 
     if check_op2:
 
