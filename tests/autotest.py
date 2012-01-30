@@ -57,18 +57,16 @@ def main():
     check_optionfile = 'no-optionfile' not in keys
     check_visualiser = 'no-visualiser' not in keys
 
-    ufl_sources = ['identity', 'helmholtz', 'euler-advection', 'diffusion-3',
+    flml_sources = ['identity', 'helmholtz', 'euler-advection', 'diffusion-3',
                    'simple-advection-diffusion', 'noop']
-    #ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3', 'identity', \
-    #        'laplacian', 'helmholtz', 'euler-advection', 'identity-vector', \
-    #        'simple-advection-diffusion' ]
+    ufl_sources = ['diffusion-1', 'diffusion-2', 'laplacian', 'identity-vector']
     optionfile_sources = ['test', 'cdisk_adv_diff']
 
     # Check a single file if specified. Otherwise check
     # all default input files.
     if (len(args) > 0):
-        if args[0] in ufl_sources:
-            ufl_sources = [ args[0] ]
+        if args[0] in flml_sources:
+            flml_sources = [ args[0] ]
             check_optionfile = False
         elif args[0] in optionfile_sources:
             optionfile_sources = [ args[0] ]
@@ -77,7 +75,7 @@ def main():
             check_visualiser = False
         else:
             print "Unsupported source file:",args[0]
-            print "Needs to be in",ufl_sources,"or",optionfile_sources
+            print "Needs to be in",flml_sources,"or",optionfile_sources
             sys.exit(-1)
 
     # Delete the outputs folder if it exists, to avoid
@@ -97,7 +95,7 @@ def main():
             lambda name: "inputs/flml/" + name + ".flml",
             lambda name: "outputs/cuda/" + name,
             lambda name: "expected/cuda/" + name,
-            ufl_sources,
+            flml_sources,
             'Running form compiler tests (CUDA backend)...')
 
     if check_op2:
@@ -109,7 +107,7 @@ def main():
             lambda name: "inputs/flml/" + name + ".flml",
             lambda name: "outputs/op2/" + name,
             lambda name: "expected/op2/" + name,
-            ufl_sources,
+            flml_sources,
             'Running form compiler tests (OP2 backend)...')
 
     if check_optionfile:
@@ -133,7 +131,7 @@ def main():
             lambda name: "inputs/ufl/" + name + ".ufl",
             lambda name: "outputs/visualiser/" + name,
             lambda name: None,
-            ufl_sources,
+            flml_sources,
             'Running PDF visualiser tests...')
 
         # If object visualiser tests have been requested
@@ -146,7 +144,7 @@ def main():
                 lambda name: "inputs/ufl/" + name + ".ufl",
                 lambda name: "outputs/objvisualiser/" + name,
                 lambda name: None,
-                ufl_sources,
+                flml_sources,
                 'Running PDF object visualiser tests...')
 
     # Exit code is 0 if no tests failed.
