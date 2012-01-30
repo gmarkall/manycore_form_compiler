@@ -119,7 +119,14 @@ def main():
             lambda name: "outputs/op2/" + name,
             lambda name: "expected/op2/" + name,
             flml_sources,
-            'Running form compiler tests (OP2 backend)...')
+            'Running form compiler tests (OP2 backend, flml input)...')
+
+        multiTester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
+            lambda name: "inputs/ufl/" + name + ".ufl",
+            lambda name: "outputs/op2/" + name,
+            lambda name: "expected/op2/" + name,
+            ufl_sources,
+            'Running form compiler tests (OP2 backend, ufl input)...')
 
     if check_optionfile:
 
