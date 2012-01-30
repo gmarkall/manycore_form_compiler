@@ -151,9 +151,11 @@ class FluidityEquation(UflEquation):
         raise RuntimeError("Given form was not found:\n%s" % form)
 
     def getFieldFromCoeff(self, coeff):
-        "Returns the first field found defined over the same element as coeff"
+        "Returns the first accessed field found defined over the same element as coeff"
         elem = self.uflObjects[coeff].element()
         rank = self.uflObjects[coeff].rank()
-        return [name for name, coeff in self.state[rank].items() if coeff.element() == elem][0]
+        accessed =  [name for count, name in self.state.accessedFields().values()]
+        return [name for name, coeff in self.state[rank].items() \
+                    if coeff.element() == elem and name in accessed][0]
 
 # vim:sw=4:ts=4:sts=4:et

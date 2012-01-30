@@ -1,3 +1,0 @@
-f = state.scalar_fields["Tracer"]
-
-state.scalar_fields["Tracer"]=f

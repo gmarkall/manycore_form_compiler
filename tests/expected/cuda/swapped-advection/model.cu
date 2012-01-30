@@ -15,7 +15,7 @@ int* Tracer_colm;
 int Tracer_colm_size;
 
 
-__global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
+__global__ void Mass(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
 {
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
@@ -33,9 +33,10 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
   };
 }
 
-__global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1)
+__global__ void rhs(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* c1, double* CG1, double* d_CG1)
 {
   double c_q0[6];
+  double c_q1[12];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
     for(int i_g = 0; i_g < 6; i_g++)
@@ -45,13 +46,26 @@ __global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, d
       {
         c_q0[i_g] += c0[i_ele + n_ele * i_r_0] * CG1[i_r_0 + 3 * i_g];
       };
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        c_q1[i_g + 6 * i_d_0] = 0.0;
+        for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+        {
+          c_q1[i_g + 6 * i_d_0] += c1[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0 + 3 * i_g];
+        };
+      };
     };
     for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
     {
       localTensor[i_ele + n_ele * i_r_0] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double l1[2] = { c_q1[i_g + 6 * 1], c_q1[i_g + 6 * 0] };
         localTensor[i_ele + n_ele * i_r_0] += CG1[i_r_0 + 3 * i_g] * c_q0[i_g] * detwei[i_ele + n_ele * i_g];
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          localTensor[i_ele + n_ele * i_r_0] += c_q0[i_g] * dt * d_CG1[i_ele + n_ele * (i_d_1 + 2 * (i_g + 6 * i_r_0))] * l1[i_d_1] * detwei[i_ele + n_ele * i_g];
+        };
       };
     };
   };
@@ -63,6 +77,7 @@ extern "C" void initialise_gpu_()
   state = new StateHolder();
   state->initialise();
   state->extractField("Tracer", 0);
+  state->extractField("Velocity", 1);
   state->allocateAllGPUMemory();
   state->transferAllFields();
   int numEle = state->getNumEle();
@@ -107,9 +122,10 @@ extern "C" void run_model_(double* dt_pointer)
   int gridXDim = 128;
   int shMemSize = t2p_shmemsize(blockXDim, nDim, nodesPerEle);
   transform_to_physical<<<gridXDim,blockXDim,shMemSize>>>(coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle);
-  A<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt, detwei, shape);
+  Mass<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt, detwei, shape);
   double* TracerCoeff = state->getElementValue("Tracer");
-  RHS<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, TracerCoeff, shape);
+  double* VelocityCoeff = state->getElementValue("Velocity");
+  rhs<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, TracerCoeff, VelocityCoeff, shape, dShape);
   cudaMemset(globalMatrix, 0, sizeof(double) * Tracer_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
   matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);

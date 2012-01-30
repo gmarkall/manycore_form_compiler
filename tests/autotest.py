@@ -40,34 +40,38 @@ def main():
 
     opts, args = get_options()
     keys = opts.keys()
-    tester = AutoTester()
+    singleTester = SingleFileTester()
+    multiTester = MultiFileTester()
 
     # Check for non-interactive execution (e.g. on the
     # buildbot).
     if 'non-interactive' in keys or 'n' in keys:
         print "Running in non-interactive mode."
-        tester.interactive = False
+        singleTester.interactive = False
+        multiTester.interactive = False
     if 'replace-all' in keys or 'r' in keys:
         print "Replacing all changed expected results."
-        tester.interactive = False
-        tester.replaceall = True
+        singleTester.interactive = False
+        singleTester.replaceall = True
+        multiTester.interactive = False
+        multiTester.replaceall = True
 
     check_cuda =  'no-cuda' not in keys
     check_op2 =  'no-op2' not in keys
     check_optionfile = 'no-optionfile' not in keys
     check_visualiser = 'no-visualiser' not in keys
 
-    ufl_sources = ['noop', 'diffusion-1', 'diffusion-2', 'diffusion-3',
-            'identity', 'laplacian', 'helmholtz', 'euler-advection', \
-            'swapped-advection', 'identity-vector', \
-            'simple-advection-diffusion' ]
+    flml_sources = ['identity', 'helmholtz', 'euler-advection', 'diffusion-3',
+                   'simple-advection-diffusion', 'noop']
+    ufl_sources = ['diffusion-1', 'diffusion-2', 'laplacian',
+                   'identity-vector', 'swapped-advection']
     optionfile_sources = ['test', 'cdisk_adv_diff']
 
     # Check a single file if specified. Otherwise check
     # all default input files.
     if (len(args) > 0):
-        if args[0] in ufl_sources:
-            ufl_sources = [ args[0] ]
+        if args[0] in flml_sources:
+            flml_sources = [ args[0] ]
             check_optionfile = False
         elif args[0] in optionfile_sources:
             optionfile_sources = [ args[0] ]
@@ -76,7 +80,7 @@ def main():
             check_visualiser = False
         else:
             print "Unsupported source file:",args[0]
-            print "Needs to be in",ufl_sources,"or",optionfile_sources
+            print "Needs to be in",flml_sources,"or",optionfile_sources
             sys.exit(-1)
 
     # Delete the outputs folder if it exists, to avoid
@@ -92,31 +96,45 @@ def main():
         # Create the cuda outputs folder
         os.mkdir('outputs/cuda', 0755)
 
-        tester.test(frontend.testHook,
+        multiTester.test(frontend.testHook,
+            lambda name: "inputs/flml/" + name + ".flml",
+            lambda name: "outputs/cuda/" + name,
+            lambda name: "expected/cuda/" + name,
+            flml_sources,
+            'Running form compiler tests (CUDA backend, flml input)...')
+
+        multiTester.test(frontend.testHook,
             lambda name: "inputs/ufl/" + name + ".ufl",
-            lambda name: "outputs/cuda/" + name + ".cu",
-            lambda name: "expected/cuda/" + name + ".cu",
+            lambda name: "outputs/cuda/" + name,
+            lambda name: "expected/cuda/" + name,
             ufl_sources,
-            'Running form compiler tests (CUDA backend)...')
+            'Running form compiler tests (CUDA backend, ufl input)...')
 
     if check_op2:
 
         # Create the cuda outputs folder
         os.mkdir('outputs/op2', 0755)
 
-        tester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
+        multiTester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
+            lambda name: "inputs/flml/" + name + ".flml",
+            lambda name: "outputs/op2/" + name,
+            lambda name: "expected/op2/" + name,
+            flml_sources,
+            'Running form compiler tests (OP2 backend, flml input)...')
+
+        multiTester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
             lambda name: "inputs/ufl/" + name + ".ufl",
-            lambda name: "outputs/op2/" + name + ".cpp",
-            lambda name: "expected/op2/" + name + ".cpp",
+            lambda name: "outputs/op2/" + name,
+            lambda name: "expected/op2/" + name,
             ufl_sources,
-            'Running form compiler tests (OP2 backend)...')
+            'Running form compiler tests (OP2 backend, ufl input)...')
 
     if check_optionfile:
 
         # Create the option file outputs folder
         os.mkdir('outputs/optionfile', 0755)
 
-        tester.test(optionfileparser.testHook,
+        singleTester.test(optionfileparser.testHook,
             lambda name: "inputs/flml/" + name + ".flml",
             lambda name: "outputs/optionfile/" + name + ".dat",
             lambda name: "expected/optionfile/" + name + ".dat",
@@ -128,12 +146,20 @@ def main():
         # Create the visualiser outputs folder
         os.mkdir('outputs/visualiser', 0755)
 
-        tester.test(frontend.testHookVisualiser,
+        multiTester.test(frontend.testHookVisualiser,
+            lambda name: "inputs/flml/" + name + ".flml",
+            lambda name: "outputs/visualiser/" + name,
+            lambda name: None,
+            flml_sources,
+            'Running PDF visualiser tests (flml input)...')
+
+
+        multiTester.test(frontend.testHookVisualiser,
             lambda name: "inputs/ufl/" + name + ".ufl",
             lambda name: "outputs/visualiser/" + name,
             lambda name: None,
             ufl_sources,
-            'Running PDF visualiser tests...')
+            'Running PDF visualiser tests (ufl input)...')
 
         # If object visualiser tests have been requested
         if 'with-objvis' in keys:
@@ -141,7 +167,7 @@ def main():
             # Create the visualiser outputs folder
             os.mkdir('outputs/objvisualiser', 0755)
 
-            tester.test(lambda infile, outfile: frontend.testHookVisualiser(infile, outfile, True),
+            multiTester.test(lambda infile, outfile: frontend.testHookVisualiser(infile, outfile, True),
                 lambda name: "inputs/ufl/" + name + ".ufl",
                 lambda name: "outputs/objvisualiser/" + name,
                 lambda name: None,
@@ -149,7 +175,7 @@ def main():
                 'Running PDF object visualiser tests...')
 
     # Exit code is 0 if no tests failed.
-    sys.exit(tester.failed)
+    sys.exit(multiTester.failed or singleTester.failed)
 
 def get_options():
     try:
@@ -181,6 +207,9 @@ class AutoTester:
         self.replaceall = replaceall
         self.failed = 0
 
+    def check(self, sourcefile):
+        raise NotImplementedError("The check method must be implemented.")
+
     def test(self, testhook, infile, outfile, expectfile, sources, message = None):
         self.testhook = testhook
         self.infile = infile
@@ -191,52 +220,23 @@ class AutoTester:
             print message
 
         for sourcefile in sources:
-            self.check(sourcefile)
+            print "  Testing " + sourcefile
+            inputfile = self.infile(sourcefile)
+            outputfile = self.outfile(sourcefile)
+            expectedfile = self.expectfile(sourcefile)
 
-    def check(self, sourcefile):
+            # Test hook returns 0 if successful, 1 if failed
+            hookfailed = self.testhook(inputfile, outputfile)
 
-        print "  Testing " + sourcefile
-
-        inputfile = self.infile(sourcefile)
-        outputfile = self.outfile(sourcefile)
-        expectedfile = self.expectfile(sourcefile)
-
-        # Test hook returns 0 if successful, 1 if failed
-        self.failed = self.testhook(inputfile, outputfile)
-
-        # Print a message if the test hook failed
-        if self.failed:
-            print "    test hook failed."
-        # Otherwise, if we have an expected output, diff against it
-        elif expectedfile:
-            cmd = "diff -u " + expectedfile + " " + outputfile
-            diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-            diffout, differr = diff.communicate()
-            if differr:
-                print differr
+            # Print a message if the test hook failed
+            if hookfailed:
+                print "    test hook failed."
                 self.failed = 1
-            else:
-                self.check_diff(sourcefile, diffout)
+            # Otherwise, if we have an expected output, diff against it
+            elif expectedfile:
+                self.check(inputfile, outputfile, expectedfile)
 
-    def check_diff(self, sourcefile, diff):
-
-        if diff:
-            print "    Difference detected in %s." % sourcefile
-            self.failed = 1
-
-            if self.replaceall:
-                self.replace(sourcefile)
-            elif self.interactive:
-                self.diffmenu(sourcefile, diff)
-
-    def replace(self, sourcefile):
-        src = self.outfile(sourcefile)
-        dst = self.expectfile(sourcefile)
-        print "    Replacing '%s' with '%s'." % (dst, src)
-        shutil.copy(src, dst)
-
-    def diffmenu(self, sourcefile, diffout):
-
+    def diffmenu(self, sourcefile, destfile, diffout):
         print "    [Continue, Abort, View, Replace, Show IR?] ",
         response = sys.stdin.readline()
         rchar = response[0].upper()
@@ -247,15 +247,66 @@ class AutoTester:
             sys.exit(-1)
         elif rchar=='V':
             print highlight(diffout, DiffLexer(), TerminalFormatter(bg="dark"))
-            self.diffmenu(sourcefile, diffout)
+            self.diffmenu(sourcefile, destfile, diffout)
         elif rchar=='R':
-            self.replace(sourcefile)
+            self.replace(sourcefile, destfile)
         elif rchar=='S':
             frontend.showGraph()
-            self.diffmenu(sourcefile, diffout)
+            self.diffmenu(sourcefile, destfile, diffout)
         else:
             print "    Please enter a valid option: ",
-            self.diffmenu(sourcefile, diffout)
+            self.diffmenu(sourcefile, destfile, diffout)
+    
+    def check_diff(self, sourcefile, destfile, diff):
+
+        if diff:
+            print "    Difference detected in %s." % sourcefile
+            self.failed = 1
+
+            if self.replaceall:
+                self.replace(sourcefile, destfile)
+            elif self.interactive:
+                self.diffmenu(sourcefile, destfile, diff)
+
+    def replace(self, src, dst):
+        print "    Replacing '%s' with '%s'." % (dst, src)
+        shutil.copy(src, dst)
+
+class SingleFileTester(AutoTester):
+
+    def check(self, inputfile, outputfile, expectedfile):
+        cmd = "diff -u " + expectedfile + " " + outputfile
+        diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+        diffout, differr = diff.communicate()
+        if differr:
+            print differr
+            self.failed = 1
+        else:
+            self.check_diff(outputfile, expectedfile, diffout)
+
+class MultiFileTester(AutoTester):
+
+    def check(self, inputfile, outputfile, expectedfile):
+        # Did we generate the right files?
+        expectedfiles = os.listdir(expectedfile)
+        outputfiles = os.listdir(outputfile)
+        if expectedfiles != outputfiles:
+            self.failed = 1
+            print "    Expected list of files does not match generated list of files."
+            return
+
+        # Are those files what we expect?
+        for currfile in os.listdir(expectedfile):
+            currentoutput = outputfile + "/" + currfile
+            currentexpect = expectedfile + "/" + currfile
+            cmd = "diff -u " + currentexpect + " " + currentoutput
+            diff = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+            diffout, differr = diff.communicate()
+            if differr:
+                print differr
+                self.failed = 1
+            else:
+                self.check_diff(currentoutput, currentexpect, diffout)
 
 # Execute main
 

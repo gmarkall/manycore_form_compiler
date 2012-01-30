@@ -47,14 +47,14 @@ class FluflParser(InputParser):
         state.insert_field('TracerDiffusivity',2)
         # Build a fake states dict
         states = {phase: state}
-        return [FluidityEquation(phase, ufl_input, state, states)]
+        return [FluidityEquation("model", ufl_input, state, states)]
 
 class FlmlParser(InputParser):
     "An input parser for Fluidity flml files"
     
     def parse(self, filename):
         "Return a list of one FluidityEquation for each equation in the flml input file"
-        p = OptionFileParser(inputFile)
+        p = OptionFileParser(filename)
         return [FluidityEquation(equationname, data[0], data[1], p.states) for equationname, data in p.uflinput.items()]
 
 # FIXME flufl files should have extension .flufl
