@@ -36,8 +36,6 @@ from mcfc import frontend, optionfileparser
 
 def main():
 
-    sys.excepthook = ultratb.FormattedTB(mode='Context')
-
     opts, args = get_options()
     keys = opts.keys()
     singleTester = SingleFileTester()
@@ -49,13 +47,15 @@ def main():
         print "Running in non-interactive mode."
         singleTester.interactive = False
         multiTester.interactive = False
+    else:
+        sys.excepthook = ultratb.FormattedTB(mode='Context')
     if 'replace-all' in keys or 'r' in keys:
         print "Replacing all changed expected results."
         singleTester.interactive = False
         singleTester.replaceall = True
         multiTester.interactive = False
         multiTester.replaceall = True
-
+    
     check_cuda =  'no-cuda' not in keys
     check_op2 =  'no-op2' not in keys
     check_optionfile = 'no-optionfile' not in keys
