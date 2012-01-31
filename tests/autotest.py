@@ -24,7 +24,7 @@ import sys, os, shutil, getopt
 from subprocess import Popen, PIPE
 
 # A nicer traceback from IPython
-from IPython import ultraTB
+from IPython.core import ultratb
 
 # For colouring diffs
 from pygments import highlight
@@ -36,7 +36,7 @@ from mcfc import frontend, optionfileparser
 
 def main():
 
-    sys.excepthook = ultraTB.FormattedTB(mode='Context')
+    sys.excepthook = ultratb.FormattedTB(mode='Context')
 
     opts, args = get_options()
     keys = opts.keys()
@@ -173,7 +173,7 @@ def main():
                 lambda name: None,
                 ufl_sources,
                 'Running PDF object visualiser tests...')
-
+    
     # Exit code is 0 if no tests failed.
     sys.exit(multiTester.failed or singleTester.failed)
 
