@@ -57,7 +57,7 @@ void allocate(void **ptr, int length)
 
   #if DEBUG_MEM
   CUresult res;
-  unsigned int free, total;
+  size_t free, total;
 
   res = cuMemGetInfo(&free, &total);
   
