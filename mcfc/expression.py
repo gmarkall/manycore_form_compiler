@@ -193,6 +193,7 @@ class ExpressionBuilder(Transformer):
             # Use IndexSum indices to build and subscript ListTensor, s.t.
             # indices match those of the loop nest
             subscriptIndices = [i[0] for i in self._sumIndexStack[-len(dimIndices):]]
+            subscriptIndices.reverse()
             tmpTensor = buildListTensorVar(subscriptIndices)
 
             # Build the expressions populating the components of the list tensor
