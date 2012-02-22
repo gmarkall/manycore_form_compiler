@@ -87,12 +87,14 @@ class ExpressionBuilder(Transformer):
         operand, _ = tree.operands()
         # Take the topmost element of the index stack
         dimIndices = self._indexStack.peek()
-        # Its first element is the dimension index corresponding to the derivative
-        indices = [dimIndices[0]]
+        indices = []
+        # The first element is the dimension index corresponding to the derivative.
         # Push the remaining indices (which may be empty) on the stack
         self._indexStack.push(dimIndices[1:])
         # Append the indices of the operand (argument or coefficient)
         indices += self.subscript(operand)
+        # The last element is the dimension index corresponding to the derivative.
+        indices.append(dimIndices[0])
         # Restore the stack
         self._indexStack.pop()
         return indices

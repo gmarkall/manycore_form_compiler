@@ -74,7 +74,7 @@ void rhs(double localTensor[3], double dt, double c0[3][2], double c1[3], double
       {
         for(int i_d_4 = 0; i_d_4 < 2; i_d_4++)
         {
-          localTensor[i_r_0] += (CG1[i_r_0][i_g] * c_q1[i_g] + c_q1[i_g] * dt * c_q2[i_g][i_d_0] * (l40[i_d_4][i_d_0] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_d_4][i_r_0][i_g]) * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
+          localTensor[i_r_0] += (CG1[i_r_0][i_g] * c_q1[i_g] + c_q1[i_g] * dt * c_q2[i_g][i_d_0] * (l40[i_d_4][i_d_0] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_4]) * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         };
       };
     };
