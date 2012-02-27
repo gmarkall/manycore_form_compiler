@@ -25,7 +25,7 @@ from ufl.coefficient import Coefficient
 from ufl.common import Counted
 from ufl.expr import Expr
 from ufl.form import Form
-from ufl.algorithms.transformations import Transformer
+from ufl.algorithms.transformations import Transformer, is_post_handler
 from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.classes import all_ufl_classes
