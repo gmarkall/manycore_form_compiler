@@ -181,7 +181,7 @@ def indexSumIndices(tree):
     ISIF = IndexSumIndexFinder()
     return ISIF.find(tree)
 
-class Partitioner(UserDefinedClassTransformer):
+class NewPartitioner(UserDefinedClassTransformer):
     """Partitions the expression up so that each partition fits inside
     strictly on loop in the local assembly loop nest."""
 
@@ -200,8 +200,41 @@ class Partitioner(UserDefinedClassTransformer):
     product = binary_op
 
 def partition(tree):
-    part = Partitioner()
+    part = NewPartitioner()
     return part.visit(tree)
+
+class Partitioner(Transformer):
+    """Partitions the expression up so that each partition fits inside
+    strictly on loop in the local assembly loop nest.
+    Returns a list of the partitions, and their depth (starting from
+    inside the quadrature loop)."""
+
+    def partition(self, tree):
+        self._partitions = []
+        self.visit(tree)
+        return self._partitions
+
+    def sum(self, tree):
+        ops = tree.operands()
+        lInd = indexSumIndices(ops[0])
+        rInd = indexSumIndices(ops[1])
+        # If both sides have the same nesting level:
+        if lInd == rInd:
+            self._partitions.append((tree,lInd))
+            return
+        else:
+            self.visit(ops[0])
+            self.visit(ops[1])
+
+    # If it's not a sum, then there shouldn't be any partitioning
+    # of the tree anyway.
+    def expr(self, tree):
+        self._partitions.append((tree,indexSumIndices(tree)))
+
+def findPartitions(tree):
+    part = Partitioner()
+    return part.partition(tree)
+
 
 def buildLoopNest(scope, indices):
     """Build a loop nest using the given indices in the given scope. Reuse
