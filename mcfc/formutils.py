@@ -22,10 +22,14 @@
 # UFL libs
 from ufl.argument import Argument
 from ufl.coefficient import Coefficient
+from ufl.common import Counted
+from ufl.expr import Expr
 from ufl.form import Form
 from ufl.algorithms.transformations import Transformer
 from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from ufl.classes import all_ufl_classes
+from ufl.common import camel2underscore as _camel2underscore
 
 # FFC libs
 from ffc.fiatinterface import create_element
@@ -34,6 +38,88 @@ from ffc.mixedelement import MixedElement as FFCMixedElement
 # MCFC libs
 from codegeneration import *
 from utilities import uniqify
+
+# Extra AST nodes, and a little bit of trickery to make them work with
+# Transformer objects.
+
+class SubExpr(Expr, Counted):
+    _globalcount = 0
+
+    def __init__(self, o, count=None):
+        Expr.__init__(self)
+        Counted.__init__(self, count=count, countedclass=SubExpr)
+        self._operand = o
+        self._repr = "SubTree(%s)" % repr(o)
+        self._shape = o.shape()
+        self._str = str(o)
+
+    def reconstruct(self, *ops):
+        return SubExpr(ops)
+
+    def operands(self):
+        return [self._operand]
+
+    def shape(self):
+        return self._shape
+
+    def evaluate(self, x, mapping, component, index_values):
+        return self._operand.evaluate(x, mapping, component, index_values)
+
+    def free_indices(self):
+        return self._operand.free_indices()
+
+    def index_dimensions(self):
+        return self._operand.index_dimensions()
+
+    def __repr__(self):
+        return self._repr
+
+    def __str__(self):
+        return self._str
+
+
+# Start the classid count from where the last UFL class counter left off.
+_classid_count = len(all_ufl_classes)
+
+all_our_ufl_classes = set([SubExpr])
+
+for _i, _c in enumerate(all_our_ufl_classes):
+    _c._classid = _i + _classid_count
+    _c._uflclass = _c
+    _c._handlername = _camel2underscore(_c.__name__)
+
+
+# A transformer that works with our extra UFL classes.
+
+class UserDefinedClassTransformer(Transformer):
+    """A Transformer that also works on the UFL classes that are defined in
+    all_our_ufl_classes"""
+
+    def __init__(self, variable_cache=None):
+        # Get the cache data first so we know if this is the first instantiation
+        # of this type
+        cache_data = Transformer._handlers_cache.get(type(self))
+        # The Transformer then handles initialisation for the UFL classes
+        Transformer.__init__(self, variable_cache)
+        # Now we may need to handle initialisation for our AST nodes
+        if not cache_data:
+            # Get the handler_cache contents that Transformer just created
+            cache_data = Transformer._handlers_cache.get(type(self))
+            # Make some space for handlers for our classes
+            extra_cache_data = [None]*len(all_our_ufl_classes)
+            cache_data.extend(extra_cache_data)
+            # For all our UFL classes
+            for classobject in all_our_ufl_classes:
+                for c in classobject.mro():
+                    name = c._handlername 
+                    function = getattr(self, name, None)
+                    if function:
+                        cache_data[classobject._classid] = name, is_post_handler(function)
+                        break
+            Transformer._handlers_cache[type(self)] = cache_data
+
+        self._handlers = [(getattr(self, name), post) for (name, post) in cache_data]
+
 
 class CoefficientUseFinder(Transformer):
     """Finds the nodes that 'use' a coefficient. This is either a Coefficient
@@ -97,35 +183,25 @@ def indexSumIndices(tree):
 
 class Partitioner(Transformer):
     """Partitions the expression up so that each partition fits inside
-    strictly on loop in the local assembly loop nest.
-    Returns a list of the partitions, and their depth (starting from
-    inside the quadrature loop)."""
+    strictly on loop in the local assembly loop nest."""
 
-    def partition(self, tree):
-        self._partitions = []
-        self.visit(tree)
-        return self._partitions
-
-    def sum(self, tree):
+    def binary_op(self, tree):
         ops = tree.operands()
         lInd = indexSumIndices(ops[0])
         rInd = indexSumIndices(ops[1])
         # If both sides have the same nesting level:
         if lInd == rInd:
-            self._partitions.append((tree,lInd))
             return
         else:
-            self.visit(ops[0])
-            self.visit(ops[1])
+            ops = [self.visit(ops[0]), self.visit(ops[1])]
+            return SubTree(tree.__class__(ops))
 
-    # If it's not a sum, then there shouldn't be any partitioning
-    # of the tree anyway.
-    def expr(self, tree):
-        self._partitions.append((tree,indexSumIndices(tree)))
+    sum = binary_op
+    product = binary_op
 
-def findPartitions(tree):
+def partition(tree):
     part = Partitioner()
-    return part.partition(tree)
+    return part.visit(tree)
 
 def buildLoopNest(scope, indices):
     """Build a loop nest using the given indices in the given scope. Reuse
