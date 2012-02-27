@@ -49,7 +49,7 @@ class SubExpr(Expr, Counted):
         Expr.__init__(self)
         Counted.__init__(self, count=count, countedclass=SubExpr)
         self._operand = o
-        self._repr = "SubTree(%s)" % repr(o)
+        self._repr = "SubExpr(%s)" % repr(o)
         self._shape = o.shape()
         self._str = str(o)
 
@@ -108,7 +108,8 @@ class UserDefinedClassTransformer(Transformer):
             # Make some space for handlers for our classes
             extra_cache_data = [None]*len(all_our_ufl_classes)
             cache_data.extend(extra_cache_data)
-            # For all our UFL classes
+            # For all our UFL classes, do essentially the same initialisation as
+            # Transformer does
             for classobject in all_our_ufl_classes:
                 for c in classobject.mro():
                     name = c._handlername 
@@ -191,16 +192,20 @@ class NewPartitioner(UserDefinedClassTransformer):
         rInd = indexSumIndices(ops[1])
         # If both sides have the same nesting level:
         if lInd == rInd:
-            return
+            return tree
         else:
             ops = [self.visit(ops[0]), self.visit(ops[1])]
-            return SubTree(tree.__class__(ops))
+            return SubExpr(tree.__class__(*ops))
 
     sum = binary_op
     product = binary_op
 
+    def expr(self, tree):
+        return tree
+
 def partition(tree):
     part = NewPartitioner()
+    print part._handlers
     return part.visit(tree)
 
 class Partitioner(Transformer):
