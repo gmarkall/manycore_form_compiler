@@ -35,7 +35,7 @@ def buildMultiArraySubscript(variable, indices):
 
     return variable
 
-class ExpressionBuilder(Transformer):
+class ExpressionBuilder(UserDefinedClassTransformer):
 
     def __init__(self, formBackend):
         Transformer.__init__(self)

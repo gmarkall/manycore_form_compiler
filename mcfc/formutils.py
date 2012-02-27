@@ -121,7 +121,7 @@ class UserDefinedClassTransformer(Transformer):
         self._handlers = [(getattr(self, name), post) for (name, post) in cache_data]
 
 
-class CoefficientUseFinder(Transformer):
+class CoefficientUseFinder(UserDefinedClassTransformer):
     """Finds the nodes that 'use' a coefficient. This is either a Coefficient
     itself, or a SpatialDerivative that has a Coefficient as its operand"""
 
@@ -155,7 +155,7 @@ class CoefficientUseFinder(Transformer):
     def coefficient(self, tree):
         self._coefficients.append(tree)
 
-class IndexSumIndexFinder(Transformer):
+class IndexSumIndexFinder(UserDefinedClassTransformer):
     "Find the count and extent of indices reduced by an IndexSum in a form."
 
     def find(self, tree):
@@ -181,7 +181,7 @@ def indexSumIndices(tree):
     ISIF = IndexSumIndexFinder()
     return ISIF.find(tree)
 
-class Partitioner(Transformer):
+class Partitioner(UserDefinedClassTransformer):
     """Partitions the expression up so that each partition fits inside
     strictly on loop in the local assembly loop nest."""
 
