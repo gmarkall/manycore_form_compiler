@@ -23,7 +23,7 @@
 from ufl.argument import Argument
 from ufl.coefficient import Coefficient
 from ufl.common import Counted
-from ufl.expr import Expr
+from ufl.expr import Operator
 from ufl.form import Form
 from ufl.algorithms.transformations import Transformer, is_post_handler
 from ufl.differentiation import SpatialDerivative
@@ -39,15 +39,37 @@ from ffc.mixedelement import MixedElement as FFCMixedElement
 from codegeneration import *
 from utilities import uniqify
 
+
+# Our counted class
+class MCFCCounted(object):
+    """Like ufl.common.Counted, except it doesn't confuse the UFL classes
+    that assume a Counted object is always a FormArgument"""
+
+    def __init__(self, count = None, countedclass = None):
+        if countedclass is None:
+            countedclass = type(self)
+        self._countedclass = countedclass
+
+        if count is None:
+            self._count = self._countedclass._globalcount
+            self._countedclass._globalcount += 1
+        else:
+            self._count = count
+            if count >= self._countedclass._globalcount:
+                self._countedclass._globalcount = count + 1
+
+    def count(self):
+        return self._count
+
 # Extra AST nodes, and a little bit of trickery to make them work with
 # Transformer objects.
 
-class SubExpr(Expr, Counted):
+class SubExpr(Operator, MCFCCounted):
     _globalcount = 0
 
     def __init__(self, o, count=None):
-        Expr.__init__(self)
-        Counted.__init__(self, count=count, countedclass=SubExpr)
+        Operator.__init__(self)
+        MCFCCounted.__init__(self, count=count, countedclass=SubExpr)
         self._operand = o
         self._repr = "SubExpr(%s)" % repr(o)
         self._shape = o.shape()
@@ -192,20 +214,21 @@ class NewPartitioner(UserDefinedClassTransformer):
         rInd = indexSumIndices(ops[1])
         # If both sides have the same nesting level:
         if lInd == rInd:
-            return tree
+            return SubExpr(tree)
         else:
+            #print repr(ops)
             ops = [self.visit(ops[0]), self.visit(ops[1])]
-            return SubExpr(tree.__class__(*ops))
+            #return tree.__class__(*ops)
+            return tree.__class__(*ops)
 
     sum = binary_op
     product = binary_op
 
     def expr(self, tree):
-        return tree
+        return SubExpr(tree)
 
 def partition(tree):
     part = NewPartitioner()
-    print part._handlers
     return part.visit(tree)
 
 class Partitioner(Transformer):
