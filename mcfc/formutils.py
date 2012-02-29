@@ -205,7 +205,7 @@ def indexSumIndices(tree):
     ISIF = IndexSumIndexFinder()
     return ISIF.find(tree)
 
-class NewPartitioner(UserDefinedClassTransformer):
+class Partitioner(UserDefinedClassTransformer):
     """Partitions the expression up so that each partition fits inside
     strictly on loop in the local assembly loop nest."""
 
@@ -227,8 +227,8 @@ class NewPartitioner(UserDefinedClassTransformer):
         return SubExpr(tree)
 
 def _partition(tree):
-    part = NewPartitioner()
-    return part.visit(tree)
+    p = Partitioner()
+    return p.visit(tree)
 
 def partition(equation):
     for name, form in equation.forms().iteritems():
@@ -239,38 +239,27 @@ def partition(equation):
         equation.uflObjects[name] = form
     return equation
 
-class Partitioner(UserDefinedClassTransformer):
-    """Partitions the expression up so that each partition fits inside
-    strictly on loop in the local assembly loop nest.
-    Returns a list of the partitions, and their depth (starting from
-    inside the quadrature loop)."""
+class PartitionFinder(UserDefinedClassTransformer):
+    """Returns the nodes at the root of each partition. These are the nodes
+    directly beneath a SubExpr node."""
 
-    def partition(self, tree):
+    def search(self, tree):
         self._partitions = []
         self.visit(tree)
-        return self._partitions
+        return self._partitions or [(SubExpr(tree), indexSumIndices(tree))]
 
-    def sum(self, tree):
-        ops = tree.operands()
-        lInd = indexSumIndices(ops[0])
-        rInd = indexSumIndices(ops[1])
-        # If both sides have the same nesting level:
-        if lInd == rInd:
-            self._partitions.append((tree,lInd))
-            return
-        else:
-            self.visit(ops[0])
-            self.visit(ops[1])
+    def sub_expr(self, tree):
+        op = tree.operands()[0]
+        indices = indexSumIndices(op)
+        self._partitions.append((tree,indices))
 
-    # If it's not a sum, then there shouldn't be any partitioning
-    # of the tree anyway.
     def expr(self, tree):
-        self._partitions.append((tree,indexSumIndices(tree)))
+        for op in tree.operands():
+            self.visit(op)
 
 def findPartitions(tree):
-    part = Partitioner()
-    return part.partition(tree)
-
+    pf = PartitionFinder()
+    return pf.search(tree)
 
 def buildLoopNest(scope, indices):
     """Build a loop nest using the given indices in the given scope. Reuse
