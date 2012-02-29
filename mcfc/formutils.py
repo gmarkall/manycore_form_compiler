@@ -30,6 +30,7 @@ from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.classes import all_ufl_classes
 from ufl.common import camel2underscore as _camel2underscore
+from ufl.integral import Integral
 
 # FFC libs
 from ffc.fiatinterface import create_element
@@ -216,9 +217,7 @@ class NewPartitioner(UserDefinedClassTransformer):
         if lInd == rInd:
             return SubExpr(tree)
         else:
-            #print repr(ops)
             ops = [self.visit(ops[0]), self.visit(ops[1])]
-            #return tree.__class__(*ops)
             return tree.__class__(*ops)
 
     sum = binary_op
@@ -227,11 +226,20 @@ class NewPartitioner(UserDefinedClassTransformer):
     def expr(self, tree):
         return SubExpr(tree)
 
-def partition(tree):
+def _partition(tree):
     part = NewPartitioner()
     return part.visit(tree)
 
-class Partitioner(Transformer):
+def partition(equation):
+    for name, form in equation.forms().iteritems():
+        integrals = []
+        for integral in form.integrals():
+            integrals.append(Integral(_partition(integral.integrand()), integral.measure()))
+        form._integrals = tuple(integrals)
+        equation.uflObjects[name] = form
+    return equation
+
+class Partitioner(UserDefinedClassTransformer):
     """Partitions the expression up so that each partition fits inside
     strictly on loop in the local assembly loop nest.
     Returns a list of the partitions, and their depth (starting from

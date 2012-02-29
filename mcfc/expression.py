@@ -38,7 +38,7 @@ def buildMultiArraySubscript(variable, indices):
 class ExpressionBuilder(UserDefinedClassTransformer):
 
     def __init__(self, formBackend):
-        Transformer.__init__(self)
+        UserDefinedClassTransformer.__init__(self)
         self._formBackend = formBackend
 
     def build(self, tree):
@@ -145,6 +145,12 @@ class ExpressionBuilder(UserDefinedClassTransformer):
 
     def buildSubscript(self, variable, indices):
         raise NotImplementedError("You're supposed to implement buildSubscript()!")
+
+    # We don't need to generate any code for a SubExpr node.
+    # FIXME: It should be an error to encounter this, when the generation of
+    # correctly-partitioned code is working.
+    def sub_expr(self, se):
+        return self.visit(se.operands()[0])
 
     def component_tensor(self, tree, *ops):
         # We ignore the 2nd operand (a MultiIndex)

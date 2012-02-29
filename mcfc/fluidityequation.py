@@ -24,7 +24,7 @@ from ufl.form import Form
 # MCFC modules
 from uflequation import UflEquation
 from symbolicvalue import SymbolicValue
-import canonicaliser, frontendast
+import canonicaliser, frontendast, formutils
 
 class solveFunctor:
     """A functor class to be called as 'solve' in the execution namespace of
@@ -84,6 +84,7 @@ class FluidityEquation(UflEquation):
         self = frontendast.preprocessFrontendAst(self)
         self = frontendast.executeFrontendAst(self)
         self = canonicaliser.canonicalise(self)
+        self = formutils.partition(self)
         return self
 
     def execPipeline(self, fd, driver):

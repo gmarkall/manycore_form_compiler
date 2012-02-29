@@ -20,6 +20,8 @@
 import ast
 # MCFC libs
 from uflvisualiser import ASTVisualiser, ObjectVisualiser, ReprVisualiser
+# UFL libs
+from ufl.form import Form
 
 class UflEquation:
     """Base class representing an equation in UFL with basic attributes.
@@ -43,6 +45,13 @@ class UflEquation:
         self.uflObjects = {}
         self.dag = None
         self.backendAst = None
+
+    def forms(self):
+        forms = {}
+        for name, value, in self.uflObjects.iteritems():
+            if isinstance(value, Form):
+                forms[name] = value
+        return forms
 
     def preExecute(self):
         """Called immediately prior to execution of the UFL code. Override this
