@@ -81,6 +81,8 @@ void A(double localTensor[6][6], double dt, double c0[3][2])
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST1 = 0.0;
+        double ST0 = 0.0;
         ST1 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
         {
@@ -176,6 +178,8 @@ void RHS(double localTensor[6], double dt, double c0[3][2], double c1[3][2])
     localTensor[i_r_0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
+      double ST3 = 0.0;
+      double ST2 = 0.0;
       ST3 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {

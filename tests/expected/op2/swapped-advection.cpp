@@ -69,6 +69,9 @@ void rhs(double localTensor[3], double dt, double c0[3][2], double c1[3], double
     localTensor[i_r_0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
+      double ST0 = 0.0;
+      double ST1 = 0.0;
+      double ST2 = 0.0;
       ST0 += CG1[i_r_0][i_g] * c_q1[i_g] * w[i_g];
       double l5[2] = { c_q2[i_g][1], c_q2[i_g][0] };
       double l35[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
@@ -137,6 +140,7 @@ void Mass(double localTensor[3][3], double dt, double c0[3][2])
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST3 = 0.0;
         ST3 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         localTensor[i_r_0][i_r_1] += ST3 * w[i_g];
       };

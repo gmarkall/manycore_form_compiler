@@ -76,6 +76,11 @@ class FormBackend(object):
             for expr in subexpressions:
                 loopBody.prepend(expr)
 
+        # Declare temporary variables to hold subexpression values
+        for (tree, _) in partitions:
+            initialiser = self.buildSubExprInitialiser(tree)
+            loopBody.prepend(initialiser)
+        
         # Insert the local tensor expression into the loop nest. There should
         # be no subexpressions.
         expression, _ = self.buildLocalTensorExpression(form, integrand)
@@ -213,6 +218,11 @@ class FormBackend(object):
         rhs = Literal(0.0)
         initialiser = AssignmentOp(lhs, rhs)
         return initialiser
+
+    def buildSubExprInitialiser(self, tree):
+        lhs = Variable("ST%s" % tree.count(), Real())
+        rhs = Literal(0.0)
+        return InitialisationOp(lhs, rhs)
 
     def buildCoeffQuadratureInitialiser(self, coeff):
         accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff, True)

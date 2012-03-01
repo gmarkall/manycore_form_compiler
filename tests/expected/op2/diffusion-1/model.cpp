@@ -68,6 +68,9 @@ void A(double localTensor[3][3], double dt, double c0[3][2], double c1[3][2][2])
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST2 = 0.0;
+        double ST1 = 0.0;
+        double ST0 = 0.0;
         ST2 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         ST1 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         double l101[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
@@ -155,6 +158,8 @@ void d(double localTensor[3][3], double dt, double c0[3][2], double c1[3][2][2])
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST8 = 0.0;
+        double ST7 = 0.0;
         ST8 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         double l101[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
         double l50[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
@@ -229,6 +234,7 @@ void M(double localTensor[3][3], double dt, double c0[3][2])
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST6 = 0.0;
         ST6 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         localTensor[i_r_0][i_r_1] += ST6 * w[i_g];
       };
@@ -313,6 +319,9 @@ void rhs(double localTensor[3], double dt, double c0[3][2], double c1[3], double
     localTensor[i_r_0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
+      double ST5 = 0.0;
+      double ST4 = 0.0;
+      double ST3 = 0.0;
       ST5 += CG1[i_r_0][i_g] * c_q1[i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
       ST4 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
       double l101[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };

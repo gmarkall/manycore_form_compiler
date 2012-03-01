@@ -56,6 +56,10 @@ void A(double localTensor[3][3], double dt, double c0[3][2])
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST3 = 0.0;
+        double ST2 = 0.0;
+        double ST1 = 0.0;
+        double ST0 = 0.0;
         ST3 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         ST2 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         ST1 += 0.1 * -1 * dt * w[i_g];
@@ -129,6 +133,9 @@ void d(double localTensor[3][3], double dt, double c0[3][2])
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST14 = 0.0;
+        double ST13 = 0.0;
+        double ST12 = 0.0;
         ST14 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         ST13 += 0.1 * -1 * dt * w[i_g];
         double l95[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
@@ -201,6 +208,7 @@ void M(double localTensor[3][3], double dt, double c0[3][2])
       localTensor[i_r_0][i_r_1] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST11 = 0.0;
         ST11 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
         localTensor[i_r_0][i_r_1] += ST11 * w[i_g];
       };
@@ -273,6 +281,10 @@ void diff_rhs(double localTensor[3], double dt, double c0[3][2], double c1[3])
     localTensor[i_r_0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
+      double ST7 = 0.0;
+      double ST6 = 0.0;
+      double ST5 = 0.0;
+      double ST4 = 0.0;
       ST7 += CG1[i_r_0][i_g] * c_q1[i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
       ST6 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
       ST5 += 0.1 * -1 * dt * w[i_g];
@@ -358,6 +370,9 @@ void adv_rhs(double localTensor[3], double dt, double c0[3][2], double c1[3], do
     localTensor[i_r_0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
+      double ST8 = 0.0;
+      double ST9 = 0.0;
+      double ST10 = 0.0;
       ST8 += CG1[i_r_0][i_g] * c_q1[i_g] * w[i_g];
       double l40[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
       ST10 += (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
