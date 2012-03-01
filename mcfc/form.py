@@ -124,9 +124,10 @@ class FormBackend(object):
         rhs, subexpr = self._expressionBuilder.build(expr)
 
         # The rhs of a form needs to be multiplied by the quadrature weights
-        indices = self.subscript_weights()
-        weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
-        rhs = MultiplyOp(rhs, weightsExpr)
+        if localTensor:
+            indices = self.subscript_weights()
+            weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
+            rhs = MultiplyOp(rhs, weightsExpr)
 
         # Assign expression to the correct Subexpression variable
         if localTensor:
