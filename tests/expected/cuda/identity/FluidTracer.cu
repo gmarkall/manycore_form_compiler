@@ -70,6 +70,7 @@ __global__ void A(int n_ele, double* localTensor, double dt, double* c0)
         for(int i_g = 0; i_g < 6; i_g++)
         {
           ST0 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
+          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += ST0 * w[i_g];
         };
       };
     };
@@ -135,6 +136,7 @@ __global__ void RHS(int n_ele, double* localTensor, double dt, double* c0, doubl
       for(int i_g = 0; i_g < 6; i_g++)
       {
         ST1 += CG1[i_r_0][i_g] * c_q1[i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
+        localTensor[i_ele + n_ele * i_r_0] += ST1 * w[i_g];
       };
     };
   };

@@ -70,6 +70,7 @@ void A(double localTensor[3][3], double dt, double c0[3][2])
             };
           };
         };
+        localTensor[i_r_0][i_r_1] += ST2 * (ST0 + ST1) * w[i_g];
       };
     };
   };
@@ -132,6 +133,7 @@ void RHS(double localTensor[3], double dt, double c0[3][2], double c1[3])
     for(int i_g = 0; i_g < 6; i_g++)
     {
       ST3 += CG1[i_r_0][i_g] * c_q1[i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
+      localTensor[i_r_0] += ST3 * w[i_g];
     };
   };
 }

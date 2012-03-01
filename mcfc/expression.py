@@ -150,7 +150,7 @@ class ExpressionBuilder(UserDefinedClassTransformer):
     # FIXME: It should be an error to encounter this, when the generation of
     # correctly-partitioned code is working.
     def sub_expr(self, se):
-        return self.visit(se.operands()[0])
+        return Variable("ST%s" % se.count())
 
     def component_tensor(self, tree, *ops):
         # We ignore the 2nd operand (a MultiIndex)

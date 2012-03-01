@@ -88,6 +88,7 @@ __global__ void A(int n_ele, double* localTensor, double dt, double* c0)
               };
             };
           };
+          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += (-1 * 0.5 * ST0 * ST1 * ST2 + ST3) * w[i_g];
         };
       };
     };
@@ -162,6 +163,7 @@ __global__ void d(int n_ele, double* localTensor, double dt, double* c0)
               };
             };
           };
+          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += ST12 * ST13 * ST14 * w[i_g];
         };
       };
     };
@@ -223,6 +225,7 @@ __global__ void M(int n_ele, double* localTensor, double dt, double* c0)
         for(int i_g = 0; i_g < 6; i_g++)
         {
           ST11 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
+          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += ST11 * w[i_g];
         };
       };
     };
@@ -311,6 +314,7 @@ __global__ void diff_rhs(int n_ele, double* localTensor, double dt, double* c0, 
             };
           };
         };
+        localTensor[i_ele + n_ele * i_r_0] += (0.5 * ST4 * ST5 * ST6 + ST7) * w[i_g];
       };
     };
   };
@@ -393,6 +397,7 @@ __global__ void adv_rhs(int n_ele, double* localTensor, double dt, double* c0, d
             ST9 += c_q2[i_g][i_d_0] * (l40[i_d_4][i_d_0] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_4] * w[i_g];
           };
         };
+        localTensor[i_ele + n_ele * i_r_0] += ST10 * (c_q1[i_g] * dt * ST9 + ST8) * w[i_g];
       };
     };
   };

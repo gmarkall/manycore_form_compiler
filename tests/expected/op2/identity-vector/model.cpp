@@ -86,6 +86,7 @@ void A(double localTensor[6][6], double dt, double c0[3][2])
         {
           ST0 += CG1_v[i_d_0][i_r_0][i_g] * CG1_v[i_d_0][i_r_1][i_g] * w[i_g];
         };
+        localTensor[i_r_0][i_r_1] += ST0 * ST1 * w[i_g];
       };
     };
   };
@@ -180,6 +181,7 @@ void RHS(double localTensor[6], double dt, double c0[3][2], double c1[3][2])
       {
         ST2 += CG1_v[i_d_0][i_r_0][i_g] * c_q1[i_g][i_d_0] * w[i_g];
       };
+      localTensor[i_r_0] += ST2 * ST3 * w[i_g];
     };
   };
 }

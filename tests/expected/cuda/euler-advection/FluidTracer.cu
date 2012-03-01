@@ -92,6 +92,7 @@ __global__ void rhs(int n_ele, double* localTensor, double dt, double* c0, doubl
             ST1 += c_q2[i_g][i_d_0] * (l40[i_d_4][i_d_0] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_4] * w[i_g];
           };
         };
+        localTensor[i_ele + n_ele * i_r_0] += ST2 * (c_q1[i_g] * dt * ST1 + ST0) * w[i_g];
       };
     };
   };
@@ -152,6 +153,7 @@ __global__ void Mass(int n_ele, double* localTensor, double dt, double* c0)
         for(int i_g = 0; i_g < 6; i_g++)
         {
           ST3 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
+          localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += ST3 * w[i_g];
         };
       };
     };

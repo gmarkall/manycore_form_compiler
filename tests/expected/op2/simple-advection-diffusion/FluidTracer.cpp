@@ -71,6 +71,7 @@ void A(double localTensor[3][3], double dt, double c0[3][2])
             };
           };
         };
+        localTensor[i_r_0][i_r_1] += (-1 * 0.5 * ST0 * ST1 * ST2 + ST3) * w[i_g];
       };
     };
   };
@@ -142,6 +143,7 @@ void d(double localTensor[3][3], double dt, double c0[3][2])
             };
           };
         };
+        localTensor[i_r_0][i_r_1] += ST12 * ST13 * ST14 * w[i_g];
       };
     };
   };
@@ -200,6 +202,7 @@ void M(double localTensor[3][3], double dt, double c0[3][2])
       for(int i_g = 0; i_g < 6; i_g++)
       {
         ST11 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]) * w[i_g];
+        localTensor[i_r_0][i_r_1] += ST11 * w[i_g];
       };
     };
   };
@@ -285,6 +288,7 @@ void diff_rhs(double localTensor[3], double dt, double c0[3][2], double c1[3])
           };
         };
       };
+      localTensor[i_r_0] += (0.5 * ST4 * ST5 * ST6 + ST7) * w[i_g];
     };
   };
 }
@@ -364,6 +368,7 @@ void adv_rhs(double localTensor[3], double dt, double c0[3][2], double c1[3], do
           ST9 += c_q2[i_g][i_d_0] * (l40[i_d_4][i_d_0] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_4] * w[i_g];
         };
       };
+      localTensor[i_r_0] += ST10 * (c_q1[i_g] * dt * ST9 + ST8) * w[i_g];
     };
   };
 }
