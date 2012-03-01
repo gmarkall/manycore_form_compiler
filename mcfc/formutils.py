@@ -62,6 +62,10 @@ class MCFCCounted(object):
     def count(self):
         return self._count
 
+    @classmethod
+    def reset(cls):
+        cls._globalcount = 0
+
 # Extra AST nodes, and a little bit of trickery to make them work with
 # Transformer objects.
 
@@ -231,6 +235,9 @@ def _partition(tree):
     return p.visit(tree)
 
 def partition(equation):
+    # Reset the subexpression count so the naming of subexpressions is less
+    # arbitrary
+    SubExpr.reset()
     for name, form in equation.forms().iteritems():
         integrals = []
         for integral in form.integrals():

@@ -110,8 +110,8 @@ class FormBackend(object):
         weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
         rhs = MultiplyOp(rhs, weightsExpr)
 
-        # Assign expression to the local tensor value
-        lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
+        # Assign expression to the correct Subexpression variable
+        lhs = Variable("ST%s" % tree.count())
         expr = PlusAssignmentOp(lhs, rhs)
 
         return expr, subexpr
