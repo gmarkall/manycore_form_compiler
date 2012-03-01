@@ -363,8 +363,8 @@ __global__ void adv_rhs(int n_ele, double* localTensor, double dt, double* c0, d
   const double w[6] = {  0.05497587, 0.05497587, 0.05497587, 0.11169079,
                          0.11169079, 0.11169079 };
   double c_q0[6][2][2];
-  double c_q1[6];
-  double c_q2[6][2];
+  double c_q2[6];
+  double c_q1[6][2];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
     for(int i_g = 0; i_g < 6; i_g++)
@@ -380,17 +380,17 @@ __global__ void adv_rhs(int n_ele, double* localTensor, double dt, double* c0, d
           };
         };
       };
-      c_q1[i_g] = 0.0;
+      c_q2[i_g] = 0.0;
       for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
       {
-        c_q1[i_g] += c1[i_ele + n_ele * i_r_0] * CG1[i_r_0][i_g];
+        c_q2[i_g] += c2[i_ele + n_ele * i_r_0] * CG1[i_r_0][i_g];
       };
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
-        c_q2[i_g][i_d_0] = 0.0;
+        c_q1[i_g][i_d_0] = 0.0;
         for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
         {
-          c_q2[i_g][i_d_0] += c2[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0][i_g];
+          c_q1[i_g][i_d_0] += c1[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0][i_g];
         };
       };
     };
@@ -402,17 +402,17 @@ __global__ void adv_rhs(int n_ele, double* localTensor, double dt, double* c0, d
         double ST8 = 0.0;
         double ST9 = 0.0;
         double ST10 = 0.0;
-        ST8 += CG1[i_r_0][i_g] * c_q1[i_g];
+        ST8 += CG1[i_r_0][i_g] * c_q2[i_g];
         double l40[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
         ST10 += c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0];
         for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
         {
           for(int i_d_4 = 0; i_d_4 < 2; i_d_4++)
           {
-            ST9 += c_q2[i_g][i_d_0] * (l40[i_d_4][i_d_0] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_4];
+            ST9 += c_q1[i_g][i_d_0] * (l40[i_d_4][i_d_0] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_4];
           };
         };
-        localTensor[i_ele + n_ele * i_r_0] += ST10 * (c_q1[i_g] * dt * ST9 + ST8) * w[i_g];
+        localTensor[i_ele + n_ele * i_r_0] += ST10 * (c_q2[i_g] * dt * ST9 + ST8) * w[i_g];
       };
     };
   };
@@ -423,8 +423,8 @@ extern "C" void initialise_gpu_()
 {
   state = new StateHolder();
   state->initialise();
-  state->extractField("Velocity", 1);
   state->extractField("Coordinate", 1);
+  state->extractField("Velocity", 1);
   state->extractField("Tracer", 0);
   state->allocateAllGPUMemory();
   state->transferAllFields();
@@ -468,9 +468,9 @@ extern "C" void run_model_(double* dt_pointer)
   int gridXDim = 128;
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   M<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
-  double* TracerCoeff = state->getElementValue("Tracer");
   double* VelocityCoeff = state->getElementValue("Velocity");
-  adv_rhs<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, TracerCoeff, VelocityCoeff);
+  double* TracerCoeff = state->getElementValue("Tracer");
+  adv_rhs<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff, TracerCoeff);
   cudaMemset(globalMatrix, 0, sizeof(double) * t_adv_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("t_adv") * numNodes);
   matrix_addto<<<gridXDim,blockXDim>>>(t_adv_findrm, t_adv_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);

@@ -4,7 +4,7 @@
 
 
 
-void A(double localTensor[3][3], double dt, double c0[3][2])
+void a(double localTensor[3][3], double dt, double c0[3][2])
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -64,7 +64,7 @@ void A(double localTensor[3][3], double dt, double c0[3][2])
   };
 }
 
-void RHS(double localTensor[3], double dt, double c0[3][2], double c1[3])
+void L(double localTensor[3], double dt, double c0[3][2], double c1[3])
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
