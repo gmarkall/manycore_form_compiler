@@ -71,9 +71,9 @@ class FormBackend(object):
         partitions = findPartitions(integrand)
         loopBody = getScopeFromNest(loopNest, rank + 1)
         for (tree, indices) in partitions:
-            expression, subexpressions = self.buildExpression(form, tree)
+            expression, listexpressions = self.buildExpression(form, tree)
             buildLoopNest(loopBody, indices).prepend(expression)
-            for expr in subexpressions:
+            for expr in listexpressions:
                 loopBody.prepend(expr)
 
         # Declare temporary variables to hold subexpression values
@@ -82,7 +82,7 @@ class FormBackend(object):
             loopBody.prepend(initialiser)
         
         # Insert the local tensor expression into the loop nest. There should
-        # be no subexpressions.
+        # be no listexpressions.
         expression, _ = self.buildLocalTensorExpression(form, integrand)
         loopBody.append(expression)
 
@@ -115,28 +115,24 @@ class FormBackend(object):
 
     def buildExpression(self, form, tree, localTensor=False):
         "Build the expression represented by the subtree tree of form."
-        # Build the rhs expression. If the tree is rooted by a SubExpr, we need
-        # to construct the expression beneath it.
-        if localTensor:
-            expr = tree
-        else:
-            expr = tree.operands()[0]
-        rhs, subexpr = self._expressionBuilder.build(expr)
+        # If the tree is rooted by a SubExpr, we need to construct the 
+        # expression beneath it.
+        expr = tree if localTensor else tree.operands()[0]
+        rhs, listexpr = self._expressionBuilder.build(expr)
 
-        # The rhs of a form needs to be multiplied by the quadrature weights
         if localTensor:
+            # The rhs of a form needs to be multiplied by the quadrature weights
             indices = self.subscript_weights()
             weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
             rhs = MultiplyOp(rhs, weightsExpr)
-
-        # Assign expression to the correct Subexpression variable
-        if localTensor:
+            # Assign expression to the local tensor
             lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
         else:
-            lhs = Variable("ST%s" % tree.count())
+            # Assign expression to the correct Subexpression variable
+            lhs = self._expressionBuilder.sub_expr(tree)
+        
         expr = PlusAssignmentOp(lhs, rhs)
-
-        return expr, subexpr
+        return expr, listexpr
 
     def buildExpressionLoopNest(self, form):
         "Build the loop nest for evaluating a form expression."
@@ -221,7 +217,7 @@ class FormBackend(object):
         return initialiser
 
     def buildSubExprInitialiser(self, tree):
-        lhs = Variable("ST%s" % tree.count(), Real())
+        lhs = self._expressionBuilder.sub_expr(tree)
         rhs = Literal(0.0)
         return InitialisationOp(lhs, rhs)
 
@@ -299,7 +295,7 @@ class FormBackend(object):
         return initialisers
 
     def _buildKernelParameters(self, form, statutoryParameters = None):
-
+        
         formalParameters = statutoryParameters or []
         # We always have local tensor to tabulate and timestep as parameters
         formalParameters += [self._buildLocalTensorParameter(form), timestep]

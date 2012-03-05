@@ -43,14 +43,14 @@ class ExpressionBuilder(UserDefinedClassTransformer):
 
     def build(self, tree):
         "Build the rhs for evaluating an expression tree."
-        self._subExprStack = []
+        self._listExprStack = []
         self._indexStack = Stack()
         self._sumIndexStack = Stack()
         expr = self.visit(tree)
 
         assert len(self._indexStack) == 0, "Index stack not empty."
 
-        return expr, self._subExprStack
+        return expr, self._listExprStack
 
     def subscript(self, tree):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
@@ -93,7 +93,7 @@ class ExpressionBuilder(UserDefinedClassTransformer):
         self._indexStack.push(dimIndices[1:])
         # Append the indices of the operand (argument or coefficient)
         indices += self.subscript(operand)
-        # The last element is the dimension index corresponding to the derivative.
+        # Finally push the dimension index corresponding to the derivative.
         indices.append(dimIndices[0])
         # Restore the stack
         self._indexStack.pop()
@@ -146,11 +146,8 @@ class ExpressionBuilder(UserDefinedClassTransformer):
     def buildSubscript(self, variable, indices):
         raise NotImplementedError("You're supposed to implement buildSubscript()!")
 
-    # We don't need to generate any code for a SubExpr node.
-    # FIXME: It should be an error to encounter this, when the generation of
-    # correctly-partitioned code is working.
     def sub_expr(self, se):
-        return Variable("ST%s" % se.count())
+        return Variable("ST%s" % se.count(), Real())
 
     def component_tensor(self, tree, *ops):
         # We ignore the 2nd operand (a MultiIndex)
@@ -206,7 +203,7 @@ class ExpressionBuilder(UserDefinedClassTransformer):
 
             # Build the expressions populating the components of the list tensor
             decl = Declaration(tmpTensor)
-            self._subExprStack.append(AssignmentOp(decl, init))
+            self._listExprStack.append(AssignmentOp(decl, init))
 
             # Build a subscript for the temporary Array and push that on the
             # expression stack

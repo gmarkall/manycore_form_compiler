@@ -44,7 +44,8 @@ from utilities import uniqify
 # Our counted class
 class MCFCCounted(object):
     """Like ufl.common.Counted, except it doesn't confuse the UFL classes
-    that assume a Counted object is always a FormArgument"""
+    that assume a Counted object is always a FormArgument. Also, it supports
+    being reset."""
 
     def __init__(self, count = None, countedclass = None):
         if countedclass is None:
@@ -139,7 +140,7 @@ class UserDefinedClassTransformer(Transformer):
             # Transformer does
             for classobject in all_our_ufl_classes:
                 for c in classobject.mro():
-                    name = c._handlername 
+                    name = c._handlername
                     function = getattr(self, name, None)
                     if function:
                         cache_data[classobject._classid] = name, is_post_handler(function)
@@ -247,13 +248,13 @@ def partition(equation):
     return equation
 
 class PartitionFinder(UserDefinedClassTransformer):
-    """Returns the nodes at the root of each partition. These are the nodes
-    directly beneath a SubExpr node."""
+    """Gives a list of the nodes that are at the root of each partition.
+    These are the SubExpr nodes in the tree."""
 
     def search(self, tree):
         self._partitions = []
         self.visit(tree)
-        return self._partitions or [(SubExpr(tree), indexSumIndices(tree))]
+        return self._partitions 
 
     def sub_expr(self, tree):
         op = tree.operands()[0]
