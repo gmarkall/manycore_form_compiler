@@ -37,10 +37,6 @@ def buildMultiArraySubscript(variable, indices):
 
 class ExpressionBuilder(UserDefinedClassTransformer):
 
-    def __init__(self, formBackend):
-        UserDefinedClassTransformer.__init__(self)
-        self._formBackend = formBackend
-
     def build(self, tree):
         "Build the rhs for evaluating an expression tree."
         self._listExprStack = []
@@ -64,12 +60,12 @@ class ExpressionBuilder(UserDefinedClassTransformer):
         if len(self._indexStack) > 0:
             indices.extend(self._indexStack.peek())
         indices += [buildBasisIndex(tree.count(), tree.element()),
-                    buildGaussIndex(self._formBackend.numGaussPoints)]
+                    buildGaussIndex()]
         return indices
 
     def subscript_Coefficient(self, coeff):
         # Build the subscript based on the rank
-        indices = [buildGaussIndex(self._formBackend.numGaussPoints)]
+        indices = [buildGaussIndex()]
 
         rank = coeff.rank()
 
@@ -249,9 +245,6 @@ class ExpressionBuilder(UserDefinedClassTransformer):
 
 class QuadratureExpressionBuilder:
 
-    def __init__(self, formBackend):
-        self._formBackend = formBackend
-
     def build(self, tree):
         # Build Accessor for values at nodes
         coeffIndices = self.subscript(tree)
@@ -310,7 +303,7 @@ class QuadratureExpressionBuilder:
         # the scalar basis. So we need to extract the sub element.
         # FIXME: This will break for mixed elements
         indices = [buildBasisIndex(0, extract_subelement(tree)),
-                   buildGaussIndex(self._formBackend.numGaussPoints)]
+                   buildGaussIndex()]
         return indices
 
     def subscript_argument_derivative(self, tree):

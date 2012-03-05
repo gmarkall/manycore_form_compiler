@@ -354,7 +354,7 @@ def buildConstDimIndex(count):
     # index is used to subscript a multi-dimensional array
     return ConstIndex(1, count)
 
-def buildGaussIndex(n):
+def buildGaussIndex(n=0):
     "Build index for a Gauss quadrature loop."
     return GaussIndex(n)
 

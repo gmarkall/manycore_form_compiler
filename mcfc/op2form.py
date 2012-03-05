@@ -26,8 +26,8 @@ class Op2FormBackend(FormBackend):
 
     def __init__(self):
         FormBackend.__init__(self)
-        self._expressionBuilder = Op2ExpressionBuilder(self)
-        self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder(self)
+        self._expressionBuilder = Op2ExpressionBuilder()
+        self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder()
 
     def _buildCoefficientParameter(self, coeff):
         # Use the coordinate field instead of the Jacobian when building the

@@ -27,8 +27,8 @@ class CudaFormBackend(FormBackend):
 
     def __init__(self):
         FormBackend.__init__(self)
-        self._expressionBuilder = CudaExpressionBuilder(self)
-        self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder(self)
+        self._expressionBuilder = CudaExpressionBuilder()
+        self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
 
     def compile(self, name, form):
         "Compile a form with a given name."
