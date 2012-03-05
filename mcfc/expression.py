@@ -35,7 +35,7 @@ def buildMultiArraySubscript(variable, indices):
 
     return variable
 
-class ExpressionBuilder(UserDefinedClassTransformer):
+class ExpressionBuilder(Transformer):
 
     def build(self, tree):
         "Build the rhs for evaluating an expression tree."

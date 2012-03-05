@@ -25,7 +25,7 @@ from ufl.coefficient import Coefficient
 from ufl.common import Counted
 from ufl.expr import Operator
 from ufl.form import Form
-from ufl.algorithms.transformations import Transformer, is_post_handler
+from ufl.algorithms.transformations import Transformer as UflTransformer, is_post_handler
 from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.classes import all_ufl_classes
@@ -119,25 +119,25 @@ for _i, _c in enumerate(all_our_ufl_classes):
 
 # A transformer that works with our extra UFL classes.
 
-class UserDefinedClassTransformer(Transformer):
+class Transformer(UflTransformer):
     """A Transformer that also works on the UFL classes that are defined in
     all_our_ufl_classes"""
 
     def __init__(self, variable_cache=None):
         # Get the cache data first so we know if this is the first instantiation
         # of this type
-        cache_data = Transformer._handlers_cache.get(type(self))
-        # The Transformer then handles initialisation for the UFL classes
-        Transformer.__init__(self, variable_cache)
+        cache_data = UflTransformer._handlers_cache.get(type(self))
+        # The UflTransformer then handles initialisation for the UFL classes
+        UflTransformer.__init__(self, variable_cache)
         # Now we may need to handle initialisation for our AST nodes
         if not cache_data:
-            # Get the handler_cache contents that Transformer just created
-            cache_data = Transformer._handlers_cache.get(type(self))
+            # Get the handler_cache contents that UflTransformer just created
+            cache_data = UflTransformer._handlers_cache.get(type(self))
             # Make some space for handlers for our classes
             extra_cache_data = [None]*len(all_our_ufl_classes)
             cache_data.extend(extra_cache_data)
             # For all our UFL classes, do essentially the same initialisation as
-            # Transformer does
+            # UflTransformer does
             for classobject in all_our_ufl_classes:
                 for c in classobject.mro():
                     name = c._handlername
@@ -145,12 +145,12 @@ class UserDefinedClassTransformer(Transformer):
                     if function:
                         cache_data[classobject._classid] = name, is_post_handler(function)
                         break
-            Transformer._handlers_cache[type(self)] = cache_data
+            UflTransformer._handlers_cache[type(self)] = cache_data
 
         self._handlers = [(getattr(self, name), post) for (name, post) in cache_data]
 
 
-class CoefficientUseFinder(UserDefinedClassTransformer):
+class CoefficientUseFinder(Transformer):
     """Finds the nodes that 'use' a coefficient. This is either a Coefficient
     itself, or a SpatialDerivative that has a Coefficient as its operand"""
 
@@ -184,7 +184,7 @@ class CoefficientUseFinder(UserDefinedClassTransformer):
     def coefficient(self, tree):
         self._coefficients.append(tree)
 
-class IndexSumIndexFinder(UserDefinedClassTransformer):
+class IndexSumIndexFinder(Transformer):
     "Find the count and extent of indices reduced by an IndexSum in a form."
 
     def find(self, tree):
@@ -210,7 +210,7 @@ def indexSumIndices(tree):
     ISIF = IndexSumIndexFinder()
     return ISIF.find(tree)
 
-class Partitioner(UserDefinedClassTransformer):
+class Partitioner(Transformer):
     """Partitions the expression up so that each partition fits inside
     strictly on loop in the local assembly loop nest."""
 
@@ -247,7 +247,7 @@ def partition(equation):
         equation.uflObjects[name] = form
     return equation
 
-class PartitionFinder(UserDefinedClassTransformer):
+class PartitionFinder(Transformer):
     """Gives a list of the nodes that are at the root of each partition.
     These are the SubExpr nodes in the tree."""
 
