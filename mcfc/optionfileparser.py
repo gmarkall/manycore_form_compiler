@@ -38,8 +38,15 @@ class OptionFileParser:
         # Build dictionary of material phases
         aliased_fields = []
         for phase in optionfile.material_phases():
+
             # Build state (dictionary of fields)
             state = UflState()
+
+            # Add vector field 'Coordinate' on 'CoordinateMesh',
+            # which is always present
+            shape, degree = self.element_types['CoordinateMesh']
+            state.insert_field('Coordinate', 1, shape, degree)
+
             for field in optionfile.fields(phase.path):
                 # For an aliased field, store material phase and field it is
                 # aliased to, come back later to assign element of the target
@@ -49,16 +56,22 @@ class OptionFileParser:
                     aliased_fields.append(field)
                 else:
                     shape, degree = self.element_types[field.mesh]
-                    state.insert_field(field.name, field.rank, shape, degree)
+                    # Insert the field in the state
+                    # FIXME currently we simply pass the quadrature degree as the
+                    # quadrature_shape parameter when creating a UFL element
+                    # is that a clean / safe way?
+                    state.insert_field(field.name, field.rank, shape, degree, optionfile.quadrature_degree())
                     # Store the UFL input if present
                     if hasattr(field, 'ufl_equation'):
-                        self.uflinput[phase.name+field.name] = (phase.name, field.name, field.ufl_equation)
+                        self.uflinput[phase.name+field.name] \
+                                = (phase.name, field.name, field.ufl_equation)
 
             self.states[phase.name] = state
 
         # Resolve aliased fields
         for alias in aliased_fields:
-            self.states[alias.phase][alias.rank][alias.name] = self.states[alias.to_phase][alias.rank][alias.to_field]
+            self.states[alias.phase][alias.rank][alias.name] \
+                    = self.states[alias.to_phase][alias.rank][alias.to_field]
 
         # Build list of UFL equations with associated state
         for key in self.uflinput:
@@ -67,11 +80,13 @@ class OptionFileParser:
             self.uflinput[key] = ufl, self.states[phase]
 
 def testHook(inputFile, outputFile = None):
+
     # FIXME: this is an evil hack to reset coefficient numbers to 0 before
     # running the tests (necessary to make tests invariant of the order they
     # are executed in)
     from ufl.coefficient import Coefficient
     Coefficient._globalcount = 0
+
     p = OptionFileParser(inputFile)
     # Print to output file if given, stdout otherwise
     with open(outputFile, 'w') if outputFile else sys.stdout as fd:

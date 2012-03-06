@@ -15,11 +15,78 @@ int* Velocity_colm;
 int Velocity_colm_size;
 
 
-__global__ void A(double* localTensor, int n_ele, double dt, double* detwei, double* CG1)
+__global__ void A(int n_ele, double* localTensor, double dt, double* c0)
 {
-  double CG1_v[2][6][6] = { { { CG1[0], CG1[6], CG1[12], 0.0, 0.0, 0.0 }, { CG1[1], CG1[7], CG1[13], 0.0, 0.0, 0.0 }, { CG1[2], CG1[8], CG1[14], 0.0, 0.0, 0.0 }, { CG1[3], CG1[9], CG1[15], 0.0, 0.0, 0.0 }, { CG1[4], CG1[10], CG1[16], 0.0, 0.0, 0.0 }, { CG1[5], CG1[11], CG1[17], 0.0, 0.0, 0.0 } }, { { 0.0, 0.0, 0.0, CG1[0], CG1[6], CG1[12] }, { 0.0, 0.0, 0.0, CG1[1], CG1[7], CG1[13] }, { 0.0, 0.0, 0.0, CG1[2], CG1[8], CG1[14] }, { 0.0, 0.0, 0.0, CG1[3], CG1[9], CG1[15] }, { 0.0, 0.0, 0.0, CG1[4], CG1[10], CG1[16] }, { 0.0, 0.0, 0.0, CG1[5], CG1[11], CG1[17] } } };
+  const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
+                               0.44594849, 0.44594849, 0.10810302 },
+                             {  0.09157621, 0.81684757, 0.09157621,
+                               0.44594849, 0.10810302, 0.44594849 },
+                             {  0.81684757, 0.09157621, 0.09157621,
+                               0.10810302, 0.44594849, 0.44594849 } };
+  const double d_CG1[3][6][2] = { { {  1., 0. },
+                                   {  1., 0. },
+                                   {  1., 0. },
+                                   {  1., 0. },
+                                   {  1., 0. },
+                                   {  1., 0. } },
+
+                                  { {  0., 1. },
+                                   {  0., 1. },
+                                   {  0., 1. },
+                                   {  0., 1. },
+                                   {  0., 1. },
+                                   {  0., 1. } },
+
+                                  { { -1.,-1. },
+                                   { -1.,-1. },
+                                   { -1.,-1. },
+                                   { -1.,-1. },
+                                   { -1.,-1. },
+                                   { -1.,-1. } } };
+  const double w[6] = {  0.05497587, 0.05497587, 0.05497587, 0.11169079,
+                         0.11169079, 0.11169079 };
+  const double CG1_v[2][6][6] = { { {  0.09157621, 0.09157621, 0.81684757,
+                                     0.44594849, 0.44594849, 0.10810302 },
+                                   {  0.09157621, 0.81684757, 0.09157621,
+                                     0.44594849, 0.10810302, 0.44594849 },
+                                   {  0.81684757, 0.09157621, 0.09157621,
+                                     0.10810302, 0.44594849, 0.44594849 },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         } },
+
+                                  { {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.09157621, 0.09157621, 0.81684757,
+                                     0.44594849, 0.44594849, 0.10810302 },
+                                   {  0.09157621, 0.81684757, 0.09157621,
+                                     0.44594849, 0.10810302, 0.44594849 },
+                                   {  0.81684757, 0.09157621, 0.09157621,
+                                     0.10810302, 0.44594849, 0.44594849 } } };
+  double c_q0[6][2][2];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
+    for(int i_g = 0; i_g < 6; i_g++)
+    {
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          c_q0[i_g][i_d_0][i_d_1] = 0.0;
+          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+          {
+            c_q0[i_g][i_d_0][i_d_1] += c0[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * d_CG1[i_r_0][i_g][i_d_1];
+          };
+        };
+      };
+    };
     for(int i_r_0 = 0; i_r_0 < 6; i_r_0++)
     {
       for(int i_r_1 = 0; i_r_1 < 6; i_r_1++)
@@ -27,30 +94,98 @@ __global__ void A(double* localTensor, int n_ele, double dt, double* detwei, dou
         localTensor[i_ele + n_ele * (i_r_0 + 6 * i_r_1)] = 0.0;
         for(int i_g = 0; i_g < 6; i_g++)
         {
+          double ST1 = 0.0;
+          double ST0 = 0.0;
+          ST1 += c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0];
           for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
           {
-            localTensor[i_ele + n_ele * (i_r_0 + 6 * i_r_1)] += CG1_v[i_d_0][i_r_0][i_g] * CG1_v[i_d_0][i_r_1][i_g] * detwei[i_ele + n_ele * i_g];
+            ST0 += CG1_v[i_d_0][i_r_0][i_g] * CG1_v[i_d_0][i_r_1][i_g];
           };
+          localTensor[i_ele + n_ele * (i_r_0 + 6 * i_r_1)] += ST0 * ST1 * w[i_g];
         };
       };
     };
   };
 }
 
-__global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, double* c0, double* CG1)
+__global__ void RHS(int n_ele, double* localTensor, double dt, double* c0, double* c1)
 {
-  double CG1_v[2][6][6] = { { { CG1[0], CG1[6], CG1[12], 0.0, 0.0, 0.0 }, { CG1[1], CG1[7], CG1[13], 0.0, 0.0, 0.0 }, { CG1[2], CG1[8], CG1[14], 0.0, 0.0, 0.0 }, { CG1[3], CG1[9], CG1[15], 0.0, 0.0, 0.0 }, { CG1[4], CG1[10], CG1[16], 0.0, 0.0, 0.0 }, { CG1[5], CG1[11], CG1[17], 0.0, 0.0, 0.0 } }, { { 0.0, 0.0, 0.0, CG1[0], CG1[6], CG1[12] }, { 0.0, 0.0, 0.0, CG1[1], CG1[7], CG1[13] }, { 0.0, 0.0, 0.0, CG1[2], CG1[8], CG1[14] }, { 0.0, 0.0, 0.0, CG1[3], CG1[9], CG1[15] }, { 0.0, 0.0, 0.0, CG1[4], CG1[10], CG1[16] }, { 0.0, 0.0, 0.0, CG1[5], CG1[11], CG1[17] } } };
-  double c_q0[12];
+  const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
+                               0.44594849, 0.44594849, 0.10810302 },
+                             {  0.09157621, 0.81684757, 0.09157621,
+                               0.44594849, 0.10810302, 0.44594849 },
+                             {  0.81684757, 0.09157621, 0.09157621,
+                               0.10810302, 0.44594849, 0.44594849 } };
+  const double d_CG1[3][6][2] = { { {  1., 0. },
+                                   {  1., 0. },
+                                   {  1., 0. },
+                                   {  1., 0. },
+                                   {  1., 0. },
+                                   {  1., 0. } },
+
+                                  { {  0., 1. },
+                                   {  0., 1. },
+                                   {  0., 1. },
+                                   {  0., 1. },
+                                   {  0., 1. },
+                                   {  0., 1. } },
+
+                                  { { -1.,-1. },
+                                   { -1.,-1. },
+                                   { -1.,-1. },
+                                   { -1.,-1. },
+                                   { -1.,-1. },
+                                   { -1.,-1. } } };
+  const double w[6] = {  0.05497587, 0.05497587, 0.05497587, 0.11169079,
+                         0.11169079, 0.11169079 };
+  const double CG1_v[2][6][6] = { { {  0.09157621, 0.09157621, 0.81684757,
+                                     0.44594849, 0.44594849, 0.10810302 },
+                                   {  0.09157621, 0.81684757, 0.09157621,
+                                     0.44594849, 0.10810302, 0.44594849 },
+                                   {  0.81684757, 0.09157621, 0.09157621,
+                                     0.10810302, 0.44594849, 0.44594849 },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         } },
+
+                                  { {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.        , 0.        , 0.        ,
+                                     0.        , 0.        , 0.         },
+                                   {  0.09157621, 0.09157621, 0.81684757,
+                                     0.44594849, 0.44594849, 0.10810302 },
+                                   {  0.09157621, 0.81684757, 0.09157621,
+                                     0.44594849, 0.10810302, 0.44594849 },
+                                   {  0.81684757, 0.09157621, 0.09157621,
+                                     0.10810302, 0.44594849, 0.44594849 } } };
+  double c_q1[6][2];
+  double c_q0[6][2][2];
   for(int i_ele = THREAD_ID; i_ele < n_ele; i_ele += THREAD_COUNT)
   {
     for(int i_g = 0; i_g < 6; i_g++)
     {
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
-        c_q0[i_g + 6 * i_d_0] = 0.0;
+        c_q1[i_g][i_d_0] = 0.0;
         for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
         {
-          c_q0[i_g + 6 * i_d_0] += c0[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0 + 3 * i_g];
+          c_q1[i_g][i_d_0] += c1[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * CG1[i_r_0][i_g];
+        };
+      };
+      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      {
+        for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
+        {
+          c_q0[i_g][i_d_0][i_d_1] = 0.0;
+          for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+          {
+            c_q0[i_g][i_d_0][i_d_1] += c0[i_ele + n_ele * (i_d_0 + 2 * i_r_0)] * d_CG1[i_r_0][i_g][i_d_1];
+          };
         };
       };
     };
@@ -59,10 +194,14 @@ __global__ void RHS(double* localTensor, int n_ele, double dt, double* detwei, d
       localTensor[i_ele + n_ele * i_r_0] = 0.0;
       for(int i_g = 0; i_g < 6; i_g++)
       {
+        double ST3 = 0.0;
+        double ST2 = 0.0;
+        ST3 += c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0];
         for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
         {
-          localTensor[i_ele + n_ele * i_r_0] += CG1_v[i_d_0][i_r_0][i_g] * c_q0[i_g + 6 * i_d_0] * detwei[i_ele + n_ele * i_g];
+          ST2 += CG1_v[i_d_0][i_r_0][i_g] * c_q1[i_g][i_d_0];
         };
+        localTensor[i_ele + n_ele * i_r_0] += ST2 * ST3 * w[i_g];
       };
     };
   };
@@ -74,6 +213,7 @@ extern "C" void initialise_gpu_()
   state = new StateHolder();
   state->initialise();
   state->extractField("Velocity", 1);
+  state->extractField("Coordinate", 1);
   state->allocateAllGPUMemory();
   state->transferAllFields();
   int numEle = state->getNumEle();
@@ -104,23 +244,14 @@ extern "C" void run_model_(double* dt_pointer)
   double dt = *dt_pointer;
   int numEle = state->getNumEle();
   int numNodes = state->getNumNodes();
-  double* detwei = state->getDetwei();
   int* eleNodes = state->getEleNodes();
-  double* coordinates = state->getCoordinates();
-  double* dn = state->getReferenceDn();
-  double* quadWeights = state->getQuadWeights();
-  int nDim = state->getDimension("Coordinate");
-  int nQuad = state->getNumQuadPoints("Coordinate");
   int nodesPerEle = state->getNodesPerEle("Coordinate");
-  double* shape = state->getBasisFunction("Coordinate");
-  double* dShape = state->getBasisFunctionDerivative("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
-  int shMemSize = t2p_shmemsize(blockXDim, nDim, nodesPerEle);
-  transform_to_physical<<<gridXDim,blockXDim,shMemSize>>>(coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle);
-  A<<<gridXDim,blockXDim>>>(localMatrix, numEle, dt, detwei, shape);
+  double* CoordinateCoeff = state->getElementValue("Coordinate");
+  A<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   double* VelocityCoeff = state->getElementValue("Velocity");
-  RHS<<<gridXDim,blockXDim>>>(localVector, numEle, dt, detwei, VelocityCoeff, shape);
+  RHS<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff);
   cudaMemset(globalMatrix, 0, sizeof(double) * Velocity_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Velocity") * numNodes);
   matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);

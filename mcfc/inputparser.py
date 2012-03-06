@@ -40,6 +40,7 @@ class FluflParser(InputParser):
         phase = ""
         # Build a fake state dict
         state = UflState()
+        state.insert_field('Coordinate',1)
         state.insert_field('Tracer',0)
         state.insert_field('Height',0)
         state.insert_field('Velocity',1)

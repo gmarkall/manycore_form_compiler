@@ -20,20 +20,20 @@
 """form.py - contains the code shared by different form backends, e.g.
 cudaform.py, op2form.py, etc."""
 
+# NumPy
+from numpy import zeros
 # UFL libs
+from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.coefficient import Coefficient
 # MCFC libs
 from codegeneration import *
 from formutils import *
+from uflnamespace import domain2num_vertices as d2v
 from utilities import uniqify
 
 class FormBackend(object):
     "Base class for generating form tabulation kernels."
-
-    numNodesPerEle = 3
-    numDimensions = 2
-    numGaussPoints = 6
 
     def __init__(self):
         self._expressionBuilder = None
@@ -49,11 +49,11 @@ class FormBackend(object):
         assert form_data, "Form has no form data attached!"
         rank = form_data.rank
 
-        # Get parameter list for kernel declaration.
-        formalParameters, actualParameters = self._buildKernelParameters(integrand, form)
-        # Attach list of formal and actual kernel parameters to form data
-        form.form_data().formalParameters = formalParameters
-        form.form_data().actualParameters = actualParameters
+        # Set basic properties of the element
+        # FIXME: We only look at the element of the coordinate field for now
+        self.numNodesPerEle = d2v[form_data.coordinates.cell().domain()]
+        self.numDimensions = form_data.coordinates.cell().topological_dimension()
+        self.numGaussPoints = form_data.coordinates.element().quadrature_scheme()
 
         # Initialise basis tensors if necessary
         declarations = self._buildBasisTensors(form_data)
@@ -71,10 +71,20 @@ class FormBackend(object):
         partitions = findPartitions(integrand)
         loopBody = getScopeFromNest(loopNest, rank + 1)
         for (tree, indices) in partitions:
-            expression, subexpressions = self.buildExpression(form, tree)
+            expression, listexpressions = self.buildExpression(form, tree)
             buildLoopNest(loopBody, indices).prepend(expression)
-            for expr in subexpressions:
+            for expr in listexpressions:
                 loopBody.prepend(expr)
+
+        # Declare temporary variables to hold subexpression values
+        for (tree, _) in partitions:
+            initialiser = self.buildSubExprInitialiser(tree)
+            loopBody.prepend(initialiser)
+        
+        # Insert the local tensor expression into the loop nest. There should
+        # be no listexpressions.
+        expression, _ = self.buildLocalTensorExpression(form, integrand)
+        loopBody.append(expression)
 
         # If there's any coefficients, we need to build a loop nest
         # that calculates their values at the quadrature points
@@ -91,28 +101,38 @@ class FormBackend(object):
                 outerScope.append(s)
             statements = [outerScope]
 
+        # Get parameter list for kernel declaration.
+        formalParameters = self._buildKernelParameters(form)
+
         # Build the function with the loop nest inside
         body = Scope(declarations + statements)
         kernel = FunctionDefinition(Void(), name, formalParameters, body)
 
         return kernel
 
-    def buildExpression(self, form, tree):
+    def buildLocalTensorExpression(self, form, tree):
+        return self.buildExpression(form, tree, True)
+
+    def buildExpression(self, form, tree, localTensor=False):
         "Build the expression represented by the subtree tree of form."
-        # Build the rhs expression
-        rhs, subexpr = self._expressionBuilder.build(tree)
+        # If the tree is rooted by a SubExpr, we need to construct the 
+        # expression beneath it.
+        expr = tree if localTensor else tree.operands()[0]
+        rhs, listexpr = self._expressionBuilder.build(expr)
 
-        # The rhs of a form needs to be multiplied by detwei
-        indices = self.subscript_detwei()
-        detwei = Variable("detwei")
-        detweiExpr = self._expressionBuilder.buildSubscript(detwei, indices)
-        rhs = MultiplyOp(rhs, detweiExpr)
-
-        # Assign expression to the local tensor value
-        lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
+        if localTensor:
+            # The rhs of a form needs to be multiplied by the quadrature weights
+            indices = self.subscript_weights()
+            weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
+            rhs = MultiplyOp(rhs, weightsExpr)
+            # Assign expression to the local tensor
+            lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
+        else:
+            # Assign expression to the correct Subexpression variable
+            lhs = self._expressionBuilder.sub_expr(tree)
+        
         expr = PlusAssignmentOp(lhs, rhs)
-
-        return expr, subexpr
+        return expr, listexpr
 
     def buildExpressionLoopNest(self, form):
         "Build the loop nest for evaluating a form expression."
@@ -151,8 +171,7 @@ class FormBackend(object):
         # Add initialiser here
         loop.append(self.buildCoeffQuadratureInitialiser(coeff))
 
-        # One loop over the basis functions
-        # FIXME: We fall back to the basis of the scalar element
+        # One loop over the basis functions of the scalar element
         basisLoop = buildIndexForLoop(buildBasisIndex(0, extract_subelement(coeff)))
         loop.append(basisLoop)
 
@@ -197,6 +216,11 @@ class FormBackend(object):
         initialiser = AssignmentOp(lhs, rhs)
         return initialiser
 
+    def buildSubExprInitialiser(self, tree):
+        lhs = self._expressionBuilder.sub_expr(tree)
+        rhs = Literal(0.0)
+        return InitialisationOp(lhs, rhs)
+
     def buildCoeffQuadratureInitialiser(self, coeff):
         accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff, True)
         initialiser = AssignmentOp(accessor, Literal(0.0))
@@ -224,60 +248,72 @@ class FormBackend(object):
 
         return declarations
 
+    def _buildCoeffQuadDeclaration(self, name, rank):
+        extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
+        return Declaration(Variable(name, Array(Real(), extents)))
+
     def _buildBasisTensors(self, form_data):
         """When using a basis that is a tensor product of the scalar basis, we
         need to create an array that holds the tensor product. This function
         generates the code to declare and initialise that array."""
-        gp = self.numGaussPoints
-        nn = self.numNodesPerEle
-        nd = self.numDimensions
-        initialisers = []
 
-        for a in form_data.actualParameters['arguments']:
-            e = a.element()
+        # Build constant initialisers for shape functions/derivatives and
+        # quadrature weights
+        element = form_data.coordinates.element()
+        # We need to construct a fake argument and derivative to get the
+        # proper names for the shape functions and derivatives
+        from ufl.objects import i
+        fakeArgument = Argument(element)
+        fakeDerivative = SpatialDerivative(fakeArgument,i)
+        nName = buildArgumentName(fakeArgument)
+        dnName = buildSpatialDerivativeName(fakeDerivative)
+        # Initialiser for shape functions on coordinate reference element
+        nInit = buildConstArrayInitializer(nName, element._n)
+        # Initialiser for shape derivatives on coordinate reference element
+        dnInit = buildConstArrayInitializer(dnName, element._dn)
+        # Initialiser for quadrature points on coordinate reference element
+        wInit = buildConstArrayInitializer("w", element._weight)
+
+        initialisers = [nInit, dnInit, wInit]
+
+        for argument in uniqify(form_data.arguments, lambda x: x.element()):
             # Ignore scalars
-            if isinstance(e, FiniteElement):
+            if isinstance(argument.element(), FiniteElement):
                 continue
-            elif isinstance(e, VectorElement):
-                n = buildVectorArgumentName(a)
+            elif isinstance(argument.element(), VectorElement):
+                n = buildVectorArgumentName(argument)
+                nn = self.numNodesPerEle
+                nd = self.numDimensions
+                t = zeros([nd,nn*nd,self.numGaussPoints])
+                # Construct initialiser lists for tensor product of scalar basis.
+                for d in range(nd):
+                    t[d][d*nn:(d+1)*nn][:] = element._n
+                initialisers.append(buildConstArrayInitializer(n, t))
             else:
-                raise RuntimeError("Not supported.")
-
-            arg = buildArgumentName(a)
-            t = Array(Real(), [nd,gp,nn*nd])
-            var = Variable(n, t)
-
-            # Construct the initialiser lists for the tensor product of the scalar basis.
-            outer = []
-            for d1 in range(nd):
-                middle = []
-                for igp in range(gp):
-                    innermost = []
-                    for d2 in range(nd):
-                        for inn in range(nn):
-                            if d1 == d2:
-                                expr = Subscript(Variable(arg), Literal(inn*gp+igp))
-                            else:
-                                expr = Literal(0.0)
-                            innermost.append(expr)
-                    middle.append(InitialiserList(innermost))
-                outer.append(InitialiserList(middle))
-            initlist = InitialiserList(outer)
-
-            init = InitialisationOp(var, initlist)
-            initialisers.append(init)
+                raise RuntimeError("Tensor elements are not yet supported.")
 
         return initialisers
 
-    def _buildKernelParameters(self, tree, form):
-        raise NotImplementedError("You're supposed to implement _buildKernelParameters()!")
+    def _buildKernelParameters(self, form, statutoryParameters = None):
+        
+        formalParameters = statutoryParameters or []
+        # We always have local tensor to tabulate and timestep as parameters
+        formalParameters += [self._buildLocalTensorParameter(form), timestep]
 
-    def subscript_detwei(self, tree):
-        raise NotImplementedError("You're supposed to implement subscript_detwei()!")
+        # Build a parameter for each coefficient encoutered in the form
+        for coeff in form.form_data().coefficients:
+            param = self._buildCoefficientParameter(coeff)
+            formalParameters.append(param)
+
+        return formalParameters
+
+    def subscript_weights(self):
+        indices = [buildGaussIndex(self.numGaussPoints)]
+        return indices
 
 # Variables used globally
 
-detwei = Variable("detwei", Pointer(Real()) )
+weights = Variable("w", Pointer(Real()) )
 timestep = Variable("dt", Real() )
 localTensor = Variable("localTensor", Pointer(Real()) )
 

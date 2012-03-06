@@ -26,33 +26,46 @@ from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
 from ufl.indexing import Index, FixedIndex
 
-class ExpressionBuilder(Transformer):
+def buildMultiArraySubscript(variable, indices):
+    """Given a list of indices, return an AST of the variable subscripted by
+    the indices as a multidimensional array. The index order is important."""
 
-    def __init__(self, formBackend):
-        Transformer.__init__(self)
-        self._formBackend = formBackend
+    for i in indices:
+        variable = Subscript(variable, Variable(i.name()))
+
+    return variable
+
+class ExpressionBuilder(Transformer):
 
     def build(self, tree):
         "Build the rhs for evaluating an expression tree."
-        self._subExprStack = []
+        self._listExprStack = []
         self._indexStack = Stack()
-        self._indices = []
+        self._sumIndexStack = Stack()
         expr = self.visit(tree)
 
         assert len(self._indexStack) == 0, "Index stack not empty."
 
-        return expr, self._subExprStack
+        return expr, self._listExprStack
 
-    def subscript(self, tree, depth=None):
+    def subscript(self, tree):
         meth = getattr(self, "subscript_"+tree.__class__.__name__)
-        if depth is None:
-            return meth(tree)
-        else:
-            return meth(tree, depth)
+        return meth(tree)
 
-    def subscript_CoeffQuadrature(self, coeff):
+    def subscript_Argument(self, tree):
+        # Build the subscript based on the argument count
+        indices = []
+        # For vector valued function space we need to add an index
+        # over dimensions
+        if len(self._indexStack) > 0:
+            indices.extend(self._indexStack.peek())
+        indices += [buildBasisIndex(tree.count(), tree.element()),
+                    buildGaussIndex()]
+        return indices
+
+    def subscript_Coefficient(self, coeff):
         # Build the subscript based on the rank
-        indices = [buildGaussIndex(self._formBackend.numGaussPoints)]
+        indices = [buildGaussIndex()]
 
         rank = coeff.rank()
 
@@ -65,6 +78,72 @@ class ExpressionBuilder(Transformer):
             indices.extend(dimIndices)
 
         return indices
+
+    def subscript_SpatialDerivative(self,tree):
+        operand, _ = tree.operands()
+        # Take the topmost element of the index stack
+        dimIndices = self._indexStack.peek()
+        indices = []
+        # The first element is the dimension index corresponding to the derivative.
+        # Push the remaining indices (which may be empty) on the stack
+        self._indexStack.push(dimIndices[1:])
+        # Append the indices of the operand (argument or coefficient)
+        indices += self.subscript(operand)
+        # Finally push the dimension index corresponding to the derivative.
+        indices.append(dimIndices[0])
+        # Restore the stack
+        self._indexStack.pop()
+        return indices
+
+    def subscript_LocalTensor(self, form):
+        form_data = form.form_data()
+        rank = form_data.rank
+
+        indices = []
+        # One rank index for each rank
+        for r in range(rank):
+            indices.append(buildBasisIndex(r, form))
+
+        return indices
+
+    def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
+        rank = coeff.rank()
+        if isinstance(coeff, Coefficient):
+            name = buildCoefficientQuadName(coeff)
+        else:
+            # The spatial derivative adds an extra dim index so we need to
+            # bump up the rank
+            rank = rank + 1
+            name = buildSpatialDerivativeName(coeff)
+        base = Variable(name)
+
+        # If there are no indices present (e.g. in the quadrature evaluation loop) then
+        # we need to fake indices for the coefficient based on its rank:
+        if fake_indices:
+            fake = [buildDimIndex(i, coeff) for i in range(rank)]
+            self._indexStack.push(tuple(fake))
+
+        indices = self.subscript_Coefficient(coeff)
+
+        # Remove the fake indices
+        if fake_indices:
+            self._indexStack.pop()
+
+        coeffExpr = buildMultiArraySubscript(base, indices)
+        return coeffExpr
+
+    def buildLocalTensorAccessor(self, form):
+        indices = self.subscript_LocalTensor(form)
+
+        # Subscript the local tensor variable
+        expr = self.buildSubscript(localTensor, indices)
+        return expr
+
+    def buildSubscript(self, variable, indices):
+        raise NotImplementedError("You're supposed to implement buildSubscript()!")
+
+    def sub_expr(self, se):
+        return Variable("ST%s" % se.count(), Real())
 
     def component_tensor(self, tree, *ops):
         # We ignore the 2nd operand (a MultiIndex)
@@ -96,12 +175,11 @@ class ExpressionBuilder(Transformer):
     # We need to keep track of how many IndexSums we passed through
     # so that we know which dim index we're dealing with.
     def index_sum(self, tree):
-        summand, mi = tree.operands()
-
-        for c, d in mi.index_dimensions().items():
-            self._indices.append(buildDimIndex(c.count(), d))
-
-        return self.visit(summand)
+        o, i = tree.operands()
+        self._sumIndexStack.push(self.visit(i))
+        op = self.visit(o)
+        self._sumIndexStack.pop()
+        return op
 
     def list_tensor(self, tree):
         dimIndices = self._indexStack.peek()
@@ -115,16 +193,17 @@ class ExpressionBuilder(Transformer):
         if len(dimIndices) > 0:
             # Use IndexSum indices to build and subscript ListTensor, s.t.
             # indices match those of the loop nest
-            subscriptIndices = self._indices[-len(dimIndices):]
+            subscriptIndices = [i[0] for i in self._sumIndexStack[-len(dimIndices):]]
+            subscriptIndices.reverse()
             tmpTensor = buildListTensorVar(subscriptIndices)
 
             # Build the expressions populating the components of the list tensor
             decl = Declaration(tmpTensor)
-            self._subExprStack.append(AssignmentOp(decl, init))
+            self._listExprStack.append(AssignmentOp(decl, init))
 
             # Build a subscript for the temporary Array and push that on the
             # expression stack
-            return self.buildMultiArraySubscript(tmpTensor, subscriptIndices)
+            return buildMultiArraySubscript(tmpTensor, subscriptIndices)
         # Otherwise we're operand of a higher rank ListTensor
         else:
             return init
@@ -146,11 +225,8 @@ class ExpressionBuilder(Transformer):
 
     def spatial_derivative(self, tree):
         name = buildSpatialDerivativeName(tree)
-        base = Variable(name)
-
-        dimIndices = self._indexStack.peek()
-        indices = self.subscript(tree, dimIndices)
-        return self.buildSubscript(base, indices)
+        indices = self.subscript(tree)
+        return buildMultiArraySubscript(Variable(name), indices)
 
     def argument(self, tree):
         e = tree.element()
@@ -158,88 +234,55 @@ class ExpressionBuilder(Transformer):
 
         if isinstance(e, FiniteElement):
             base = Variable(buildArgumentName(tree))
-            return self.buildSubscript(base, indices)
         elif isinstance(e, VectorElement):
             base = Variable(buildVectorArgumentName(tree))
-            return self.buildMultiArraySubscript(base, indices)
         else:
             base = Variable(buildTensorArgumentName(tree))
-            return self.buildMultiArraySubscript(base, indices)
+        return buildMultiArraySubscript(base, indices)
 
     def coefficient(self, tree):
         return self.buildCoeffQuadratureAccessor(tree)
 
-    def buildCoeffQuadratureAccessor(self, coeff, fake_indices=False):
-        rank = coeff.rank()
-        if isinstance(coeff, Coefficient):
-            name = buildCoefficientQuadName(coeff)
-        else:
-            # The spatial derivative adds an extra dim index so we need to
-            # bump up the rank
-            rank = rank + 1
-            name = buildSpatialDerivativeName(coeff)
-        base = Variable(name)
-
-        # If there are no indices present (e.g. in the quadrature evaluation loop) then
-        # we need to fake indices for the coefficient based on its rank:
-        if fake_indices:
-            fake = [buildDimIndex(i, coeff) for i in range(rank)]
-            self._indexStack.push(tuple(fake))
-
-        indices = self.subscript_CoeffQuadrature(coeff)
-
-        # Remove the fake indices
-        if fake_indices:
-            self._indexStack.pop()
-
-        coeffExpr = self.buildSubscript(base, indices)
-        return coeffExpr
-
-    def buildLocalTensorAccessor(self, form):
-        indices = self.subscript_LocalTensor(form)
-
-        # Subscript the local tensor variable
-        expr = self.buildSubscript(localTensor, indices)
-        return expr
-
-    def buildSubscript(self, variable, indices):
-        raise NotImplementedError("You're supposed to implement buildSubscript()!")
-
-    def subscript_LocalTensor(self, form):
-        raise NotImplementedError("You're supposed to implement subscript_LocalTensor()!")
-
 class QuadratureExpressionBuilder:
-
-    def __init__(self, formBackend):
-        self._formBackend = formBackend
 
     def build(self, tree):
         # Build Accessor for values at nodes
-        indices = self.subscript(tree)
-
+        coeffIndices = self.subscript(tree)
+        
         if isinstance(tree, Coefficient):
-            name = buildCoefficientName(tree)
-        elif isinstance (tree, SpatialDerivative):
-            operand, _ = tree.operands()
-            name = buildCoefficientName(operand)
+            coeffName = buildCoefficientName(tree)
+            argName = buildArgumentName(tree)
+            argIndices = self.subscript_argument(tree)
 
-        coeffAtBasis = Variable(name)
-        coeffExpr = self.buildSubscript(coeffAtBasis, indices)
+            # Check if we are dealing with the Jacobian
+            if isJacobian(tree):
+                # Subscript coordinate field if we are dealing with the Jacobian
+                coeffIndices = self.subscript(extractCoordinates(tree))
+                # We actually need to pass a SpatialDerivative to build its name
+                # FIXME: can this be done any nicer?
+                from ufl.objects import i
+                fakeArg = TrialFunction(extract_element(tree))
+                fakeDerivative = SpatialDerivative(fakeArg,i)
+                argName = buildSpatialDerivativeName(fakeDerivative)
+                # Add an index over dimensions, since we're dealing with shape
+                # derivatives (Important: build an index over the 2nd dimension)
+                argIndices += [buildDimIndex(1,tree)]
 
-        # Build accessor for argument
-        if isinstance(tree, Coefficient):
-            name = buildArgumentName(tree)
-            indices = self.subscript_argument(tree)
         elif isinstance (tree, SpatialDerivative):
             operand, indices = tree.operands()
-            element = operand.element()
-            basis = TrialFunction(element)
-            basisDerivative = SpatialDerivative(basis, indices)
-            name = buildSpatialDerivativeName(basisDerivative)
-            indices = self.subscript_spatial_derivative(basisDerivative)
+            coeffName = buildCoefficientName(operand)
 
-        arg = Variable(name)
-        argExpr = self.buildSubscript(arg, indices)
+            basis = TrialFunction(operand.element())
+            basisDerivative = SpatialDerivative(basis, indices)
+            argName = buildSpatialDerivativeName(basisDerivative)
+            argIndices = self.subscript_argument_derivative(basisDerivative)
+
+            # Check if we are dealing with the Jacobian
+            if isinstance(operand.element().quadrature_scheme(), Coefficient):
+                raise RuntimeError("Oops, the Jacobian shouldn't appear under a derivative.")
+
+        coeffExpr = self.buildSubscript(Variable(coeffName), coeffIndices)
+        argExpr = buildMultiArraySubscript(Variable(argName), argIndices)
 
         # Combine to form the expression
         expr = MultiplyOp(coeffExpr, argExpr)
@@ -258,12 +301,17 @@ class QuadratureExpressionBuilder:
         # at the quadrature points even if the coefficient is on a vector or
         # tensor basis since that is (in UFL) by definition a tensor product of
         # the scalar basis. So we need to extract the sub element.
+        # FIXME: This will break for mixed elements
         indices = [buildBasisIndex(0, extract_subelement(tree)),
-                   buildGaussIndex(self._formBackend.numGaussPoints)]
+                   buildGaussIndex()]
         return indices
 
-    def subscript_spatial_derivative(self, tree):
-        raise NotImplementedError("You're supposed to implement subscript_spatial_derivative()!")
+    def subscript_argument_derivative(self, tree):
+        # The count of the basis function induction variable is always
+        # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
+        # index should be used to subscript the derivative (I think).
+        return self.subscript_argument(tree.operands()[0]) \
+                + [ buildDimIndex(0,tree) ]
 
 def buildListTensorVar(indices):
     # FIXME: is that a stable naming scheme?

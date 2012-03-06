@@ -36,6 +36,8 @@ from mcfc import frontend, optionfileparser
 
 def main():
 
+    sys.excepthook = ultratb.FormattedTB(mode='Context')
+
     opts, args = get_options()
     keys = opts.keys()
     singleTester = SingleFileTester()

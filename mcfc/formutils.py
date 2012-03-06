@@ -22,10 +22,15 @@
 # UFL libs
 from ufl.argument import Argument
 from ufl.coefficient import Coefficient
+from ufl.common import Counted
+from ufl.expr import Operator
 from ufl.form import Form
-from ufl.algorithms.transformations import Transformer
+from ufl.algorithms.transformations import Transformer as UflTransformer, is_post_handler
 from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from ufl.classes import all_ufl_classes
+from ufl.common import camel2underscore as _camel2underscore
+from ufl.integral import Integral
 
 # FFC libs
 from ffc.fiatinterface import create_element
@@ -34,6 +39,116 @@ from ffc.mixedelement import MixedElement as FFCMixedElement
 # MCFC libs
 from codegeneration import *
 from utilities import uniqify
+
+
+# Our counted class
+class MCFCCounted(object):
+    """Like ufl.common.Counted, except it doesn't confuse the UFL classes
+    that assume a Counted object is always a FormArgument. Also, it supports
+    being reset."""
+
+    def __init__(self, count = None, countedclass = None):
+        if countedclass is None:
+            countedclass = type(self)
+        self._countedclass = countedclass
+
+        if count is None:
+            self._count = self._countedclass._globalcount
+            self._countedclass._globalcount += 1
+        else:
+            self._count = count
+            if count >= self._countedclass._globalcount:
+                self._countedclass._globalcount = count + 1
+
+    def count(self):
+        return self._count
+
+    @classmethod
+    def reset(cls):
+        cls._globalcount = 0
+
+# Extra AST nodes, and a little bit of trickery to make them work with
+# Transformer objects.
+
+class SubExpr(Operator, MCFCCounted):
+    _globalcount = 0
+
+    def __init__(self, o, count=None):
+        Operator.__init__(self)
+        MCFCCounted.__init__(self, count=count, countedclass=SubExpr)
+        self._operand = o
+        self._repr = "SubExpr(%s)" % repr(o)
+        self._shape = o.shape()
+        self._str = str(o)
+
+    def reconstruct(self, *ops):
+        return SubExpr(ops)
+
+    def operands(self):
+        return [self._operand]
+
+    def shape(self):
+        return self._shape
+
+    def evaluate(self, x, mapping, component, index_values):
+        return self._operand.evaluate(x, mapping, component, index_values)
+
+    def free_indices(self):
+        return self._operand.free_indices()
+
+    def index_dimensions(self):
+        return self._operand.index_dimensions()
+
+    def __repr__(self):
+        return self._repr
+
+    def __str__(self):
+        return self._str
+
+
+# Start the classid count from where the last UFL class counter left off.
+_classid_count = len(all_ufl_classes)
+
+all_our_ufl_classes = set([SubExpr])
+
+for _i, _c in enumerate(all_our_ufl_classes):
+    _c._classid = _i + _classid_count
+    _c._uflclass = _c
+    _c._handlername = _camel2underscore(_c.__name__)
+
+
+# A transformer that works with our extra UFL classes.
+
+class Transformer(UflTransformer):
+    """A Transformer that also works on the UFL classes that are defined in
+    all_our_ufl_classes"""
+
+    def __init__(self, variable_cache=None):
+        # Get the cache data first so we know if this is the first instantiation
+        # of this type
+        cache_data = UflTransformer._handlers_cache.get(type(self))
+        # The UflTransformer then handles initialisation for the UFL classes
+        UflTransformer.__init__(self, variable_cache)
+        # Now we may need to handle initialisation for our AST nodes
+        if not cache_data:
+            # Get the handler_cache contents that UflTransformer just created
+            cache_data = UflTransformer._handlers_cache.get(type(self))
+            # Make some space for handlers for our classes
+            extra_cache_data = [None]*len(all_our_ufl_classes)
+            cache_data.extend(extra_cache_data)
+            # For all our UFL classes, do essentially the same initialisation as
+            # UflTransformer does
+            for classobject in all_our_ufl_classes:
+                for c in classobject.mro():
+                    name = c._handlername
+                    function = getattr(self, name, None)
+                    if function:
+                        cache_data[classobject._classid] = name, is_post_handler(function)
+                        break
+            UflTransformer._handlers_cache[type(self)] = cache_data
+
+        self._handlers = [(getattr(self, name), post) for (name, post) in cache_data]
+
 
 class CoefficientUseFinder(Transformer):
     """Finds the nodes that 'use' a coefficient. This is either a Coefficient
@@ -97,35 +212,62 @@ def indexSumIndices(tree):
 
 class Partitioner(Transformer):
     """Partitions the expression up so that each partition fits inside
-    strictly on loop in the local assembly loop nest.
-    Returns a list of the partitions, and their depth (starting from
-    inside the quadrature loop)."""
+    strictly on loop in the local assembly loop nest."""
 
-    def partition(self, tree):
-        self._partitions = []
-        self.visit(tree)
-        return self._partitions
-
-    def sum(self, tree):
+    def binary_op(self, tree):
         ops = tree.operands()
         lInd = indexSumIndices(ops[0])
         rInd = indexSumIndices(ops[1])
         # If both sides have the same nesting level:
         if lInd == rInd:
-            self._partitions.append((tree,lInd))
-            return
+            return SubExpr(tree)
         else:
-            self.visit(ops[0])
-            self.visit(ops[1])
+            ops = [self.visit(ops[0]), self.visit(ops[1])]
+            return tree.__class__(*ops)
 
-    # If it's not a sum, then there shouldn't be any partitioning
-    # of the tree anyway.
+    sum = binary_op
+    product = binary_op
+
     def expr(self, tree):
-        self._partitions.append((tree,indexSumIndices(tree)))
+        return SubExpr(tree)
+
+def _partition(tree):
+    p = Partitioner()
+    return p.visit(tree)
+
+def partition(equation):
+    # Reset the subexpression count so the naming of subexpressions is less
+    # arbitrary
+    SubExpr.reset()
+    for name, form in equation.forms().iteritems():
+        integrals = []
+        for integral in form.integrals():
+            integrals.append(Integral(_partition(integral.integrand()), integral.measure()))
+        form._integrals = tuple(integrals)
+        equation.uflObjects[name] = form
+    return equation
+
+class PartitionFinder(Transformer):
+    """Gives a list of the nodes that are at the root of each partition.
+    These are the SubExpr nodes in the tree."""
+
+    def search(self, tree):
+        self._partitions = []
+        self.visit(tree)
+        return self._partitions 
+
+    def sub_expr(self, tree):
+        op = tree.operands()[0]
+        indices = indexSumIndices(op)
+        self._partitions.append((tree,indices))
+
+    def expr(self, tree):
+        for op in tree.operands():
+            self.visit(op)
 
 def findPartitions(tree):
-    part = Partitioner()
-    return part.partition(tree)
+    pf = PartitionFinder()
+    return pf.search(tree)
 
 def buildLoopNest(scope, indices):
     """Build a loop nest using the given indices in the given scope. Reuse
@@ -179,10 +321,9 @@ class ConstIndex(CodeIndex):
 
 def extract_element(expr):
     "Extract the element of a UFL expression."
-    if isinstance(expr, (Argument, Coefficient)):
-        return expr.element()
     if isinstance(expr, SpatialDerivative):
-        return expr.operands()[0].element()
+        expr = expr.operands()[0]
+    return extractCoordinates(expr).element()
 
 def extract_subelement(expr):
     """Extract the scalar element of a UFL expression (i.e. for a vector or
@@ -213,7 +354,7 @@ def buildConstDimIndex(count):
     # index is used to subscript a multi-dimensional array
     return ConstIndex(1, count)
 
-def buildGaussIndex(n):
+def buildGaussIndex(n=0):
     "Build index for a Gauss quadrature loop."
     return GaussIndex(n)
 
@@ -267,6 +408,17 @@ def buildTensorArgumentName(tree):
 
 def buildTensorSpatialDerivativeName(tree):
     return buildSpatialDerivativeName(tree) + "_t"
+
+def isJacobian(coeff):
+    "Detect whether a coefficient represents the Jacobian."
+    return isinstance(coeff.element().quadrature_scheme(), Coefficient)
+
+def extractCoordinates(coeff):
+    """Extract the coordinate coefficient from the Jacobian coefficient. Does
+    nothing if the coefficient doesn't represent the Jacobian."""
+    if isJacobian(coeff):
+        return coeff.element().quadrature_scheme()
+    return coeff
 
 def numBasisFunctions(e):
     """Return the number of basis functions. e can be a form or an element -

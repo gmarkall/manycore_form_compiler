@@ -17,14 +17,13 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
-from cudaparameters import numElements
 from expression import *
-from formutils import extract_element
 
 # Variables
 
 threadCount = Variable("THREAD_COUNT")
 threadId = Variable("THREAD_ID")
+numElements = Variable("n_ele", Integer() )
 
 # The ElementIndex is here and not form.py because not all backends need
 # an element index (e.g. OP2).
@@ -63,16 +62,6 @@ def buildSubscript(variable, indices):
 
     return Subscript(variable, expr)
 
-def buildMultiArraySubscript(variable, indices):
-    """Given a list of indices, return an AST of the variable
-    subscripted by the indices as if it were a multidimensional
-    array."""
-
-    for i in indices:
-        variable = Subscript(variable, Variable(i.name()))
-
-    return variable
-
 # Expression builders
 
 class CudaExpressionBuilder(ExpressionBuilder):
@@ -80,50 +69,10 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
-    def buildMultiArraySubscript(self, variable, indices):
-        return buildMultiArraySubscript(variable, indices)
-
-    def subscript_Argument(self, tree):
-        # Build the subscript based on the argument count
-        count = tree.count()
-        element = tree.element()
-        indices = []
-        for dimIndices in self._indexStack:
-            indices.extend(dimIndices)
-        indices += [buildBasisIndex(count, element),
-                    buildGaussIndex(self._formBackend.numGaussPoints)]
-        return indices
-
-    def subscript_SpatialDerivative(self,tree,dimIndices):
-        # Build the subscript based on the argument count and the
-        # indices
-        operand, _ = tree.operands()
-        element = operand.element()
-        count = operand.count()
-
-        if isinstance(operand, Argument):
-            indices = [ ElementIndex()]
-            indices.extend(dimIndices)
-            indices = indices + [ buildGaussIndex(self._formBackend.numGaussPoints),
-                                  buildBasisIndex(count, element) ]
-        elif isinstance(operand, Coefficient):
-            indices = [ buildGaussIndex(self._formBackend.numGaussPoints) ]
-            indices.extend(dimIndices)
-
-        return indices
-
     def subscript_LocalTensor(self, form):
-        form_data = form.form_data()
-        rank = form_data.rank
-
+        indices = super(CudaExpressionBuilder,self).subscript_LocalTensor(form)
         # First index is the element index
-        indices = [ElementIndex()]
-
-        # One rank index for each rank
-        for r in range(rank):
-            indices.append(buildBasisIndex(r,form))
-
-        return indices
+        return [ElementIndex()] + indices
 
 class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
@@ -138,16 +87,6 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         for r in range(tree.rank()):
             indices.append(buildDimIndex(r,tree))
         indices.append(buildBasisIndex(0, extract_subelement(tree)))
-        return indices
-
-    def subscript_spatial_derivative(self, tree):
-        # The count of the basis function induction variable is always
-        # 0 in the quadrature loops (i.e. i_r_0), and only the first dim
-        # index should be used to subscript the derivative (I think).
-        indices = [ ElementIndex(),
-                    buildDimIndex(0, tree),
-                    buildGaussIndex(self._formBackend.numGaussPoints),
-                    buildBasisIndex(0, extract_subelement(tree)) ]
         return indices
 
 # vim:sw=4:ts=4:sts=4:et

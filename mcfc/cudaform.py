@@ -20,17 +20,15 @@
 
 # MCFC libs
 from form import *
-from cudaparameters import CudaKernelParameterGenerator, numElements, statutoryParameters
-from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop, ElementIndex
-# UFL libs
-from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
+from cudaexpression import CudaExpressionBuilder, CudaQuadratureExpressionBuilder, buildElementLoop, numElements
+
 
 class CudaFormBackend(FormBackend):
 
     def __init__(self):
         FormBackend.__init__(self)
-        self._expressionBuilder = CudaExpressionBuilder(self)
-        self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder(self)
+        self._expressionBuilder = CudaExpressionBuilder()
+        self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
 
     def compile(self, name, form):
         "Compile a form with a given name."
@@ -46,16 +44,15 @@ class CudaFormBackend(FormBackend):
         kernel.setCudaKernel(True)
         return kernel
 
-    def _buildCoeffQuadDeclaration(self, name, rank):
-        length = self.numGaussPoints * pow(self.numDimensions, rank)
-        return Declaration(Variable(name, Array(Real(), Literal(length))))
+    def _buildCoefficientParameter(self, coeff):
+        name = buildCoefficientName(coeff)
+        return Variable(name, Pointer(Real()))
 
-    def _buildKernelParameters(self, tree, form):
-        KPG = CudaKernelParameterGenerator()
-        return KPG.generate(tree, form, statutoryParameters)
+    def _buildLocalTensorParameter(self, form):
+        return localTensor
 
-    def subscript_detwei(self):
-        indices = [ElementIndex(), buildGaussIndex(self.numGaussPoints)]
-        return indices
+    def _buildKernelParameters(self, form):
+        # We need the number of elements as an additional parameter
+        return super(CudaFormBackend,self)._buildKernelParameters(form, [numElements])
 
 # vim:sw=4:ts=4:sts=4:et

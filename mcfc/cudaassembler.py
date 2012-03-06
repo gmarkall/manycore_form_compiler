@@ -26,6 +26,7 @@ cudaform.py, and the necessary solves."""
 # MCFC libs
 from assembler import *
 from codegeneration import *
+from formutils import extractCoordinates
 from utilities import uniqify
 # FEniCS UFL libs
 import ufl.finiteelement
@@ -44,16 +45,8 @@ solutionVector   = Variable('solutionVector',     Pointer(Real()))
 
 numEle           = Variable('numEle',            Integer())
 numNodes         = Variable('numNodes',          Integer())
-detwei           = Variable('detwei',            Pointer(Real()))
 eleNodes         = Variable('eleNodes',          Pointer(Integer()))
-coordinates      = Variable('coordinates',       Pointer(Real()))
-dn               = Variable('dn',                Pointer(Real()))
-quadWeights      = Variable('quadWeights',       Pointer(Real()))
-nDim             = Variable('nDim',              Integer())
-nQuad            = Variable('nQuad',             Integer())
 nodesPerEle      = Variable('nodesPerEle',       Integer())
-shape            = Variable('shape',             Pointer(Real()))
-dShape           = Variable('dShape',            Pointer(Real()))
 numValsPerNode   = Variable('numValsPerNode',    Integer())
 numVectorEntries = Variable('numVectorEntries',  Integer())
 
@@ -64,16 +57,8 @@ numVectorEntries = Variable('numVectorEntries',  Integer())
 
 getters = { numEle:           ('getNumEle',                  None,        ), \
             numNodes:         ('getNumNodes',                None,        ), \
-            detwei:           ('getDetwei',                  None,        ), \
             eleNodes:         ('getEleNodes',                None,        ), \
-            coordinates:      ('getCoordinates',             None,        ), \
-            dn:               ('getReferenceDn',             None,        ), \
-            quadWeights:      ('getQuadWeights',             None,        ), \
-            nDim:             ('getDimension',               'Coordinate' ), \
-            nQuad:            ('getNumQuadPoints',           'Coordinate' ), \
             nodesPerEle:      ('getNodesPerEle',             'Coordinate' ), \
-            shape:            ('getBasisFunction',           'Coordinate' ), \
-            dShape:           ('getBasisFunctionDerivative', 'Coordinate' ), \
             numValsPerNode:   ('getValsPerNode',             None         ), \
             numVectorEntries: ('getNodesPerEle',             None         )  }
 
@@ -253,8 +238,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.append(setDt)
 
         # Initialise some variables we need
-        toBeInitialised = [ numEle, numNodes, detwei, eleNodes, coordinates, dn, \
-          quadWeights, nDim, nQuad, nodesPerEle, shape, dShape ]
+        toBeInitialised = [ numEle, numNodes, eleNodes, nodesPerEle ]
         for var in toBeInitialised:
             simpleAppend(func, var)
 
@@ -267,23 +251,10 @@ class CudaAssemblerBackend(AssemblerBackend):
         assignment = AssignmentOp(Declaration(gridXDim), Literal(128))
         func.append(assignment)
 
-        # Call the function that computes the amount of shared memory we need for
-        # transform_to_physical. 
-        shMemSize = Variable('shMemSize', Integer())
-        params = [ blockXDim, nDim, nodesPerEle ]
-        t2pShMemSizeCall = FunctionCall('t2p_shmemsize', params)
-        assignment = AssignmentOp(Declaration(shMemSize), t2pShMemSizeCall)
-        func.append(assignment)
-
-        # Create a call to transform_to_physical.
-        params = [ coordinates, dn, quadWeights, dShape, detwei, numEle, nDim, nQuad, nodesPerEle ]
-        t2pCall = CudaKernelCall('transform_to_physical', params, gridXDim, blockXDim, shMemSize)
-        func.append(t2pCall)
-
         # These parameters will be needed by every matrix/vector assembly
         # see also the KernelParameterComputer in cudaform.py.
-        matrixParameters = [localMatrix, numEle, dt, detwei]
-        vectorParameters = [localVector, numEle, dt, detwei]
+        matrixParameters = [numEle, localMatrix, dt]
+        vectorParameters = [numEle, localVector, dt]
 
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
@@ -359,20 +330,16 @@ class CudaAssemblerBackend(AssemblerBackend):
         return var
 
     def _makeParameterListAndGetters(self, func, tree, form, staticParameters):
-        assert form.form_data().actualParameters, "actual kernel parameters have not been attached to form data"
-        paramUFL = form.form_data().actualParameters
         # Figure out which parameters to pass
         params = list(staticParameters)
 
-        for coeff in paramUFL['coefficients']:
-            # find which field this coefficient came from, then extract from that field.
-            var = self.extractCoefficient(func, self._eq.getInputCoeffName(coeff.count()))
+        for coeff in form.form_data().original_coefficients:
+            # Find which field this coefficient came from, then extract from
+            # that field.
+            # Skip the Jacobian and pass the coordinate field instead
+            name = self._eq.getInputCoeffName(extractCoordinates(coeff).count())
+            var = self.extractCoefficient(func, name)
             params.append(var)
-
-        if paramUFL['arguments']:
-            params.append(shape)
-        if paramUFL['argumentDerivatives']:
-            params.append(dShape)
          
         return params
 

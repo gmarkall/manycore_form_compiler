@@ -36,6 +36,8 @@ def canonicalise(equation):
        arguments)"""
 
     for name, value in equation.namespace.iteritems():
+        # Extract coordinate field to attach to each forms form_data
+        coordinates = equation.namespace['x']
         # UFL Forms
         if isinstance(value, (ufl.form.Form, tuple)):
             # Swap form for its preprocessed equivalent and re-attach form data
@@ -44,6 +46,7 @@ def canonicalise(equation):
             # We keep the original (not preprocessed form for name lookup in
             # the uflObjects dictionary
             form_data.original_form = form
+            form_data.coordinates = coordinates
             form = form_data.preprocessed_form
             form._form_data = form_data
             equation.uflObjects[name] = form

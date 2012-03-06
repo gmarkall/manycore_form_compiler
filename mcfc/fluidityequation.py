@@ -24,7 +24,7 @@ from ufl.form import Form
 # MCFC modules
 from uflequation import UflEquation
 from symbolicvalue import SymbolicValue
-import canonicaliser, frontendast
+import canonicaliser, frontendast, formutils
 
 class solveFunctor:
     """A functor class to be called as 'solve' in the execution namespace of
@@ -79,10 +79,12 @@ class FluidityEquation(UflEquation):
             state.readyToRun()
 
     def _execCommonPipeline(self):
+        self.preprocessCode()
         self = frontendast.generateFrontendAst(self)
         self = frontendast.preprocessFrontendAst(self)
         self = frontendast.executeFrontendAst(self)
         self = canonicaliser.canonicalise(self)
+        self = formutils.partition(self)
         return self
 
     def execPipeline(self, fd, driver):
@@ -94,6 +96,19 @@ class FluidityEquation(UflEquation):
         self = self._execCommonPipeline()
 
         self.visualise(outputFile, objvis)
+
+    def preprocessCode(self):
+        # Pre-multiply dx by the Jacobian determinant (FIXME: hack!)
+        import re
+        self.code = re.sub(r'\bdx\b', 'detJ*dx', self.code)
+        self.code = """
+x = state.vector_fields['Coordinate']
+J, invJ, detJ = transform(x)
+def grad(u):
+    return ufl.dot(invJ, ufl.grad(u))
+def div(u):
+    ufl.div(ufl.inner(invJ, u))
+""" + self.code
 
     def getInputCoeffName(self, count):
         "Get the name of an input coefficient from the coefficient count"

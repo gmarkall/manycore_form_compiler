@@ -87,6 +87,9 @@ class OptionFile:
             if test(child):
                 yield child
 
+    def quadrature_degree(self):
+        return int(libspud.get_option('/geometry/quadrature/degree'))
+
     def meshes(self):
         for child in self._children('/geometry', lambda s: s.startswith('mesh')):
             yield Mesh('/geometry/'+child)

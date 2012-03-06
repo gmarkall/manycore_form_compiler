@@ -20,33 +20,29 @@
 
 # MCFC libs
 from form import *
-from op2parameters import Op2KernelParameterGenerator, _buildArrayParameter
 from op2expression import Op2ExpressionBuilder, Op2QuadratureExpressionBuilder
 
 class Op2FormBackend(FormBackend):
 
     def __init__(self):
         FormBackend.__init__(self)
-        self._expressionBuilder = Op2ExpressionBuilder(self)
-        self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder(self)
+        self._expressionBuilder = Op2ExpressionBuilder()
+        self._quadratureExpressionBuilder = Op2QuadratureExpressionBuilder()
 
-    def _buildCoeffQuadDeclaration(self, name, rank):
-        extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
-        return Declaration(Variable(name, Array(Real(), extents)))
+    def _buildCoefficientParameter(self, coeff):
+        # Use the coordinate field instead of the Jacobian when building the
+        # subscript.
+        indices = self._quadratureExpressionBuilder.subscript(extractCoordinates(coeff))
+        # Do however use the Jacobian coefficent when building the name, since
+        # the coordinate coefficient doesn't get renumbered!
+        name = buildCoefficientName(coeff)
+        return buildArrayParameter(name, indices)
 
-    def _buildKernelParameters(self, tree, form):
-        KPG = Op2KernelParameterGenerator(self)
+    def _buildLocalTensorParameter(self, form):
+        return buildArrayParameter(localTensor.name(), \
+                self._expressionBuilder.subscript_LocalTensor(form))
 
-        detwei = _buildArrayParameter("detwei", self.subscript_detwei())
-        timestep = Variable("dt", Real() )
-        localTensor = _buildArrayParameter("localTensor", KPG.expBuilder.subscript_LocalTensor(form))
-
-        statutoryParameters = [ localTensor, timestep, detwei ]
-
-        return KPG.generate(tree, form, statutoryParameters)
-
-    def subscript_detwei(self):
-        indices = [buildGaussIndex(self.numGaussPoints)]
-        return indices
+def buildArrayParameter(name, indices):
+    return Variable(name, Array(Real(), [i.extent() for i in indices]))
 
 # vim:sw=4:ts=4:sts=4:et
