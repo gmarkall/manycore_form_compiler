@@ -11,7 +11,7 @@
 
 // Debugging
 
-#define DEBUG_MEM 1
+#define DEBUG_MEM 0
 
 // Memory management
 
