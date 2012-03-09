@@ -307,6 +307,10 @@ class CudaAssemblerBackend(AssemblerBackend):
             expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
             func.append(expand)
 
+        return func
+
+    def buildReturnFields(self):
+
         # Transfer all fields solved for on the GPU and written back to state
         for field in self._eq.getReturnedFieldNames():
             # Sanity check: only copy back fields that were solved for
@@ -315,7 +319,6 @@ class CudaAssemblerBackend(AssemblerBackend):
                 returnCall = FunctionCall('returnFieldToHost', params)
                 func.append(ArrowOp(state, returnCall))
 
-        return func
 
     def extractCoefficient(self, func, coefficientName):
         varName = coefficientName + 'Coeff'
