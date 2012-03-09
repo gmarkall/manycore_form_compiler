@@ -89,8 +89,6 @@ program ufl_program
      
     call run_model(dt)
 
-    call calculate_diagnostic_variables(state)
-
     if (simulation_completed(current_time, timestep)) exit timestep_loop     
 
     call advance_current_time(current_time, dt)
@@ -181,6 +179,7 @@ contains
 
     integer, save :: dump_no=0
 
+    call return_fields
     call calculate_diagnostic_variables(state, exclude_nonrecalculated = .false.)
     call write_diagnostics(state, current_time, dt, timestep)
     call write_state(dump_no, state)
