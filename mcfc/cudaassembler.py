@@ -82,6 +82,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         declarations.append(finaliser)
         runModel = self._buildRunModel()
         declarations.append(runModel)
+        returnFields = self._buildReturnFields()
+        declarations.append(returnFields)
 
         # Build definitions
         # This comes last since it requires information from earlier steps
@@ -309,8 +311,10 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         return func
 
-    def buildReturnFields(self):
+    def _buildReturnFields(self):
 
+        func = FunctionDefinition(Void(), 'return_fields_', [])
+        func.setExternC(True)
         # Transfer all fields solved for on the GPU and written back to state
         for field in self._eq.getReturnedFieldNames():
             # Sanity check: only copy back fields that were solved for
@@ -319,6 +323,7 @@ class CudaAssemblerBackend(AssemblerBackend):
                 returnCall = FunctionCall('returnFieldToHost', params)
                 func.append(ArrowOp(state, returnCall))
 
+        return func
 
     def extractCoefficient(self, func, coefficientName):
         varName = coefficientName + 'Coeff'

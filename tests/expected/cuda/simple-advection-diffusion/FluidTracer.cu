@@ -488,5 +488,10 @@ extern "C" void run_model_(double* dt_pointer)
   expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Tracer"), nodesPerEle);
 }
 
+extern "C" void return_fields_()
+{
+  state->returnFieldToHost("Tracer");
+}
+
 
 

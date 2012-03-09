@@ -260,5 +260,10 @@ extern "C" void run_model_(double* dt_pointer)
   expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Velocity"), nodesPerEle);
 }
 
+extern "C" void return_fields_()
+{
+  state->returnFieldToHost("Velocity");
+}
+
 
 
