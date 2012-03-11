@@ -24,7 +24,12 @@ import sys, os, shutil, getopt
 from subprocess import Popen, PIPE
 
 # A nicer traceback from IPython
-from IPython.core import ultratb
+# Try IPython.core.ultratb first (recommended from 0.11)
+try:
+    from IPython.core import ultratb
+# If that fails fall back to ultraTB (deprecated as of 0.11)
+except ImportError:
+    from IPython import ultraTB as ultratb
 
 # For colouring diffs
 from pygments import highlight
