@@ -40,8 +40,8 @@ class FormBackend(object):
         self._quadratureExpressionBuilder = None
         self._coefficientUseFinder = CoefficientUseFinder()
 
-    def compile(self, name, form, outerScope = None):
-        "Compile a form with a given name."
+    def compile(self, form, outerScope = None):
+        "Compile a pre-processed form."
 
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
@@ -106,7 +106,7 @@ class FormBackend(object):
 
         # Build the function with the loop nest inside
         body = Scope(declarations + statements)
-        kernel = FunctionDefinition(Void(), name, formalParameters, body)
+        kernel = FunctionDefinition(Void(), form_data.name, formalParameters, body)
 
         return kernel
 

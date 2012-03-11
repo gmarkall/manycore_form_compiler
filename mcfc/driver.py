@@ -18,17 +18,8 @@
 # holders.
 
 
-import ufl.form
+from ufl.form import Form
 from codegeneration import ArbitraryString
-
-def findForms(uflObjects):
-
-    forms = []
-    for key, value in uflObjects.items():
-        if isinstance(value, ufl.form.Form):
-            forms.append((key,value))
-
-    return forms
 
 class Driver:
 
@@ -39,10 +30,10 @@ class Driver:
 
         # Build forms
         # needs to happen first, since form_data attached to the forms is changed
-        forms = findForms(equation.uflObjects)
-        for name, form in forms:
+        forms = [f for f in equation.uflObjects.values() if isinstance(f, Form)]
+        for form in forms:
             assert form.form_data(), "Form has no form data attached!"
-            form.form_data().code = self._formBackend.compile(name, form)
+            form.form_data().code = self._formBackend.compile(form)
 
         # Build assembler
         definitions, declarations = self._assemblerBackend.compile(equation)
@@ -55,7 +46,7 @@ class Driver:
         print >>fd
 
         # Unparse form kernel declarations
-        for _, form in forms:
+        for form in forms:
             print >>fd, form.form_data().code.unparse()
             print >>fd
 

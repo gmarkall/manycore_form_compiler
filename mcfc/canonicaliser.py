@@ -43,6 +43,8 @@ def canonicalise(equation):
             # Swap form for its preprocessed equivalent and re-attach form data
             form = as_form(value)
             form_data = form.compute_form_data()
+            # Assign the name used in the UFL source
+            form_data.name = name
             # We keep the original (not preprocessed form for name lookup in
             # the uflObjects dictionary
             form_data.original_form = form

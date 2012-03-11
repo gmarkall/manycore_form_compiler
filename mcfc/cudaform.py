@@ -30,15 +30,15 @@ class CudaFormBackend(FormBackend):
         self._expressionBuilder = CudaExpressionBuilder()
         self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
 
-    def compile(self, name, form):
-        "Compile a form with a given name."
+    def compile(self, form):
+        "Compile a pre-processed form."
 
         # The element loop is the outermost loop
         outerLoop = buildElementLoop()
 
         # Build the kernel as normal, but pass the element loop as the outer
         # scope to nest the other loop nests under
-        kernel = super(CudaFormBackend, self).compile(name, form, outerLoop)
+        kernel = super(CudaFormBackend, self).compile(form, outerLoop)
 
         # Make this a Cuda kernel.
         kernel.setCudaKernel(True)
