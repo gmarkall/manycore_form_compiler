@@ -9,6 +9,7 @@ visualiser is optionally available.
 
 usage: autotest.py [OPTIONS] [INPUT-FILE]
     where OPTIONS can be one of
+        -h, --help             Print this usage message
         -n, --non-interactive  Run in non-interactive (batch) mode
         --no-cuda              Do not test the CUDA backend
         --no-op2               Do not test the OP2 backend
@@ -45,6 +46,11 @@ def main():
 
     opts, args = get_options()
     keys = opts.keys()
+
+    if 'help' in keys or 'h' in keys:
+        print __doc__
+        sys.exit(0)
+
     singleTester = SingleFileTester()
     multiTester = MultiFileTester()
 
@@ -186,14 +192,15 @@ def main():
 
 def get_options():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "nr", [ "non-interactive",
-                                                         "no-cuda",
-                                                         "no-op2",
-                                                         "no-optionfile",
-                                                         "no-visualiser",
-                                                         "with-objvis",
-                                                         "with-objvisualise",
-                                                         "replace-all"])
+        opts, args = getopt.getopt(sys.argv[1:], "hnr", [ "help",
+                                                          "non-interactive",
+                                                          "no-cuda",
+                                                          "no-op2",
+                                                          "no-optionfile",
+                                                          "no-visualiser",
+                                                          "with-objvis",
+                                                          "with-objvisualise",
+                                                          "replace-all"])
     except getopt.error, msg:
         print msg
         print __doc__
