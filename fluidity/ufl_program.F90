@@ -76,12 +76,13 @@ program ufl_program
   call initialise_diagnostics(simulation_name, state)
   call initialise_write_state()
 
+  call initialise_gpu
+  
   ! Always output the initial conditions.
   call output_state(state, current_time, dt, timestep)
 
   call ETIME(tarray, start)
 
-  call initialise_gpu
 
   timestep_loop: do 
     timestep=timestep+1
@@ -99,13 +100,13 @@ program ufl_program
 
   end do timestep_loop
   
-  call finalise_gpu
-
   call ETIME(tarray, finish)
   print *,"Simulation time: ",(finish-start)
 
   ! One last dump
   call output_state(state, current_time, dt, timestep)
+  
+  call finalise_gpu
 
 contains
 
