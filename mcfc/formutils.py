@@ -154,6 +154,39 @@ class Transformer(UflTransformer):
 
         self._handlers = [(getattr(self, name), post) for (name, post) in cache_data]
 
+class ArgumentUseFinder(Transformer):
+    """Finds the nodes that 'use' an argument. This is either an Argument
+    itself, or a SpatialDerivative that has an Argument as its operand"""
+
+    def find(self, tree):
+        # We keep arguments and spatial derivatives in separate lists
+        # because we need separate criteria to uniqify the lists.
+        self._arguments = []
+        self._spatialDerivatives = []
+
+        self.visit(tree)
+
+        # Arguments define __eq__ and __hash__ so the straight uniqify works.
+        # For spatial derivatives, we need to compare the coefficients.
+        arguments = uniqify(self._arguments, lambda x: x.element())
+        spatialDerivatives = uniqify(self._spatialDerivatives, lambda x: x.operands()[0].element())
+
+        return list(arguments), list(spatialDerivatives)
+
+    # Most expressions are uninteresting.
+    def expr(self, tree, *ops):
+        pass
+
+    def argument(self, tree):
+        self._arguments.append(tree)
+
+    def spatial_derivative(self, tree):
+        subject = tree.operands()[0]
+        if isinstance(subject, Argument):
+            self._spatialDerivatives.append(tree)
+
+    def coefficient(self, tree):
+        pass
 
 class CoefficientUseFinder(Transformer):
     """Finds the nodes that 'use' a coefficient. This is either a Coefficient
