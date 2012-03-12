@@ -40,5 +40,10 @@ extern "C" void run_model_(double* dt_pointer)
   int gridXDim = 128;
 }
 
+extern "C" void return_fields_()
+{
+
+}
+
 
 

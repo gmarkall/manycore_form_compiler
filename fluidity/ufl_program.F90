@@ -76,20 +76,19 @@ program ufl_program
   call initialise_diagnostics(simulation_name, state)
   call initialise_write_state()
 
+  call initialise_gpu
+  
   ! Always output the initial conditions.
   call output_state(state, current_time, dt, timestep)
 
   call ETIME(tarray, start)
 
-  call initialise_gpu
 
   timestep_loop: do 
     timestep=timestep+1
     ewrite (1,'(a,i0)') "Start of timestep ",timestep
      
     call run_model(dt)
-
-    call calculate_diagnostic_variables(state)
 
     if (simulation_completed(current_time, timestep)) exit timestep_loop     
 
@@ -101,13 +100,13 @@ program ufl_program
 
   end do timestep_loop
   
-  call finalise_gpu
-
   call ETIME(tarray, finish)
   print *,"Simulation time: ",(finish-start)
 
   ! One last dump
   call output_state(state, current_time, dt, timestep)
+  
+  call finalise_gpu
 
 contains
 
@@ -181,6 +180,7 @@ contains
 
     integer, save :: dump_no=0
 
+    call return_fields
     call calculate_diagnostic_variables(state, exclude_nonrecalculated = .false.)
     call write_diagnostics(state, current_time, dt, timestep)
     call write_state(dump_no, state)

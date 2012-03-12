@@ -82,6 +82,8 @@ class CudaAssemblerBackend(AssemblerBackend):
         declarations.append(finaliser)
         runModel = self._buildRunModel()
         declarations.append(runModel)
+        returnFields = self._buildReturnFields()
+        declarations.append(returnFields)
 
         # Build definitions
         # This comes last since it requires information from earlier steps
@@ -307,6 +309,12 @@ class CudaAssemblerBackend(AssemblerBackend):
             expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
             func.append(expand)
 
+        return func
+
+    def _buildReturnFields(self):
+
+        func = FunctionDefinition(Void(), 'return_fields_', [])
+        func.setExternC(True)
         # Transfer all fields solved for on the GPU and written back to state
         for field in self._eq.getReturnedFieldNames():
             # Sanity check: only copy back fields that were solved for
