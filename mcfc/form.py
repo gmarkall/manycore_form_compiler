@@ -254,53 +254,48 @@ class FormBackend(object):
 
         elements = {}
         initialisers = {}
-        def addInitialiser(element, name, buildarray):
+
+        def buildTensorProduct(e, buildarray):
+            t = zeros([e.numDimensions, e.numNodesPerEle*e.numDimensions, e.numGaussPoints])
+            # Construct initialiser lists for tensor product of scalar basis.
+            for d in range(e.numDimensions):
+                t[d][d*e.numNodesPerEle:(d+1)*e.numNodesPerEle][:] = buildarray(e)
+            return t
+
+        def addInitialiser(element, buildarray, buildname = lambda n: n):
+
+            if isinstance(element, FiniteElement):
+                name = buildname(elementName(element))
+                getarray = buildarray
+            elif isinstance(element, VectorElement):
+                name = buildname(vectorName(elementName(element)))
+                getarray = lambda e: buildTensorProduct(e, buildarray)
+            else:
+                raise NotImplementedError("Tensor elements are not yet supported.")
+
             if name not in initialisers:
                 # Only query femtools for elements if we haven't already done so
                 if element not in elements:
                     elements[element] = FemtoolsElement(element)
-                initialisers[name] = buildarray(elements[element])
-        def buildTensorProduct(e):
-            t = zeros([e.numDimensions, e.numNodesPerEle*e.numDimensions, e.numGaussPoints])
-            # Construct initialiser lists for tensor product of scalar basis.
-            for d in range(e.numDimensions):
-                t[d][d*e.numNodesPerEle:(d+1)*e.numNodesPerEle][:] = e.n
-            return t
+                initialisers[name] = getarray(elements[element])
 
         # Build constant initialisers for shape derivatives and quadrature
-        # weights on coordinate field
+        # weights on coordinate field (we need to use the scalar element)
         # FIXME: We only look at the element of the coordinate field for now
-        coord_element = form_data.coordinates.element()
+        coord_element = form_data.coordinates.element().sub_elements()[0]
 
         # Initialiser for quadrature points on coordinate reference element
-        addInitialiser(coord_element, 'w', lambda e: e.weights)
-        # We need to construct a fake argument derivative to get the
-        # proper names for the shape derivatives needed for the Jacobian
-        from ufl.objects import i
-        fakeArgument = Argument(coord_element)
-        fakeDerivative = SpatialDerivative(fakeArgument,i)
+        addInitialiser(coord_element, lambda e: e.weights, lambda n: 'w')
         # Initialiser for shape derivatives on coordinate reference element
-        addInitialiser(coord_element, buildSpatialDerivativeName(fakeDerivative), lambda e: e.dn)
+        addInitialiser(coord_element, lambda e: e.dn, derivativeName)
 
         # Build shape function initialisers for arguments used in the form
         for argument in arguments:
-            e = argument.element()
-            if isinstance(e, FiniteElement):
-                addInitialiser(e, buildArgumentName(argument), lambda e: e.n)
-            elif isinstance(e, VectorElement):
-                addInitialiser(e, buildVectorArgumentName(argument), buildTensorProduct)
-            else:
-                raise NotImplementedError("Tensor elements are not yet supported.")
+            addInitialiser(argument.element(), lambda e: e.n)
 
         # Build shape derivative initialisers for argument derivatives used in the form
         for deriv in spatialDerivatives:
-            e = deriv.operands()[0].element()
-            if isinstance(e, FiniteElement):
-                addInitialiser(e, buildSpatialDerivativeName(deriv), lambda e: e.dn)
-            elif isinstance(e, VectorElement):
-                raise NotImplementedError("Vector element derivatives are not yet supported.")
-            else:
-                raise NotImplementedError("Tensor element derivatives are not yet supported.")
+            addInitialiser(deriv.operands()[0].element(), lambda e: e.dn, derivativeName)
 
         # Set basic properties of the element
         # FIXME: We only look at the element of the coordinate field for now
