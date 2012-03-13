@@ -37,7 +37,6 @@ class FormBackend(object):
     def __init__(self):
         self._expressionBuilder = None
         self._quadratureExpressionBuilder = None
-        self._coefficientUseFinder = CoefficientUseFinder()
 
     def compile(self, form, outerScope = None):
         "Compile a pre-processed form."
@@ -80,8 +79,9 @@ class FormBackend(object):
         # hence needs to be done afterwards, though it comes first in the
         # generated code
         if form_data.num_coefficients > 0:
-            declarations += self.buildCoeffQuadDeclarations(form)
-            statements = [self.buildQuadratureLoopNest(form)] + statements
+            coeff_decls, coeff_loopnest = self.buildQuadrature(form)
+            declarations += coeff_decls
+            statements = [coeff_loopnest] + statements
 
         # If we are given an outer scope, append the statements to it
         if outerScope:
@@ -186,12 +186,15 @@ class FormBackend(object):
 
         return expr
 
-    def buildQuadratureLoopNest(self, form):
-        "Build quadrature loop nest evaluating all coefficients of the form."
+    def buildQuadrature(self, form):
+        """Build quadrature loop nest evaluating all coefficients of the form
+        and their declarations."""
 
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
-        coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
+        coefficients, spatialDerivatives = CoefficientUseFinder().find(integrand)
+
+        declarations = []
 
         # Outer loop over gauss points
         gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
@@ -200,14 +203,24 @@ class FormBackend(object):
         # to compute its value
         for coeff in coefficients:
             rank = coeff.rank()
+            # declaration
+            name = buildCoefficientQuadName(coeff)
+            decl = self._buildCoeffQuadDeclaration(name, rank)
+            declarations.append(decl)
+            # loop nest
             self.buildCoefficientLoopNest(coeff, rank, gaussLoop)
 
         for spatialDerivative in spatialDerivatives:
             operand = spatialDerivative.operands()[0]
             rank = operand.rank() + 1
+            # delaration
+            name = buildSpatialDerivativeName(spatialDerivative)
+            decl = self._buildCoeffQuadDeclaration(name, rank)
+            declarations.append(decl)
+            # loop nest
             self.buildCoefficientLoopNest(spatialDerivative, rank, gaussLoop)
 
-        return gaussLoop
+        return declarations, gaussLoop
 
     def buildLocalTensorInitialiser(self, form):
         lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
@@ -224,28 +237,6 @@ class FormBackend(object):
         accessor = self._expressionBuilder.buildCoeffQuadratureAccessor(coeff, True)
         initialiser = AssignmentOp(accessor, Literal(0.0))
         return initialiser
-
-    def buildCoeffQuadDeclarations(self, form):
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
-        coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
-
-        declarations = []
-
-        for coeff in coefficients:
-            name = buildCoefficientQuadName(coeff)
-            rank = coeff.rank()
-            decl = self._buildCoeffQuadDeclaration(name, rank)
-            declarations.append(decl)
-
-        for d in spatialDerivatives:
-            name = buildSpatialDerivativeName(d)
-            operand = d.operands()[0]
-            rank = operand.rank() + 1 # The extra dimension due to the differentiation
-            decl = self._buildCoeffQuadDeclaration(name, rank)
-            declarations.append(decl)
-
-        return declarations
 
     def _buildCoeffQuadDeclaration(self, name, rank):
         extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
