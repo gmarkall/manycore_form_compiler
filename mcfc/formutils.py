@@ -435,13 +435,14 @@ def buildGaussIndex(n=0):
     "Build index for a Gauss quadrature loop."
     return GaussIndex(n)
 
-# Name builders
+## Name builders
 
-def safe_shortstr(name):
-    return name[:name.find('(')]
+safe_shortstr = lambda n: n[:n.find('(')]
+vectorName = lambda n: n + '_v'
+tensorName = lambda n: n + '_t'
+derivativeName = lambda n: 'd_' + n
 
-def buildArgumentName(tree):
-    element = tree.element()
+def elementName(element):
     if element.num_sub_elements() is not 0:
         if element.family() == 'Mixed':
             raise NotImplementedError("I can't digest mixed elements. They make me feel funny.")
@@ -449,8 +450,10 @@ def buildArgumentName(tree):
             # Sub elements are all the same
             sub_elements = element.sub_elements()
             element = sub_elements[0]
-
     return safe_shortstr(element.shortstr())
+
+def buildArgumentName(tree):
+    return elementName(tree.element())
 
 def buildSpatialDerivativeName(tree):
     operand = tree.operands()[0]
@@ -461,8 +464,7 @@ def buildSpatialDerivativeName(tree):
     else:
         cls = operand.__class__.__name__
         raise NotImplementedError("Unsupported SpatialDerivative of " + cls)
-    spatialDerivName = 'd_%s' % (name)
-    return spatialDerivName
+    return derivativeName(name)
 
 def buildCoefficientName(tree):
     count = tree.count()
@@ -475,16 +477,16 @@ def buildCoefficientQuadName(tree):
     return name
 
 def buildVectorArgumentName(tree):
-    return buildArgumentName(tree) + "_v"
+    return vectorName(buildArgumentName(tree))
 
 def buildVectorSpatialDerivativeName(tree):
-    return buildSpatialDerivativeName(tree) + "_v"
+    return vectorName(buildSpatialDerivativeName(tree))
 
 def buildTensorArgumentName(tree):
-    return buildArgumentName(tree) + "_t"
+    return tensorNmae(buildArgumentName(tree))
 
 def buildTensorSpatialDerivativeName(tree):
-    return buildSpatialDerivativeName(tree) + "_t"
+    return tensorName(buildSpatialDerivativeName(tree))
 
 def isJacobian(coeff):
     "Detect whether a coefficient represents the Jacobian."
