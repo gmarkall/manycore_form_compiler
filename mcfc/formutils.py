@@ -41,6 +41,9 @@ from ufl.integral import Integral
 from ffc.fiatinterface import create_element
 from ffc.mixedelement import MixedElement as FFCMixedElement
 
+# Femtools libs
+from get_element import get_element
+
 # MCFC libs
 from codegeneration import *
 from utilities import uniqify
@@ -321,6 +324,33 @@ def buildLoopNest(scope, indices):
             scope.append(loop)
         scope = loop.body()
     return scope
+
+# Number of facets associated with each UFL domain
+domain2num_vertices = {"cell1D": None,
+                       "cell2D": None,
+                       "cell3D": None,
+                       "interval": 2,
+                       "triangle": 3,
+                       "tetrahedron": 4,
+                       "quadrilateral": 4,
+                       "hexahedron": 8}
+
+class FemtoolsElement:
+
+    def __init__(self, element):
+        self.numNodesPerEle = domain2num_vertices[element.cell().domain()]
+        self.numDimensions = element.cell().topological_dimension()
+        # Query Femtools for:
+        # - quadrature weights
+        # - quadrature points
+        # - shape functions
+        # - shape function derivatives
+        self.weights, self.l, self.n, self.dn \
+            = get_element( self.numDimensions,
+                           self.numNodesPerEle,
+                           element.quadrature_scheme(),
+                           element.degree() )
+        self.numGaussPoints = len(self.weights)
 
 # Code indices represent induction variables in a loop. A list of CodeIndexes is
 # supplied to buildSubscript, in order for it to build the computation of a

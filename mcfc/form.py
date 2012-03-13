@@ -29,7 +29,6 @@ from ufl.coefficient import Coefficient
 # MCFC libs
 from codegeneration import *
 from formutils import *
-from uflnamespace import domain2num_vertices as d2v
 from utilities import uniqify
 
 class FormBackend(object):
@@ -49,14 +48,8 @@ class FormBackend(object):
         assert form_data, "Form has no form data attached!"
         rank = form_data.rank
 
-        # Set basic properties of the element
-        # FIXME: We only look at the element of the coordinate field for now
-        self.numNodesPerEle = d2v[form_data.coordinates.cell().domain()]
-        self.numDimensions = form_data.coordinates.cell().topological_dimension()
-        self.numGaussPoints = form_data.coordinates.element().quadrature_scheme()
-
         # Initialise basis tensors if necessary
-        declarations = self._buildBasisTensors(form_data)
+        declarations = self._buildBasisTensors(form)
 
         # Build the loop nest
         loopNest, gaussBody = self.buildExpressionLoopNest(form)
@@ -258,47 +251,74 @@ class FormBackend(object):
         extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
         return Declaration(Variable(name, Array(Real(), extents)))
 
-    def _buildBasisTensors(self, form_data):
+    def _buildBasisTensors(self, form):
         """When using a basis that is a tensor product of the scalar basis, we
         need to create an array that holds the tensor product. This function
         generates the code to declare and initialise that array."""
 
-        # Build constant initialisers for shape functions/derivatives and
-        # quadrature weights
-        element = form_data.coordinates.element()
-        # We need to construct a fake argument and derivative to get the
-        # proper names for the shape functions and derivatives
-        from ufl.objects import i
-        fakeArgument = Argument(element)
-        fakeDerivative = SpatialDerivative(fakeArgument,i)
-        nName = buildArgumentName(fakeArgument)
-        dnName = buildSpatialDerivativeName(fakeDerivative)
-        # Initialiser for shape functions on coordinate reference element
-        nInit = buildConstArrayInitializer(nName, element._n)
-        # Initialiser for shape derivatives on coordinate reference element
-        dnInit = buildConstArrayInitializer(dnName, element._dn)
+        form_data = form.form_data()
+        # FIXME what if we have multiple integrals?
+        integrand = form.integrals()[0].integrand()
+        arguments, spatialDerivatives = ArgumentUseFinder().find(integrand)
+
+        elements = {}
+        initialisers = {}
+        def addInitialiser(element, name, buildarray):
+            if name not in initialisers:
+                # Only query femtools for elements if we haven't already done so
+                if element not in elements:
+                    elements[element] = FemtoolsElement(element)
+                initialisers[name] = buildarray(elements[element])
+        def buildTensorProduct(e):
+            t = zeros([e.numDimensions, e.numNodesPerEle*e.numDimensions, e.numGaussPoints])
+            # Construct initialiser lists for tensor product of scalar basis.
+            for d in range(e.numDimensions):
+                t[d][d*e.numNodesPerEle:(d+1)*e.numNodesPerEle][:] = e.n
+            return t
+
+        # Build constant initialisers for shape derivatives and quadrature
+        # weights on coordinate field
+        # FIXME: We only look at the element of the coordinate field for now
+        coord_element = form_data.coordinates.element()
+
         # Initialiser for quadrature points on coordinate reference element
-        wInit = buildConstArrayInitializer("w", element._weight)
+        addInitialiser(coord_element, 'w', lambda e: e.weights)
+        # We need to construct a fake argument derivative to get the
+        # proper names for the shape derivatives needed for the Jacobian
+        from ufl.objects import i
+        fakeArgument = Argument(coord_element)
+        fakeDerivative = SpatialDerivative(fakeArgument,i)
+        # Initialiser for shape derivatives on coordinate reference element
+        addInitialiser(coord_element, buildSpatialDerivativeName(fakeDerivative), lambda e: e.dn)
 
-        initialisers = [nInit, dnInit, wInit]
-
-        for argument in uniqify(form_data.arguments, lambda x: x.element()):
-            # Ignore scalars
-            if isinstance(argument.element(), FiniteElement):
-                continue
-            elif isinstance(argument.element(), VectorElement):
-                n = buildVectorArgumentName(argument)
-                nn = self.numNodesPerEle
-                nd = self.numDimensions
-                t = zeros([nd,nn*nd,self.numGaussPoints])
-                # Construct initialiser lists for tensor product of scalar basis.
-                for d in range(nd):
-                    t[d][d*nn:(d+1)*nn][:] = element._n
-                initialisers.append(buildConstArrayInitializer(n, t))
+        # Build shape function initialisers for arguments used in the form
+        for argument in arguments:
+            e = argument.element()
+            if isinstance(e, FiniteElement):
+                addInitialiser(e, buildArgumentName(argument), lambda e: e.n)
+            elif isinstance(e, VectorElement):
+                addInitialiser(e, buildVectorArgumentName(argument), buildTensorProduct)
             else:
-                raise RuntimeError("Tensor elements are not yet supported.")
+                raise NotImplementedError("Tensor elements are not yet supported.")
 
-        return initialisers
+        # Build shape derivative initialisers for argument derivatives used in the form
+        for deriv in spatialDerivatives:
+            e = deriv.operands()[0].element()
+            if isinstance(e, FiniteElement):
+                addInitialiser(e, buildSpatialDerivativeName(deriv), lambda e: e.dn)
+            elif isinstance(e, VectorElement):
+                raise NotImplementedError("Vector element derivatives are not yet supported.")
+            else:
+                raise NotImplementedError("Tensor element derivatives are not yet supported.")
+
+        # Set basic properties of the element
+        # FIXME: We only look at the element of the coordinate field for now
+        self.numNodesPerEle = elements[coord_element].numNodesPerEle
+        self.numDimensions = elements[coord_element].numDimensions
+        self.numGaussPoints = elements[coord_element].numGaussPoints
+
+        return [buildConstArrayInitializer(name, arr) for name, arr in \
+                sorted(initialisers.items(), key=lambda x:x[0])]
 
     def _buildKernelParameters(self, form, statutoryParameters = None):
         

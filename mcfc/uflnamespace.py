@@ -20,8 +20,6 @@
 # UFL modules
 import ufl
 from ufl.tensoralgebra import Inverse, Determinant
-# femtools libs
-from get_element import get_element
 
 countJ = -3
 
@@ -50,32 +48,7 @@ def Jacobian(coordinates):
     element = ufl.TensorElement('DG', domain, degree, quad_scheme=coordinates)
     return ufl.Coefficient(element, countJ)
 
-# Number of facets associated with each UFL domain
-domain2num_vertices = {"cell1D": None,
-                       "cell2D": None,
-                       "cell3D": None,
-                       "interval": 2,
-                       "triangle": 3,
-                       "tetrahedron": 4,
-                       "quadrilateral": 4,
-                       "hexahedron": 8}
-
 def transform(coordinates):
-    element = coordinates.element()
-    domain = element.cell().domain()
-    # Query Femtools for:
-    # - quadrature weights
-    # - quadrature points
-    # - shape functions
-    # - shape function derivatives
-    element._weight, element._l, element._n, element._dn \
-        = get_element( element.cell().topological_dimension(),
-                       domain2num_vertices[domain],
-                       element.quadrature_scheme(),
-                       element.degree() )
-    # Set the quadrature scheme of the coordinate element to the
-    # number of quadrature points for query by the form backend
-    element._quad_scheme = len(element._weight)
     J = Jacobian(coordinates)
     invJ = Inverse(J)
     detJ = Determinant(J)
