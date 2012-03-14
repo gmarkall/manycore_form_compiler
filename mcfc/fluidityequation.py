@@ -155,16 +155,6 @@ def div(u):
         "Get the field name of an extracted field from the coefficient count"
         return self.state.accessedFields()[count][1]
 
-    def getFormName(self, form):
-        "Look up the name of a given form in uflObjects"
-        # Sanity check: we only accept forms
-        assert isinstance(form, Form)
-        for name, obj in self.uflObjects.items():
-            if isinstance(obj, Form) and obj.form_data().original_form == form:
-                return name
-        # We went through all UFL objects and found nothing
-        raise RuntimeError("Given form was not found:\n%s" % form)
-
     def getFieldFromCoeff(self, coeff):
         "Returns the first accessed field found defined over the same element as coeff"
         elem = self.uflObjects[coeff].element()

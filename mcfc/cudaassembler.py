@@ -261,22 +261,17 @@ class CudaAssemblerBackend(AssemblerBackend):
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
             result = self._eq.getResultCoeffName(count)
-            matrix = forms[0]
-            vector = forms[1]
+            matrix, vector = forms
             sparsity = self._sparsities[result]
 
             # Call the matrix assembly
-            # FIXME what if we have multiple integrals?
-            tree = matrix.integrals()[0].integrand()
-            params = self._makeParameterListAndGetters(func, tree, matrix, matrixParameters)
-            matrixAssembly = CudaKernelCall(self._eq.getFormName(matrix), params, gridXDim, blockXDim)
+            params = self._makeParameterListAndGetters(func, matrix, matrixParameters)
+            matrixAssembly = CudaKernelCall(matrix.form_data().name, params, gridXDim, blockXDim)
             func.append(matrixAssembly)
 
             # Then call the rhs assembly
-            # FIXME what if we have multiple integrals?
-            tree = vector.integrals()[0].integrand()
-            params = self._makeParameterListAndGetters(func, tree, vector, vectorParameters)
-            vectorAssembly = CudaKernelCall(self._eq.getFormName(vector), params, gridXDim, blockXDim)
+            params = self._makeParameterListAndGetters(func, vector, vectorParameters)
+            vectorAssembly = CudaKernelCall(vector.form_data().name, params, gridXDim, blockXDim)
             func.append(vectorAssembly)
 
             # Zero the global matrix and vector
