@@ -55,11 +55,11 @@ numVectorEntries = Variable('numVectorEntries',  Integer())
 # coordinate field for now, assuming that they're the same for all fields. This
 # will change once we have the basic functionality working.
 
-getters = { numEle:           ('getNumEle',                  None,        ), \
-            numNodes:         ('getNumNodes',                None,        ), \
-            eleNodes:         ('getEleNodes',                None,        ), \
-            nodesPerEle:      ('getNodesPerEle',             'Coordinate' ), \
-            numValsPerNode:   ('getValsPerNode',             None         ), \
+getters = { numEle:           ('getNumEle',                  None,        ),
+            numNodes:         ('getNumNodes',                None,        ),
+            eleNodes:         ('getEleNodes',                None,        ),
+            nodesPerEle:      ('getNodesPerEle',             'Coordinate' ),
+            numValsPerNode:   ('getValsPerNode',             None         ),
             numVectorEntries: ('getNodesPerEle',             None         )  }
 
 def _getTmpField(field):
@@ -74,16 +74,11 @@ class CudaAssemblerBackend(AssemblerBackend):
 
         # Build declarations
         declarations = GlobalScope()
-        state = self._buildState()
-        declarations.append(state)
-        initialiser = self._buildInitialiser()
-        declarations.append(initialiser)
-        finaliser = self._buildFinaliser()
-        declarations.append(finaliser)
-        runModel = self._buildRunModel()
-        declarations.append(runModel)
-        returnFields = self._buildReturnFields()
-        declarations.append(returnFields)
+        declarations.append(self._buildState())
+        declarations.append(self._buildInitialiser())
+        declarations.append(self._buildFinaliser())
+        declarations.append(self._buildRunModel())
+        declarations.append(self._buildReturnFields())
 
         # Build definitions
         # This comes last since it requires information from earlier steps
@@ -101,26 +96,19 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.setExternC(True)
 
         # Call the state constructor
-        newState = New(Class('StateHolder'))
-        construct = AssignmentOp(state, newState)
-        func.append(construct)
+        func.append(AssignmentOp(state, New(Class('StateHolder'))))
         
         # Call the state initialiser
-        call = FunctionCall('initialise')
-        func.append(ArrowOp(state, call))
+        func.append(ArrowOp(state, FunctionCall('initialise')))
 
         # Extract accessed fields
         for rank, field in self._eq.state.accessedFields().values():
             params = [ Literal(field), Literal(rank) ]
-            call = FunctionCall('extractField',params)
-            func.append(ArrowOp(state, call))
+            func.append(ArrowOp(state, FunctionCall('extractField',params)))
 
         # Allocate memory and transfer to GPU
-        call = FunctionCall('allocateAllGPUMemory')
-        func.append(ArrowOp(state, call))
-
-        call = FunctionCall('transferAllFields')
-        func.append(ArrowOp(state, call))
+        func.append(ArrowOp(state, FunctionCall('allocateAllGPUMemory')))
+        func.append(ArrowOp(state, FunctionCall('transferAllFields')))
 
         # Get num_ele, num_nodes etc
         simpleAppend(func, numEle)
@@ -130,8 +118,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         # temporary field for it
         for field in self._eq.getTmpCoeffNames():
             params = [ Literal(field), Literal(self._eq.getFieldFromCoeff(field)) ]
-            call = FunctionCall('insertTemporaryField',params)
-            func.append(ArrowOp(state, call))
+            func.append(ArrowOp(state, FunctionCall('insertTemporaryField',params)))
 
         self._sparsities = {}
         # FIXME: This will stupidly extract a sparsity for each coefficient
@@ -141,8 +128,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             # Get sparsity of the field we're solving for
             sparsity = Variable(field+'_sparsity', Pointer(Class('CsrSparsity')))
             call = FunctionCall('getSparsity', [ Literal(field) ])
-            assignment = AssignmentOp(Declaration(sparsity), ArrowOp(state, call))
-            func.append(assignment)
+            func.append(AssignmentOp(Declaration(sparsity), ArrowOp(state, call)))
 
             matrixColmSize   = Variable(field+'_colm_size',   Integer())
             matrixFindrmSize = Variable(field+'_findrm_size', Integer())
@@ -155,10 +141,8 @@ class CudaAssemblerBackend(AssemblerBackend):
             sourceFns  = ['getCudaColm', 'getCudaFindrm', 'getSizeColm',  'getSizeFindrm'   ]
 
             for var, source in zip(matrixVars, sourceFns):
-                call = FunctionCall(source)
-                rhs = ArrowOp(sparsity, call)
-                assignment = AssignmentOp(var, rhs)
-                func.append(assignment)
+                rhs = ArrowOp(sparsity, FunctionCall(source))
+                func.append(AssignmentOp(var, rhs))
 
             # Remember the sparsity variable information
             self._sparsities[field] = dict(zip(['colm','findrm','colm_size','findrm_size'], matrixVars))
@@ -178,15 +162,13 @@ class CudaAssemblerBackend(AssemblerBackend):
             # Now multiply numVectorEntries by numValsPerNode to get the correct
             # size of the storage required
             mult = MultiplyOp(numVectorEntries, numValsPerNode)
-            assignment = AssignmentOp(numVectorEntries, mult)
-            func.append(assignment)
+            func.append(AssignmentOp(numVectorEntries, mult))
 
             # The space for the local matrix storage is equal to the local vector
             # storage size squared.
             numMatrixEntries = Variable('numMatrixEntries', Integer())
             rhs = MultiplyOp(numVectorEntries, numVectorEntries)
-            assignment = AssignmentOp(Declaration(numMatrixEntries), rhs)
-            func.append(assignment)
+            func.append(AssignmentOp(Declaration(numMatrixEntries), rhs))
 
             # Generate Mallocs for the local matrix and vector, and the solution
             # vector.
@@ -202,17 +184,14 @@ class CudaAssemblerBackend(AssemblerBackend):
         func = FunctionDefinition(Void(), 'finalise_gpu_')
         func.setExternC(True)
 
-        delete = Delete(state)
-        func.append(delete)
+        func.append(Delete(state))
 
         return func
 
     def _buildHeadersAndGlobals(self):
         scope = GlobalScope()
-        include = Include('cudastatic.hpp')
-        scope.append(include)
-        include = Include('cudastate.hpp')
-        scope.append(include)
+        scope.append(Include('cudastatic.hpp'))
+        scope.append(Include('cudastate.hpp'))
 
         # Declare vars in global scope
         declVars = [localVector, localMatrix, globalVector, globalMatrix, solutionVector ]
@@ -236,22 +215,18 @@ class CudaAssemblerBackend(AssemblerBackend):
         # Fortran always passes by reference, so we need to dereference to get the
         # timestep.
         dt = Variable('dt', Real())
-        setDt = AssignmentOp(Declaration(dt), Dereference(dtp))
-        func.append(setDt)
+        func.append(AssignmentOp(Declaration(dt), Dereference(dtp)))
 
         # Initialise some variables we need
-        toBeInitialised = [ numEle, numNodes, eleNodes, nodesPerEle ]
-        for var in toBeInitialised:
+        for var in [ numEle, numNodes, eleNodes, nodesPerEle ]:
             simpleAppend(func, var)
 
         # Build the block dimension declaration. Eventually this needs to be configurable
         # (e.g. for autotuning, performance experiments.)
         blockXDim = Variable('blockXDim', Integer())
-        assignment = AssignmentOp(Declaration(blockXDim), Literal(64))
-        func.append(assignment)
+        func.append(AssignmentOp(Declaration(blockXDim), Literal(64)))
         gridXDim = Variable('gridXDim', Integer())
-        assignment = AssignmentOp(Declaration(gridXDim), Literal(128))
-        func.append(assignment)
+        func.append(AssignmentOp(Declaration(gridXDim), Literal(128)))
 
         # These parameters will be needed by every matrix/vector assembly
         # see also the KernelParameterComputer in cudaform.py.
@@ -266,13 +241,11 @@ class CudaAssemblerBackend(AssemblerBackend):
 
             # Call the matrix assembly
             params = self._makeParameterListAndGetters(func, matrix, matrixParameters)
-            matrixAssembly = CudaKernelCall(matrix.form_data().name, params, gridXDim, blockXDim)
-            func.append(matrixAssembly)
+            func.append(CudaKernelCall(matrix.form_data().name, params, gridXDim, blockXDim))
 
             # Then call the rhs assembly
             params = self._makeParameterListAndGetters(func, vector, vectorParameters)
-            vectorAssembly = CudaKernelCall(vector.form_data().name, params, gridXDim, blockXDim)
-            func.append(vectorAssembly)
+            func.append(CudaKernelCall(vector.form_data().name, params, gridXDim, blockXDim))
 
             # Zero the global matrix and vector
             # First we need to get numvalspernode, for the length of the global vector
@@ -284,23 +257,22 @@ class CudaAssemblerBackend(AssemblerBackend):
             # For the matrix
             params = [ sparsity['findrm'], sparsity['colm'], globalMatrix, eleNodes, \
                          localMatrix, numEle, nodesPerEle ]
-            matrixAddto = CudaKernelCall('matrix_addto', params, gridXDim, blockXDim)
-            func.append(matrixAddto)
+            func.append(CudaKernelCall('matrix_addto', params, gridXDim, blockXDim))
 
             # And the vector
             params = [ globalVector, eleNodes, localVector, numEle, nodesPerEle ]
-            vectorAddto = CudaKernelCall('vector_addto', params, gridXDim, blockXDim)
-            func.append(vectorAddto)
+            func.append(CudaKernelCall('vector_addto', params, gridXDim, blockXDim))
             
             # call the solve
-            params = [ sparsity['findrm'], sparsity['findrm_size'], sparsity['colm'], sparsity['colm_size'], \
-                          globalMatrix, globalVector, numNodes, solutionVector ]
-            cgSolve = FunctionCall('cg_solve', params)
-            func.append(cgSolve)
+            params = [ sparsity['findrm'], sparsity['findrm_size'], \
+                       sparsity['colm'], sparsity['colm_size'], \
+                       globalMatrix, globalVector, numNodes, solutionVector ]
+            func.append(FunctionCall('cg_solve', params))
 
             # expand the result
             var = self.extractCoefficient(func, result)
-            params = [ var, solutionVector, eleNodes, numEle, stateGetter(numValsPerNode, param=result), nodesPerEle ]
+            params = [ var, solutionVector, eleNodes, numEle, \
+                    stateGetter(numValsPerNode, param=result), nodesPerEle ]
             expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
             func.append(expand)
 
@@ -332,7 +304,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         
         return var
 
-    def _makeParameterListAndGetters(self, func, tree, form, staticParameters):
+    def _makeParameterListAndGetters(self, func, form, staticParameters):
         # Figure out which parameters to pass
         params = list(staticParameters)
 
@@ -341,25 +313,20 @@ class CudaAssemblerBackend(AssemblerBackend):
             # that field.
             # Skip the Jacobian and pass the coordinate field instead
             name = self._eq.getInputCoeffName(extractCoordinates(coeff).count())
-            var = self.extractCoefficient(func, name)
-            params.append(var)
+            params.append(self.extractCoefficient(func, name))
          
         return params
 
 def buildAppendCudaMemsetZero(func, base, length):
     t = base.type().getBaseType()
     size = MultiplyOp(SizeOf(t), length)
-    params = [ base, Literal(0), size ]
-    memset = FunctionCall('cudaMemset', params)
-    func.append(memset)
+    func.append(FunctionCall('cudaMemset', [ base, Literal(0), size ]))
 
 def buildAppendCudaMalloc(scope, var, size):
     cast = Cast(Pointer(Pointer(Void())), AddressOfOp(var))
     sizeof = SizeOf(var.type().getBaseType())
     sizeArg = MultiplyOp(sizeof, size)
-    params = [ cast, sizeArg ]
-    malloc = FunctionCall('cudaMalloc', params)
-    scope.append(malloc)
+    scope.append(FunctionCall('cudaMalloc', [ cast, sizeArg ]))
 
 def stateGetter(var, provider=None, param=None):
     params = []
@@ -372,8 +339,7 @@ def stateGetter(var, provider=None, param=None):
     if param is not None:
         params.append(Literal(param))
 
-    call = FunctionCall(provider, params)
-    return ArrowOp(state, call)
+    return ArrowOp(state, FunctionCall(provider, params))
 
 def simpleAppend(func, var, provider=None, param=None):
     """Append a variable declaration to func, without building a new
@@ -381,7 +347,6 @@ def simpleAppend(func, var, provider=None, param=None):
     with the parameter param, unless these are not specified. If they
     are not specified, then the getters dict is used to look one up."""
 
-    assignment = AssignmentOp(Declaration(var), stateGetter(var, provider, param))
-    func.append(assignment)
+    func.append(AssignmentOp(Declaration(var), stateGetter(var, provider, param)))
 
 # vim:sw=4:ts=4:sts=4:et
