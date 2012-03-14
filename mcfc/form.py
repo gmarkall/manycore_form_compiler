@@ -47,6 +47,11 @@ class FormBackend(object):
         assert form_data, "Form has no form data attached!"
         rank = form_data.rank
 
+        # Element data queried by femtools
+        self.elementdata = {}
+        # Static array initialisers for shape functions/derivatives of elements
+        self.initialisers = {}
+
         # Initialise basis tensors if necessary
         declarations = self._buildBasisTensors(form)
 
@@ -242,6 +247,30 @@ class FormBackend(object):
         extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
         return Declaration(Variable(name, Array(Real(), extents)))
 
+    def addInitialiser(self, element, buildarray, buildname = lambda n: n):
+
+        def buildTensorProduct(e, buildarray):
+            t = zeros([e.numDimensions, e.numNodesPerEle*e.numDimensions, e.numGaussPoints])
+            # Construct initialiser lists for tensor product of scalar basis.
+            for d in range(e.numDimensions):
+                t[d][d*e.numNodesPerEle:(d+1)*e.numNodesPerEle][:] = buildarray(e)
+            return t
+
+        if isinstance(element, FiniteElement):
+            name = buildname(elementName(element))
+            getarray = buildarray
+        elif isinstance(element, VectorElement):
+            name = buildname(vectorName(elementName(element)))
+            getarray = lambda e: buildTensorProduct(e, buildarray)
+        else:
+            raise NotImplementedError("Tensor elements are not yet supported.")
+
+        if name not in self.initialisers:
+            # Only query femtools for elements if we haven't already done so
+            if element not in self.elementdata:
+                self.elementdata[element] = FemtoolsElement(element)
+            self.initialisers[name] = getarray(self.elementdata[element])
+
     def _buildBasisTensors(self, form):
         """When using a basis that is a tensor product of the scalar basis, we
         need to create an array that holds the tensor product. This function
@@ -252,59 +281,34 @@ class FormBackend(object):
         integrand = form.integrals()[0].integrand()
         arguments, spatialDerivatives = ArgumentUseFinder().find(integrand)
 
-        elements = {}
-        initialisers = {}
-
-        def buildTensorProduct(e, buildarray):
-            t = zeros([e.numDimensions, e.numNodesPerEle*e.numDimensions, e.numGaussPoints])
-            # Construct initialiser lists for tensor product of scalar basis.
-            for d in range(e.numDimensions):
-                t[d][d*e.numNodesPerEle:(d+1)*e.numNodesPerEle][:] = buildarray(e)
-            return t
-
-        def addInitialiser(element, buildarray, buildname = lambda n: n):
-
-            if isinstance(element, FiniteElement):
-                name = buildname(elementName(element))
-                getarray = buildarray
-            elif isinstance(element, VectorElement):
-                name = buildname(vectorName(elementName(element)))
-                getarray = lambda e: buildTensorProduct(e, buildarray)
-            else:
-                raise NotImplementedError("Tensor elements are not yet supported.")
-
-            if name not in initialisers:
-                # Only query femtools for elements if we haven't already done so
-                if element not in elements:
-                    elements[element] = FemtoolsElement(element)
-                initialisers[name] = getarray(elements[element])
-
         # Build constant initialisers for shape derivatives and quadrature
         # weights on coordinate field (we need to use the scalar element)
         # FIXME: We only look at the element of the coordinate field for now
         coord_element = form_data.coordinates.element().sub_elements()[0]
 
         # Initialiser for quadrature points on coordinate reference element
-        addInitialiser(coord_element, lambda e: e.weights, lambda n: 'w')
+        self.addInitialiser(coord_element, lambda e: e.weights, lambda n: 'w')
         # Initialiser for shape derivatives on coordinate reference element
-        addInitialiser(coord_element, lambda e: e.dn, derivativeName)
+        self.addInitialiser(coord_element, lambda e: e.dn, derivativeName)
 
         # Build shape function initialisers for arguments used in the form
         for argument in arguments:
-            addInitialiser(argument.element(), lambda e: e.n)
+            self.addInitialiser(argument.element(), lambda e: e.n)
 
         # Build shape derivative initialisers for argument derivatives used in the form
         for deriv in spatialDerivatives:
-            addInitialiser(deriv.operands()[0].element(), lambda e: e.dn, derivativeName)
+            self.addInitialiser(deriv.operands()[0].element(), lambda e: e.dn, derivativeName)
 
         # Set basic properties of the element
         # FIXME: We only look at the element of the coordinate field for now
-        self.numNodesPerEle = elements[coord_element].numNodesPerEle
-        self.numDimensions = elements[coord_element].numDimensions
-        self.numGaussPoints = elements[coord_element].numGaussPoints
+        # FIXME: This should be set someplace else
+        coord_felement = self.elementdata[coord_element]
+        self.numNodesPerEle = coord_felement.numNodesPerEle
+        self.numDimensions = coord_felement.numDimensions
+        self.numGaussPoints = coord_felement.numGaussPoints
 
         return [buildConstArrayInitializer(name, arr) for name, arr in \
-                sorted(initialisers.items(), key=lambda x:x[0])]
+                sorted(self.initialisers.items(), key=lambda x:x[0])]
 
     def _buildKernelParameters(self, form, statutoryParameters = None):
         
