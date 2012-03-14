@@ -53,11 +53,10 @@ class FormBackend(object):
         self.initialisers = {}
 
         # Initialise basis tensors if necessary
-        declarations = self._buildBasisTensors(form)
+        self._buildBasisTensors(form)
 
         # Build the loop nest
         loopNest, gaussBody = self.buildExpressionLoopNest(form)
-        statements = [loopNest]
 
         # Insert the expressions into the loop nest
         partitions = findPartitions(integrand)
@@ -83,10 +82,13 @@ class FormBackend(object):
         # Note: this uses data generated during building of the expressions,
         # hence needs to be done afterwards, though it comes first in the
         # generated code
+        coeff_decls, coeff_loopnest = [], []
         if form_data.num_coefficients > 0:
             coeff_decls, coeff_loopnest = self.buildQuadrature(form)
-            declarations += coeff_decls
-            statements = [coeff_loopnest] + statements
+
+        k = lambda x:x._lhs.unparse()
+        declarations = sorted(self.initialisers.values(), key=k) + coeff_decls
+        statements = coeff_loopnest + [loopNest]
 
         # If we are given an outer scope, append the statements to it
         if outerScope:
@@ -225,7 +227,7 @@ class FormBackend(object):
             # loop nest
             self.buildCoefficientLoopNest(spatialDerivative, rank, gaussLoop)
 
-        return declarations, gaussLoop
+        return declarations, [gaussLoop]
 
     def buildLocalTensorInitialiser(self, form):
         lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
@@ -269,7 +271,8 @@ class FormBackend(object):
             # Only query femtools for elements if we haven't already done so
             if element not in self.elementdata:
                 self.elementdata[element] = FemtoolsElement(element)
-            self.initialisers[name] = getarray(self.elementdata[element])
+            self.initialisers[name] = buildConstArrayInitializer(name,
+                                        getarray(self.elementdata[element]))
 
     def _buildBasisTensors(self, form):
         """When using a basis that is a tensor product of the scalar basis, we
