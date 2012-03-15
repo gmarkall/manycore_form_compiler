@@ -353,14 +353,21 @@ extern "C" void run_model_(double* dt_pointer)
              sizeof(double) * state->getValsPerNode("Velocity") * numNodes);
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   A_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
-  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
+  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, 
+                                       globalMatrix, eleNodes, localMatrix, 
+                                       numEle, nodesPerEle);
   double* VelocityCoeff = state->getElementValue("Velocity");
-  RHS_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff);
-  vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
+  RHS_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
+                                VelocityCoeff);
+  vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, 
+                                       numEle, nodesPerEle);
   cg_solve(Velocity_findrm, Velocity_findrm_size, Velocity_colm, 
            Velocity_colm_size, globalMatrix, globalVector, numNodes, 
            solutionVector);
-  expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Velocity"), nodesPerEle);
+  expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, 
+                                      numEle, 
+                                      state->getValsPerNode("Velocity"), 
+                                      nodesPerEle);
 }
 
 extern "C" void return_fields_()

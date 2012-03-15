@@ -206,13 +206,19 @@ extern "C" void run_model_(double* dt_pointer)
              sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   a_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
-  matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
+  matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, 
+                                       globalMatrix, eleNodes, localMatrix, 
+                                       numEle, nodesPerEle);
   double* TracerCoeff = state->getElementValue("Tracer");
-  L_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, TracerCoeff);
-  vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
+  L_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
+                              TracerCoeff);
+  vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, 
+                                       numEle, nodesPerEle);
   cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, 
            globalMatrix, globalVector, numNodes, solutionVector);
-  expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Tracer"), nodesPerEle);
+  expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, 
+                                      numEle, state->getValsPerNode("Tracer"), 
+                                      nodesPerEle);
 }
 
 extern "C" void return_fields_()
