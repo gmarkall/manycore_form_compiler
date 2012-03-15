@@ -475,11 +475,15 @@ extern "C" void initialise_gpu_()
   int numVectorEntries = state->getNodesPerEle("Tracer");
   numVectorEntries = numVectorEntries * numValsPerNode;
   int numMatrixEntries = numVectorEntries * numVectorEntries;
-  cudaMalloc((void**)(&localVector), sizeof(double) * numEle * numVectorEntries);
-  cudaMalloc((void**)(&localMatrix), sizeof(double) * numEle * numMatrixEntries);
-  cudaMalloc((void**)(&globalVector), sizeof(double) * numNodes * numValsPerNode);
+  cudaMalloc((void**)(&localVector), 
+             sizeof(double) * numEle * numVectorEntries);
+  cudaMalloc((void**)(&localMatrix), 
+             sizeof(double) * numEle * numMatrixEntries);
+  cudaMalloc((void**)(&globalVector), 
+             sizeof(double) * numNodes * numValsPerNode);
   cudaMalloc((void**)(&globalMatrix), sizeof(double) * Tracer_colm_size);
-  cudaMalloc((void**)(&solutionVector), sizeof(double) * numNodes * numValsPerNode);
+  cudaMalloc((void**)(&solutionVector), 
+             sizeof(double) * numNodes * numValsPerNode);
 }
 
 extern "C" void finalise_gpu_()
@@ -497,7 +501,8 @@ extern "C" void run_model_(double* dt_pointer)
   int blockXDim = 64;
   int gridXDim = 128;
   cudaMemset(globalMatrix, 0, sizeof(double) * t_adv_colm_size);
-  cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("t_adv") * numNodes);
+  cudaMemset(globalVector, 0, 
+             sizeof(double) * state->getValsPerNode("t_adv") * numNodes);
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   M_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   matrix_addto<<<gridXDim,blockXDim>>>(t_adv_findrm, t_adv_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
@@ -505,16 +510,19 @@ extern "C" void run_model_(double* dt_pointer)
   double* TracerCoeff = state->getElementValue("Tracer");
   adv_rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff, TracerCoeff);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
-  cg_solve(t_adv_findrm, t_adv_findrm_size, t_adv_colm, t_adv_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
+  cg_solve(t_adv_findrm, t_adv_findrm_size, t_adv_colm, t_adv_colm_size, 
+           globalMatrix, globalVector, numNodes, solutionVector);
   double* t_advCoeff = state->getElementValue("t_adv");
   expand_data<<<gridXDim,blockXDim>>>(t_advCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("t_adv"), nodesPerEle);
   cudaMemset(globalMatrix, 0, sizeof(double) * Tracer_colm_size);
-  cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
+  cudaMemset(globalVector, 0, 
+             sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
   A_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   diff_rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, t_advCoeff);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
-  cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
+  cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, 
+           globalMatrix, globalVector, numNodes, solutionVector);
   expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Tracer"), nodesPerEle);
 }
 

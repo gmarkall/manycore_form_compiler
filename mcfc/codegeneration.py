@@ -199,8 +199,24 @@ class ExpressionList(BackendASTNode):
     def prepend(self, expression):
          self._expressions.insert(0, expression)
 
-    def unparse(self):
-        return '(' + ', '.join([e.unparse() for e in self._expressions]) + ')'
+    def unparse(self, indent = None):
+
+        if indent:
+            class indenter:
+                # Current line length
+                ll = indent + indentLevel + 1
+                baseindent = ll
+                def __call__(self, s):
+                    self.ll += len(s) + 2
+                    if self.ll < 80:
+                        return s
+                    self.ll = self.baseindent + len(s) + 2
+                    return '\n' + ' ' * self.baseindent + s
+            newl = indenter()
+        else:
+            newl = lambda x: x
+
+        return '(' + ', '.join([newl(e.unparse()) for e in self._expressions]) + ')'
 
     __str__ = unparse
 
@@ -242,7 +258,7 @@ class FunctionCall(BackendASTNode):
 
     def unparse(self):
         name = self._name
-        params = self._params.unparse()
+        params = self._params.unparse(len(name))
         return '%s%s' % (name, params)
 
     __str__ = unparse

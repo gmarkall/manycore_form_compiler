@@ -176,11 +176,15 @@ extern "C" void initialise_gpu_()
   int numVectorEntries = state->getNodesPerEle("Tracer");
   numVectorEntries = numVectorEntries * numValsPerNode;
   int numMatrixEntries = numVectorEntries * numVectorEntries;
-  cudaMalloc((void**)(&localVector), sizeof(double) * numEle * numVectorEntries);
-  cudaMalloc((void**)(&localMatrix), sizeof(double) * numEle * numMatrixEntries);
-  cudaMalloc((void**)(&globalVector), sizeof(double) * numNodes * numValsPerNode);
+  cudaMalloc((void**)(&localVector), 
+             sizeof(double) * numEle * numVectorEntries);
+  cudaMalloc((void**)(&localMatrix), 
+             sizeof(double) * numEle * numMatrixEntries);
+  cudaMalloc((void**)(&globalVector), 
+             sizeof(double) * numNodes * numValsPerNode);
   cudaMalloc((void**)(&globalMatrix), sizeof(double) * Tracer_colm_size);
-  cudaMalloc((void**)(&solutionVector), sizeof(double) * numNodes * numValsPerNode);
+  cudaMalloc((void**)(&solutionVector), 
+             sizeof(double) * numNodes * numValsPerNode);
 }
 
 extern "C" void finalise_gpu_()
@@ -198,14 +202,16 @@ extern "C" void run_model_(double* dt_pointer)
   int blockXDim = 64;
   int gridXDim = 128;
   cudaMemset(globalMatrix, 0, sizeof(double) * Tracer_colm_size);
-  cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
+  cudaMemset(globalVector, 0, 
+             sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   a_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   double* TracerCoeff = state->getElementValue("Tracer");
   L_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, TracerCoeff);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
-  cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
+  cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, 
+           globalMatrix, globalVector, numNodes, solutionVector);
   expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Tracer"), nodesPerEle);
 }
 
