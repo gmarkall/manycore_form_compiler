@@ -381,6 +381,9 @@ extern "C" void run_model_(double* dt_pointer)
               op_arg_dat(TracerDiffusivity_data, OP_ALL, 
                          TracerDiffusivity_map, OP_READ));
   op_solve(A_mat, rhs_vec, Tracer_data);
+  op_free_vec(rhs_vec);
+  op_free_mat(A_mat);
+  op_free_sparsity(A_sparsity);
 }
 
 extern "C" void return_fields_()

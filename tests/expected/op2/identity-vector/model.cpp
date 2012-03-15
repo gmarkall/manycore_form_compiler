@@ -308,6 +308,9 @@ extern "C" void run_model_(double* dt_pointer)
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
               op_arg_dat(Velocity_data, OP_ALL, Velocity_map, OP_READ));
   op_solve(A_mat, RHS_vec, Velocity_data);
+  op_free_vec(RHS_vec);
+  op_free_mat(A_mat);
+  op_free_sparsity(A_sparsity);
 }
 
 extern "C" void return_fields_()

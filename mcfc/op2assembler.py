@@ -42,6 +42,12 @@ opDeclSparsity = lambda rowmap, colmap: \
     FunctionCall('op_decl_sparsity', [rowmap, colmap])
 opDeclMat = lambda sparsity: \
     FunctionCall('op_decl_mat', [sparsity])
+opFreeVec = lambda vec: \
+    FunctionCall('op_free_vec', [vec])
+opFreeSparsity = lambda sparsity: \
+    FunctionCall('op_free_sparsity', [sparsity])
+opFreeMat = lambda mat: \
+    FunctionCall('op_free_mat', [mat])
 opArgDat = lambda dat, index, mapping, access: \
     FunctionCall('op_arg_dat', [dat, index, mapping, access])
 opArgMat = lambda mat, rowindex, rowmap, colindex, colmap, access: \
@@ -148,7 +154,8 @@ class Op2AssemblerBackend(AssemblerBackend):
             field_data[field] = extractOpFieldData(func, field)
 
         # If the coefficient is not written back to state, insert a
-        # temporary field for it
+        # temporary field to solve for
+        temp_dats = []
         for field in self._eq.getTmpCoeffNames():
             # Get field data for orginal coefficient (dat, map, set)
             orig_data = field_data[self._eq.getFieldFromCoeff(field)]
@@ -158,6 +165,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # The temporary dat has the same associate map and set as the
             # origin it has been derived from
             field_data[field] = datVar, orig_data[1], orig_data[2]
+            temp_dats.append(datVar)
 
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
@@ -194,6 +202,14 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             # Solve
             func.append(opSolve(matrix, vector, mdat))
+
+            # Free temporaries
+            func.append(opFreeVec(vector))
+            func.append(opFreeMat(matrix))
+            func.append(opFreeSparsity(sparsity))
+
+        for dat in temp_dats:
+            func.append(opFreeVec(dat))
 
         return func
 

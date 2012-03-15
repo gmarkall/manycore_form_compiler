@@ -186,6 +186,9 @@ extern "C" void run_model_(double* dt_pointer)
               op_arg_dat(Tracer_data, OP_ALL, Tracer_map, OP_READ), 
               op_arg_dat(Velocity_data, OP_ALL, Velocity_map, OP_READ));
   op_solve(Mass_mat, rhs_vec, Tracer_data);
+  op_free_vec(rhs_vec);
+  op_free_mat(Mass_mat);
+  op_free_sparsity(Mass_sparsity);
 }
 
 extern "C" void return_fields_()

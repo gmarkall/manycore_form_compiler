@@ -427,6 +427,9 @@ extern "C" void run_model_(double* dt_pointer)
               op_arg_dat(Velocity_data, OP_ALL, Velocity_map, OP_READ), 
               op_arg_dat(Tracer_data, OP_ALL, Tracer_map, OP_READ));
   op_solve(M_mat, adv_rhs_vec, t_adv);
+  op_free_vec(adv_rhs_vec);
+  op_free_mat(M_mat);
+  op_free_sparsity(M_sparsity);
   op_sparsity A_sparsity = op_decl_sparsity(Tracer_map, Tracer_map);
   op_mat A_mat = op_decl_mat(A_sparsity);
   op_par_loop(A, "A", elements, 
@@ -439,6 +442,10 @@ extern "C" void run_model_(double* dt_pointer)
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
               op_arg_dat(t_adv, OP_ALL, Tracer_map, OP_READ));
   op_solve(A_mat, diff_rhs_vec, Tracer_data);
+  op_free_vec(diff_rhs_vec);
+  op_free_mat(A_mat);
+  op_free_sparsity(A_sparsity);
+  op_free_vec(t_adv);
 }
 
 extern "C" void return_fields_()
