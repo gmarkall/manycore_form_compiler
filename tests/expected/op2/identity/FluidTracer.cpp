@@ -4,16 +4,6 @@
 
 #include "op_lib_cpp.h"
 #include "op_seq_mat.h"
-op_set elements;
-op_dat Coordinate_data;
-op_map Coordinate_map;
-op_set Coordinate_set;
-op_dat Tracer_data;
-op_map Tracer_map;
-op_set Tracer_set;
-op_sparsity Tracer_sparsity;
-op_mat Tracer_mat;
-op_dat Tracer_vec;
 
 void a_0(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
 {
@@ -143,16 +133,6 @@ void L_0(double** localTensor, double* dt, double* c0[2], double* c1[1])
 extern "C" void initialise_gpu_()
 {
   op_init(0, 0, 2);
-  elements = get_op_element_set();
-  Coordinate_data = get_op_dat("Coordinate");
-  Coordinate_map = get_op_map("Coordinate");
-  Coordinate_set = get_op_set("Coordinate");
-  Tracer_data = get_op_dat("Tracer");
-  Tracer_map = get_op_map("Tracer");
-  Tracer_set = get_op_set("Tracer");
-  Tracer_sparsity = op_decl_sparsity(Tracer_map, Tracer_map);
-  Tracer_mat = op_decl_mat(Tracer_sparsity);
-  Tracer_vec = op_clone_dat(Tracer_data, "Tracer_vec");
 }
 
 extern "C" void finalise_gpu_()
@@ -162,19 +142,29 @@ extern "C" void finalise_gpu_()
 
 extern "C" void run_model_(double* dt_pointer)
 {
+  op_set elements = get_op_element_set();
+  op_dat Coordinate_data = get_op_dat("Coordinate");
+  op_map Coordinate_map = get_op_map("Coordinate");
+  op_set Coordinate_set = get_op_set("Coordinate");
+  op_dat Tracer_data = get_op_dat("Tracer");
+  op_map Tracer_map = get_op_map("Tracer");
+  op_set Tracer_set = get_op_set("Tracer");
+  op_sparsity a_sparsity = op_decl_sparsity(Tracer_map, Tracer_map);
+  op_mat a_mat = op_decl_mat(a_sparsity);
   op_par_loop(a, "a", elements, 
-              op_arg_mat(Tracer_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
+              op_arg_mat(a_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
                          OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
-  op_par_loop(L, "L", elements, 
-              op_arg_dat(Tracer_vec, OP_ALL, Tracer_map, OP_INC), 
+  op_dat L_vec = op_clone_dat(Tracer_data, "L_vec");
+  op_par_loop(L, "L", elements, op_arg_dat(L_vec, OP_ALL, Tracer_map, OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
               op_arg_dat(Tracer_data, OP_ALL, Tracer_map, OP_READ));
-  op_solve(Tracer_mat, Tracer_vec, Tracer_data);
+  op_solve(a_mat, L_vec, Tracer_data);
 }
 
 extern "C" void return_fields_()
 {
+  op_dat Tracer_data = get_op_dat("Tracer");
   op_fetch_data(Tracer_data);
   set_op_dat("Tracer", Tracer_data);
 }

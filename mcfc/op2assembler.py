@@ -61,13 +61,13 @@ opGetElementSet = lambda : FunctionCall('get_op_element_set', [])
 def extractOpFieldData(scope, field):
     # Get op_dat
     datVar = Variable(field+'_data', OpDat)
-    scope.append(AssignmentOp(datVar, opGetDat(Literal(field))))
+    scope.append(AssignmentOp(Declaration(datVar), opGetDat(Literal(field))))
     # Get op_map
     mapVar = Variable(field+'_map', OpMap)
-    scope.append(AssignmentOp(mapVar, opGetMap(Literal(field))))
+    scope.append(AssignmentOp(Declaration(mapVar), opGetMap(Literal(field))))
     # Get op_set (currently unused)
     setVar = Variable(field+'_set', OpSet)
-    scope.append(AssignmentOp(setVar, opGetSet(Literal(field))))
+    scope.append(AssignmentOp(Declaration(setVar), opGetSet(Literal(field))))
 
     return datVar, mapVar, setVar
 
@@ -102,52 +102,6 @@ class Op2AssemblerBackend(AssemblerBackend):
         # FIXME: We don't currently pass argc, argv
         func.append(opInit(Literal(2)))
 
-        # Get element set
-        func.append(AssignmentOp(elements, opGetElementSet()))
-
-        # Triplets of op_dat, op_map, op_set per field solved for
-        self._field_data = {}
-        # Extract op_dat, op_map, op_set for accessed fields
-        # FIXME: Do we need different call for different ranks?
-        for rank, field in self._eq.state.accessedFields().values():
-            self._field_data[field] = extractOpFieldData(func, field)
-
-        # If the coefficient is not written back to state, insert a
-        # temporary field for it
-        for field in self._eq.getTmpCoeffNames():
-            # Get field data for orginal coefficient (dat, map, set)
-            orig_data = self._field_data[self._eq.getFieldFromCoeff(field)]
-            datVar = Variable(field, OpDat)
-            call = opCloneDat(orig_data[0], field)
-            func.append(AssignmentOp(datVar, call))
-            # The temporary dat has the same associate map and set as the
-            # origin it has been derived from
-            self._field_data[field] = datVar, orig_data[1], orig_data[2]
-
-        # Tuples of sparsity, matrix per field solved for
-        self._solve_data = {}
-        # FIXME: This will stupidly create a sparsity for each coefficient
-        # solved for (which is not necessary in the general case)
-        for field in self._eq.getResultCoeffNames():
-
-            # Get sparsity of the field we're solving for
-            sparsity = Variable(field+'_sparsity', OpSparsity)
-            fieldmap = self._field_data[field][1]
-            call = opDeclSparsity(fieldmap, fieldmap)
-            func.append(AssignmentOp(sparsity, call))
-
-            # Create a matrix
-            matrix = Variable(field+'_mat', OpMat)
-            func.append(AssignmentOp(matrix, opDeclMat(sparsity)))
-
-            # Create the resulting vector
-            vector = Variable(field+'_vec', OpDat)
-            func.append(AssignmentOp(vector,
-                opCloneDat(self._field_data[field][0], vector.name())))
-
-            # Remember the sparsity variable information
-            self._solve_data[field] = sparsity, matrix, vector
-
         return func
 
     def _buildFinaliser(self):
@@ -163,44 +117,80 @@ class Op2AssemblerBackend(AssemblerBackend):
         scope.append(Include('op_lib_cpp.h'))
         scope.append(Include('op_seq_mat.h'))
 
-        # Declare vars in global scope:
-        # op_dat, op_map, op_set for fields; op_sparsity, op_mat for solves
-        scope.append(Declaration(elements))
-        # We need to make sure declarations are unique
-        declared_vars = set()
-        for data in self._field_data.values() + self._solve_data.values():
-            for var in data:
-                if var not in declared_vars:
-                    scope.append(Declaration(var))
-                    declared_vars.add(var)
-
         return scope
 
     def _buildRunModel(self):
+
+        def makeParameterListAndGetters(form, staticParameters):
+            # Figure out which parameters to pass
+            params = list(staticParameters)
+
+            for coeff in form.form_data().original_coefficients:
+                # find which field this coefficient came from, then get data for that field
+                field = self._eq.getInputCoeffName(extractCoordinates(coeff).count())
+                mdat, mmap, _ = field_data[field]
+                params.append(opArgDat(mdat, OpAll, mmap, OpRead))
+
+            return params
 
         dtp = Variable('dt_pointer', Pointer(Real()))
         func = FunctionDefinition(Void(), 'run_model_', [dtp])
         func.setExternC(True)
 
+        # Get element set
+        func.append(AssignmentOp(Declaration(elements), opGetElementSet()))
+
+        # Triplets of op_dat, op_map, op_set per field solved for
+        field_data = {}
+        # Extract op_dat, op_map, op_set for accessed fields
+        # FIXME: Do we need different call for different ranks?
+        for rank, field in self._eq.state.accessedFields().values():
+            field_data[field] = extractOpFieldData(func, field)
+
+        # If the coefficient is not written back to state, insert a
+        # temporary field for it
+        for field in self._eq.getTmpCoeffNames():
+            # Get field data for orginal coefficient (dat, map, set)
+            orig_data = field_data[self._eq.getFieldFromCoeff(field)]
+            datVar = Variable(field, OpDat)
+            call = opCloneDat(orig_data[0], field)
+            func.append(AssignmentOp(Declaration(datVar), call))
+            # The temporary dat has the same associate map and set as the
+            # origin it has been derived from
+            field_data[field] = datVar, orig_data[1], orig_data[2]
+
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
-            result = self._eq.getResultCoeffName(count)
-            matrixform, vectorform = forms
-            sparsity, matrix, vector = self._solve_data[result]
-            mdat, mmap, _ = self._field_data[result]
+            matform, vecform = forms
+            matname = matform.form_data().name
+            vecname = vecform.form_data().name
+            mdat, mmap, _ = field_data[self._eq.getResultCoeffName(count)]
+
+            # Get sparsity of the field we're solving for
+            sparsity = Variable(matname+'_sparsity', OpSparsity)
+            fieldmap = field_data[field][1]
+            call = opDeclSparsity(fieldmap, fieldmap)
+            func.append(AssignmentOp(Declaration(sparsity), call))
 
             # Call the op_par_loops
 
+            # Create a matrix
+            matrix = Variable(matname+'_mat', OpMat)
+            func.append(AssignmentOp(Declaration(matrix), opDeclMat(sparsity)))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
             matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, OpInc)
-            arguments = self._makeParameterListAndGetters(matrixform, [matArg])
-            func.append(opParLoop(matrixform.form_data().name, elements, arguments))
+            arguments = makeParameterListAndGetters(matform, [matArg])
+            func.append(opParLoop(matname, elements, arguments))
 
+            # Create the resulting vector
+            vector = Variable(vecname+'_vec', OpDat)
+            func.append(AssignmentOp(Declaration(vector),
+                opCloneDat(field_data[field][0], vector.name())))
             # Vector
             datArg = opArgDat(vector, OpAll, mmap, OpInc)
-            arguments = self._makeParameterListAndGetters(vectorform, [datArg])
-            func.append(opParLoop(vectorform.form_data().name, elements, arguments))
+            arguments = makeParameterListAndGetters(vecform, [datArg])
+            func.append(opParLoop(vecname, elements, arguments))
 
             # Solve
             func.append(opSolve(matrix, vector, mdat))
@@ -215,22 +205,11 @@ class Op2AssemblerBackend(AssemblerBackend):
         for field in self._eq.getReturnedFieldNames():
             # Sanity check: only copy back fields that were solved for
             if field in self._eq.getResultCoeffNames():
-                dat = self._field_data[field][0]
+                dat = Variable(field+'_data', OpDat)
+                func.append(AssignmentOp(Declaration(dat), opGetDat(Literal(field))))
                 func.append(opFetchData(dat))
                 func.append(opSetDat(Literal(field), dat))
 
         return func
-
-    def _makeParameterListAndGetters(self, form, staticParameters):
-        # Figure out which parameters to pass
-        params = list(staticParameters)
-
-        for coeff in form.form_data().original_coefficients:
-            # find which field this coefficient came from, then get data for that field
-            field = self._eq.getInputCoeffName(extractCoordinates(coeff).count())
-            mdat, mmap, _ = self._field_data[field]
-            params.append(opArgDat(mdat, OpAll, mmap, OpRead))
-
-        return params
 
 # vim:sw=4:ts=4:sts=4:et
