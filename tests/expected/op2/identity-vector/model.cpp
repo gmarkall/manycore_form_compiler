@@ -2,6 +2,18 @@
 // https://github.com/gmarkall/manycore_form_compiler
 
 
+#include "op_lib_cpp.h"
+#include "op_seq_mat.h"
+op_set elements;
+op_dat Coordinate_data;
+op_map Coordinate_map;
+op_set Coordinate_set;
+op_dat Velocity_data;
+op_map Velocity_map;
+op_set Velocity_set;
+op_sparsity Velocity_sparsity;
+op_mat Velocity_mat;
+op_dat Velocity_vec;
 
 void A_0(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
 {
@@ -274,5 +286,44 @@ void RHS_0(double** localTensor, double* dt, double* c0[2], double* c1[2])
   }
 }
 
+
+extern "C" void initialise_gpu_()
+{
+  op_init(0, 0, 2);
+  elements = get_op_element_set();
+  Coordinate_data = get_op_dat("Coordinate");
+  Coordinate_map = get_op_map("Coordinate");
+  Coordinate_set = get_op_set("Coordinate");
+  Velocity_data = get_op_dat("Velocity");
+  Velocity_map = get_op_map("Velocity");
+  Velocity_set = get_op_set("Velocity");
+  Velocity_sparsity = op_decl_sparsity(Velocity_map, Velocity_map);
+  Velocity_mat = op_decl_mat(Velocity_sparsity);
+  Velocity_vec = op_clone_dat(Velocity_data, "Velocity_vec");
+}
+
+extern "C" void finalise_gpu_()
+{
+  op_exit();
+}
+
+extern "C" void run_model_(double* dt_pointer)
+{
+  op_par_loop(A, "A", elements, 
+              op_arg_mat(Velocity_mat, OP_ALL, Velocity_map, OP_ALL, 
+                         Velocity_map, OP_INC), 
+              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
+  op_par_loop(RHS, "RHS", elements, 
+              op_arg_dat(Velocity_vec, OP_ALL, Velocity_map, OP_INC), 
+              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
+              op_arg_dat(Velocity_data, OP_ALL, Velocity_map, OP_READ));
+  op_solve(Velocity_mat, Velocity_vec, Velocity_data);
+}
+
+extern "C" void return_fields_()
+{
+  op_fetch_data(Velocity_data);
+  set_op_dat("Velocity", Velocity_data);
+}
 
 

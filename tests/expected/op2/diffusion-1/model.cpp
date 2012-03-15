@@ -2,6 +2,21 @@
 // https://github.com/gmarkall/manycore_form_compiler
 
 
+#include "op_lib_cpp.h"
+#include "op_seq_mat.h"
+op_set elements;
+op_dat Coordinate_data;
+op_map Coordinate_map;
+op_set Coordinate_set;
+op_dat TracerDiffusivity_data;
+op_map TracerDiffusivity_map;
+op_set TracerDiffusivity_set;
+op_dat Tracer_data;
+op_map Tracer_map;
+op_set Tracer_set;
+op_sparsity Tracer_sparsity;
+op_mat Tracer_mat;
+op_dat Tracer_vec;
 
 void A_0(double* localTensor, double* dt, double* c0[2], double* c1[2][2], int i_r_0, int i_r_1)
 {
@@ -340,5 +355,51 @@ void rhs_0(double** localTensor, double* dt, double* c0[2], double* c1[1], doubl
   }
 }
 
+
+extern "C" void initialise_gpu_()
+{
+  op_init(0, 0, 2);
+  elements = get_op_element_set();
+  TracerDiffusivity_data = get_op_dat("TracerDiffusivity");
+  TracerDiffusivity_map = get_op_map("TracerDiffusivity");
+  TracerDiffusivity_set = get_op_set("TracerDiffusivity");
+  Coordinate_data = get_op_dat("Coordinate");
+  Coordinate_map = get_op_map("Coordinate");
+  Coordinate_set = get_op_set("Coordinate");
+  Tracer_data = get_op_dat("Tracer");
+  Tracer_map = get_op_map("Tracer");
+  Tracer_set = get_op_set("Tracer");
+  Tracer_sparsity = op_decl_sparsity(Tracer_map, Tracer_map);
+  Tracer_mat = op_decl_mat(Tracer_sparsity);
+  Tracer_vec = op_clone_dat(Tracer_data, "Tracer_vec");
+}
+
+extern "C" void finalise_gpu_()
+{
+  op_exit();
+}
+
+extern "C" void run_model_(double* dt_pointer)
+{
+  op_par_loop(A, "A", elements, 
+              op_arg_mat(Tracer_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
+                         OP_INC), 
+              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
+              op_arg_dat(TracerDiffusivity_data, OP_ALL, 
+                         TracerDiffusivity_map, OP_READ));
+  op_par_loop(rhs, "rhs", elements, 
+              op_arg_dat(Tracer_vec, OP_ALL, Tracer_map, OP_INC), 
+              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
+              op_arg_dat(Tracer_data, OP_ALL, Tracer_map, OP_READ), 
+              op_arg_dat(TracerDiffusivity_data, OP_ALL, 
+                         TracerDiffusivity_map, OP_READ));
+  op_solve(Tracer_mat, Tracer_vec, Tracer_data);
+}
+
+extern "C" void return_fields_()
+{
+  op_fetch_data(Tracer_data);
+  set_op_dat("Tracer", Tracer_data);
+}
 
 
