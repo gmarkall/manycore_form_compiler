@@ -413,14 +413,14 @@ extern "C" void run_model_(double* dt_pointer)
   op_dat Tracer_data = get_op_dat("Tracer");
   op_map Tracer_map = get_op_map("Tracer");
   op_set Tracer_set = get_op_set("Tracer");
-  op_dat t_adv = op_clone_dat(Tracer_data, "t_adv");
+  op_dat t_adv = op_decl_vec(Tracer_data, "t_adv");
   op_sparsity M_sparsity = op_decl_sparsity(Tracer_map, Tracer_map);
   op_mat M_mat = op_decl_mat(M_sparsity);
   op_par_loop(M, "M", elements, 
               op_arg_mat(M_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
                          OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
-  op_dat adv_rhs_vec = op_clone_dat(t_adv, "adv_rhs_vec");
+  op_dat adv_rhs_vec = op_decl_vec(t_adv, "adv_rhs_vec");
   op_par_loop(adv_rhs, "adv_rhs", elements, 
               op_arg_dat(adv_rhs_vec, OP_ALL, Tracer_map, OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
@@ -433,7 +433,7 @@ extern "C" void run_model_(double* dt_pointer)
               op_arg_mat(A_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
                          OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
-  op_dat diff_rhs_vec = op_clone_dat(t_adv, "diff_rhs_vec");
+  op_dat diff_rhs_vec = op_decl_vec(t_adv, "diff_rhs_vec");
   op_par_loop(diff_rhs, "diff_rhs", elements, 
               op_arg_dat(diff_rhs_vec, OP_ALL, Tracer_map, OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 

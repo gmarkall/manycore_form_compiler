@@ -302,7 +302,7 @@ extern "C" void run_model_(double* dt_pointer)
               op_arg_mat(A_mat, OP_ALL, Velocity_map, OP_ALL, Velocity_map, 
                          OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
-  op_dat RHS_vec = op_clone_dat(Velocity_data, "RHS_vec");
+  op_dat RHS_vec = op_decl_vec(Velocity_data, "RHS_vec");
   op_par_loop(RHS, "RHS", elements, 
               op_arg_dat(RHS_vec, OP_ALL, Velocity_map, OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 

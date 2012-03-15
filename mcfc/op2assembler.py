@@ -36,8 +36,8 @@ OpRead = Constant('OP_READ')
 # OP2 functions
 opInit = lambda diags: FunctionCall('op_init', [Literal(0), Literal(0), diags])
 opExit = lambda : FunctionCall('op_exit', [])
-opCloneDat = lambda origin, name: \
-    FunctionCall('op_clone_dat', [origin, Literal(name)])
+opDeclVec = lambda origin, name: \
+    FunctionCall('op_decl_vec', [origin, Literal(name)])
 opDeclSparsity = lambda rowmap, colmap: \
     FunctionCall('op_decl_sparsity', [rowmap, colmap])
 opDeclMat = lambda sparsity: \
@@ -153,7 +153,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Get field data for orginal coefficient (dat, map, set)
             orig_data = field_data[self._eq.getFieldFromCoeff(field)]
             datVar = Variable(field, OpDat)
-            call = opCloneDat(orig_data[0], field)
+            call = opDeclVec(orig_data[0], field)
             func.append(AssignmentOp(Declaration(datVar), call))
             # The temporary dat has the same associate map and set as the
             # origin it has been derived from
@@ -186,7 +186,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Create the resulting vector
             vector = Variable(vecname+'_vec', OpDat)
             func.append(AssignmentOp(Declaration(vector),
-                opCloneDat(field_data[field][0], vector.name())))
+                opDeclVec(field_data[field][0], vector.name())))
             # Vector
             datArg = opArgDat(vector, OpAll, mmap, OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg])
