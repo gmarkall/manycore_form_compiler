@@ -302,6 +302,13 @@ class FormBackend(object):
         for deriv in spatialDerivatives:
             self.addInitialiser(deriv.operands()[0].element(), lambda e: e.dn, derivativeName)
 
+        # Build shape function initialisers for elements of coefficients (other
+        # than the Jacobian) used in the form. These need the shape functions
+        # for interpolation of the coefficient field at quadrature points.
+        for coeff in form_data.coefficients:
+            if not isJacobian(coeff):
+                self.addInitialiser(extract_subelement(coeff), lambda e: e.n)
+
         # Set basic properties of the element
         # FIXME: We only look at the element of the coordinate field for now
         # FIXME: This should be set someplace else
