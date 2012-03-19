@@ -74,8 +74,9 @@ def main():
     check_optionfile = 'no-optionfile' not in keys
     check_visualiser = 'no-visualiser' not in keys
 
-    flml_sources = ['identity', 'helmholtz', 'helmholtz-p2', 'euler-advection',
-                    'diffusion-3', 'simple-advection-diffusion', 'noop']
+    flml_sources = ['identity', 'identity-p2', 'helmholtz', 'helmholtz-p2',
+                    'euler-advection', 'diffusion-3',
+                    'simple-advection-diffusion', 'noop']
     ufl_sources = ['diffusion-1', 'diffusion-2', 'laplacian',
                    'identity-vector', 'swapped-advection']
     optionfile_sources = ['test', 'cdisk_adv_diff']
