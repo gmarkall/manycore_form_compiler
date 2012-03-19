@@ -46,7 +46,7 @@
         <real_value rank="0">0.0</real_value>
       </constant>
     </dump_period>
-    <output_mesh name="CoordinateMesh"/>
+    <output_mesh name="VelocityMesh"/>
     <stat/>
   </io>
   <timestepping>
@@ -131,7 +131,7 @@ state.scalar_fields["Tracer"] = solution</string_value>
     <scalar_field name="AbsoluteDifference" rank="0">
       <diagnostic field_name_b="Tracer" field_name_a="AnalyticalSolution">
         <algorithm name="Internal" material_phase_support="multiple"/>
-        <mesh name="CoordinateMesh"/>
+        <mesh name="VelocityMesh"/>
         <output/>
         <stat/>
         <convergence>
@@ -147,7 +147,7 @@ state.scalar_fields["Tracer"] = solution</string_value>
     </scalar_field>
     <scalar_field name="AnalyticalSolution" rank="0">
       <prognostic>
-        <mesh name="CoordinateMesh"/>
+        <mesh name="VelocityMesh"/>
         <equation name="AdvectionDiffusion"/>
         <spatial_discretisation>
           <continuous_galerkin>
