@@ -26,9 +26,9 @@ __device__ int eleIdx(int ele, int node, int val, int n_ele, int n_vals_per_node
   return node*n_ele*n_vals_per_node + val*n_ele + ele;
 }
 
-__device__ int lMatIdx(int x, int y, int cur_ele, int n_ele) 
+__device__ int lMatIdx(int x, int y, int cur_ele, int n_ele, int nodes_per_ele)
 {
-  return x*3*n_ele + y*n_ele + cur_ele;
+  return x*nodes_per_ele*n_ele + y*n_ele + cur_ele;
 }
 
 // For the addto in global matrices.
@@ -116,7 +116,7 @@ __global__ void matrix_addto(int*findrm, int *colm, double *global_matrix_val, i
         int mat_x = local_to_global[locToGlobIdx(i,x,nodes_per_ele)];
         int mat_y = local_to_global[locToGlobIdx(i,y,nodes_per_ele)];
         int mpos = pos(mat_x, mat_y, findrm, colm);
-        int localMatrixIdx = lMatIdx(x,y,i,n_ele);
+        int localMatrixIdx = lMatIdx(x,y,i,n_ele,nodes_per_ele);
         atomicDoubleAdd(&global_matrix_val[mpos], local_matrices[localMatrixIdx]);
       }
     }
