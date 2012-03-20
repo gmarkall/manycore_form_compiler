@@ -35,7 +35,6 @@ extern "C" void run_model_(double* dt_pointer)
   int numEle = state->getNumEle();
   int numNodes = state->getNumNodes();
   int* eleNodes = state->getEleNodes();
-  int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
 }

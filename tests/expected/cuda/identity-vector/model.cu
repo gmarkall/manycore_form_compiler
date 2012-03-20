@@ -328,7 +328,6 @@ extern "C" void run_model_(double* dt_pointer)
   int numEle = state->getNumEle();
   int numNodes = state->getNumNodes();
   int* eleNodes = state->getEleNodes();
-  int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
   double* CoordinateCoeff = state->getElementValue("Coordinate");
@@ -337,10 +336,10 @@ extern "C" void run_model_(double* dt_pointer)
   RHS<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff);
   cudaMemset(globalMatrix, 0, sizeof(double) * Velocity_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Velocity") * numNodes);
-  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
-  vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
+  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, state->getNodesPerEle("Velocity"));
+  vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, state->getNodesPerEle("Velocity"));
   cg_solve(Velocity_findrm, Velocity_findrm_size, Velocity_colm, Velocity_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
-  expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Velocity"), nodesPerEle);
+  expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Velocity"), state->getNodesPerEle("Velocity"));
 }
 
 extern "C" void return_fields_()

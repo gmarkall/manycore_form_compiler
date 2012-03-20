@@ -218,7 +218,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func.append(AssignmentOp(Declaration(dt), Dereference(dtp)))
 
         # Initialise some variables we need
-        for var in [ numEle, numNodes, eleNodes, nodesPerEle ]:
+        for var in [ numEle, numNodes, eleNodes ]:
             simpleAppend(func, var)
 
         # Build the block dimension declaration. Eventually this needs to be configurable
@@ -256,11 +256,11 @@ class CudaAssemblerBackend(AssemblerBackend):
             # Build calls to addto kernels. 
             # For the matrix
             params = [ sparsity['findrm'], sparsity['colm'], globalMatrix, eleNodes, \
-                         localMatrix, numEle, nodesPerEle ]
+                         localMatrix, numEle, stateGetter(nodesPerEle, param=result) ]
             func.append(CudaKernelCall('matrix_addto', params, gridXDim, blockXDim))
 
             # And the vector
-            params = [ globalVector, eleNodes, localVector, numEle, nodesPerEle ]
+            params = [ globalVector, eleNodes, localVector, numEle, stateGetter(nodesPerEle, param=result) ]
             func.append(CudaKernelCall('vector_addto', params, gridXDim, blockXDim))
             
             # call the solve
@@ -272,7 +272,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             # expand the result
             var = self.extractCoefficient(func, result)
             params = [ var, solutionVector, eleNodes, numEle, \
-                    stateGetter(numValsPerNode, param=result), nodesPerEle ]
+                    stateGetter(numValsPerNode, param=result), stateGetter(nodesPerEle, param=result) ]
             expand = CudaKernelCall('expand_data', params, gridXDim, blockXDim)
             func.append(expand)
 
