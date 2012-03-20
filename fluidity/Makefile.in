@@ -53,7 +53,7 @@ LIBFEMTOOLS=-lfemtools
 LIBADAPT=-ladaptivity
 BINARIES = $(UFL_PROGRAM)
 
-.SUFFIXES: .f90 .F90 .c .cpp .cu .o .a 
+.SUFFIXES: .f90 .F90 .c .cpp .cu .o .a
 
 %.o:	%.f90
 	$(FC) $(FCFLAGS) -c $<
@@ -84,5 +84,5 @@ lib/:
 
 clean:
 	rm -f *.o *.mod *.linkinfo
-	rm -rf build dist fluidity.egg-info 
+	rm -rf build dist fluidity.egg-info
 

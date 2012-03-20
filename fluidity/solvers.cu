@@ -1,7 +1,7 @@
 #include "cudastatic.hpp"
 #include <sys/time.h>
 
-// Texture references for CSR matrix 
+// Texture references for CSR matrix
 texture<int,1> tex_findrm, tex_colm;
 texture<int2,1> tex_val;
 
@@ -216,7 +216,7 @@ void cg_solve(int* k_findrm, int size_findrm, int* k_colm, int size_colm, double
   dim3 BlockDim(NUM_THREADS);
   dim3 GridDim(NUM_BLOCKS);
 
-  // Create diagonal preconditioning matrix (J = 1/diag(M)) 
+  // Create diagonal preconditioning matrix (J = 1/diag(M))
   create_jac_sym<<<GridDim,BlockDim>>>(rhs_val_size, k_findrm, k_colm, k_val, k_jac);
   //  printd("jac", k_jac, 1000);
   // Bind the matrix to the texture cache - this was not done earlier as we modified the matrix

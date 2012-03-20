@@ -77,20 +77,20 @@ program ufl_program
   call initialise_write_state()
 
   call initialise_gpu
-  
+
   ! Always output the initial conditions.
   call output_state(state, current_time, dt, timestep)
 
   call ETIME(tarray, start)
 
 
-  timestep_loop: do 
+  timestep_loop: do
     timestep=timestep+1
     ewrite (1,'(a,i0)') "Start of timestep ",timestep
-     
+
     call run_model(dt)
 
-    if (simulation_completed(current_time, timestep)) exit timestep_loop     
+    if (simulation_completed(current_time, timestep)) exit timestep_loop
 
     call advance_current_time(current_time, dt)
 
@@ -99,13 +99,13 @@ program ufl_program
     end if
 
   end do timestep_loop
-  
+
   call ETIME(tarray, finish)
   print *,"Simulation time: ",(finish-start)
 
   ! One last dump
   call output_state(state, current_time, dt, timestep)
-  
+
   call finalise_gpu
 
 contains
@@ -166,7 +166,7 @@ contains
 
   subroutine advance_current_time(current_time, dt)
     real, intent(inout) :: current_time, dt
-    
+
     ! Adaptive timestepping could go here.
 
     current_time=current_time + dt
@@ -184,7 +184,7 @@ contains
     call calculate_diagnostic_variables(state, exclude_nonrecalculated = .false.)
     call write_diagnostics(state, current_time, dt, timestep)
     call write_state(dump_no, state)
-    
+
   end subroutine output_state
 
 

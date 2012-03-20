@@ -21,7 +21,7 @@ class StateEntity
   public:
     StateEntity(string entityName);
     StateEntity(const StateEntity &o);
-    
+
     static int getNewRef();
     string getName();
     int getCount();
@@ -44,7 +44,7 @@ class Quadrature : public StateEntity
   public:
     Quadrature(int degree, int loc, int ngi, string name);
     Quadrature(const Quadrature &o);
-    
+
     int getNumQuadPoints();
 
     void setHostPointers(double *weight);
@@ -111,7 +111,7 @@ class Mesh : public StateEntity
     // Computed by transform_to_physical, and are a property of the mesh.
     double *cuda_transformed_dn;
     double *cuda_detwei;
-    
+
     CsrSparsity *atranspose, *connectivity;
 
   public:
@@ -162,12 +162,12 @@ class Field : public StateEntity
     int getRank();
 };
 
-class ScalarField : public Field 
+class ScalarField : public Field
 {
   public:
     ScalarField(int dim, string name);
     ScalarField(const ScalarField &o);
-    
+
     virtual void transferHtoD();
     virtual void transferDtoH();
     virtual int getCompactValSize() const;
@@ -175,7 +175,7 @@ class ScalarField : public Field
 };
 
 
-class VectorField : public Field 
+class VectorField : public Field
 {
   public:
     VectorField(int dim, string name);
@@ -188,12 +188,12 @@ class VectorField : public Field
 };
 
 
-class TensorField : public Field 
+class TensorField : public Field
 {
   public:
     TensorField(int dim, string name);
     TensorField(const TensorField &o);
-    
+
     virtual void transferHtoD();
     virtual void transferDtoH();
     virtual int getCompactValSize() const;

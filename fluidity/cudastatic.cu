@@ -1,9 +1,9 @@
 // cudastatic.cu
 //
-// Used by generated code - contains functions that will be the same in 
+// Used by generated code - contains functions that will be the same in
 // every implementation.
 
-// Utility functions for calculating locations when using 
+// Utility functions for calculating locations when using
 // expanded data layout.
 
 #include "cudastatic.hpp"
@@ -16,7 +16,7 @@ __device__ int locToGlobIdx(int ele, int node, int nodes_per_ele)
   return ele*nodes_per_ele + node;
 }
 
-__device__ int eleIdx(int ele, int node, int n_ele) 
+__device__ int eleIdx(int ele, int node, int n_ele)
 {
   return node*n_ele + ele;
 }
@@ -38,7 +38,7 @@ __device__ void atomicDoubleAdd(double *address, double val)
   unsigned long long int new_val, old;
   unsigned long long int old2 = __double_as_longlong(*address);
 
-  do 
+  do
   {
     old = old2;
     new_val = __double_as_longlong(__longlong_as_double(old) + val);
@@ -62,33 +62,33 @@ __device__ int pos(int i, int j, int* findrm, int* colm)
   lower_pos=0;
   lower_j = colm[row];
 
-  if (upper_j==j) 
+  if (upper_j==j)
   {
     csr_pos=upper_pos+base;
     return csr_pos;
   }
-  else if (lower_j==j) 
+  else if (lower_j==j)
   {
     csr_pos=lower_pos+base;
     return csr_pos;
   }
 
-  while(upper_pos-lower_pos>1) 
+  while(upper_pos-lower_pos>1)
   {
     this_pos=(upper_pos+lower_pos)/2;
     this_j = colm[row+this_pos];
 
-    if(this_j==j) 
+    if(this_j==j)
     {
       csr_pos=this_pos+base;
       return csr_pos;
     }
-    else if(this_j>j) 
+    else if(this_j>j)
     {
       upper_j=this_j;
       upper_pos=this_pos;
     }
-    else if(this_j<j) 
+    else if(this_j<j)
     {
       lower_j=this_j;
       lower_pos=this_pos;
@@ -107,11 +107,11 @@ __device__ int pos(int i, int j, int* findrm, int* colm)
 
 __global__ void matrix_addto(int*findrm, int *colm, double *global_matrix_val, int *local_to_global, double *local_matrices, int n_ele, int nodes_per_ele)
 {
-  for (int i=THREAD_ID; i<n_ele; i+=THREAD_COUNT) 
+  for (int i=THREAD_ID; i<n_ele; i+=THREAD_COUNT)
   {
-    for (int x=0; x<nodes_per_ele; x++) 
+    for (int x=0; x<nodes_per_ele; x++)
     {
-      for (int y=0; y<nodes_per_ele; y++) 
+      for (int y=0; y<nodes_per_ele; y++)
       {
         int mat_x = local_to_global[locToGlobIdx(i,x,nodes_per_ele)];
         int mat_y = local_to_global[locToGlobIdx(i,y,nodes_per_ele)];
@@ -125,7 +125,7 @@ __global__ void matrix_addto(int*findrm, int *colm, double *global_matrix_val, i
 
 __global__ void vector_addto(double *global_vector, int *local_to_global, double *local_vectors, int n_ele, int nodes_per_ele)
 {
-  for (int ele=THREAD_ID; ele<n_ele; ele+=THREAD_COUNT) 
+  for (int ele=THREAD_ID; ele<n_ele; ele+=THREAD_COUNT)
   {
     for (int i=0; i<nodes_per_ele; i++)
     {
@@ -140,7 +140,7 @@ __global__ void vector_addto(double *global_vector, int *local_to_global, double
 
 __global__ void expand_data(double *dest, double *src, int *local_to_global, int n_ele, int n_vals_per_node, int nodes_per_ele)
 {
-  for (int ele=THREAD_ID; ele<n_ele; ele+=THREAD_COUNT) 
+  for (int ele=THREAD_ID; ele<n_ele; ele+=THREAD_COUNT)
   {
     for (int node=0; node<nodes_per_ele; node++)
     {
@@ -156,7 +156,7 @@ __global__ void expand_data(double *dest, double *src, int *local_to_global, int
 
 __global__ void contract_data(double *dest, double *src, int *local_to_global, int n_ele, int n_vals_per_node, int nodes_per_ele)
 {
-  for (int ele=THREAD_ID; ele<n_ele; ele+=THREAD_COUNT) 
+  for (int ele=THREAD_ID; ele<n_ele; ele+=THREAD_COUNT)
   {
     for (int node=0; node<nodes_per_ele; node++)
     {

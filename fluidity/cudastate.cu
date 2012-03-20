@@ -17,13 +17,13 @@
 
 #if DEBUG_MEM
 static unsigned long inKB(unsigned long bytes)
-{ 
-  return bytes/1024; 
+{
+  return bytes/1024;
 }
 
 static unsigned long inMB(unsigned long bytes)
-{ 
-  return bytes/(1024*1024); 
+{
+  return bytes/(1024*1024);
 }
 
 
@@ -60,7 +60,7 @@ void allocate(void **ptr, int length)
   size_t free, total;
 
   res = cuMemGetInfo(&free, &total);
-  
+
   if(res!=CUDA_SUCCESS)
   {
     cerr << "Driver API Error" << endl;
@@ -103,7 +103,7 @@ void copyDtoH(void *dev_ptr, void *host_ptr, int length)
 }
 
 // StateEntity
-// The base of all entities in state - most methods are 
+// The base of all entities in state - most methods are
 // empty as we don't need them to do anything, but
 // would like to visit every entity easily.
 
@@ -354,7 +354,7 @@ Mesh::Mesh(const Mesh &o) : StateEntity(o)
   num_nodes = o.num_nodes;
   dim = o.dim;
 
-  shape = new Element(*(o.shape));  
+  shape = new Element(*(o.shape));
   int num_local_nodes = num_ele * shape->getLoc();
   allocate((void**)&cuda_ndglno, sizeof(int)*num_local_nodes);
   cudaMemcpy(cuda_ndglno, o.cuda_ndglno, sizeof(int)*num_local_nodes, cudaMemcpyDeviceToDevice);
@@ -385,7 +385,7 @@ void Mesh::allocateGPUMem()
 
   allocate((void**)&cuda_transformed_dn, transformed_dn_size);
   allocate((void**)&cuda_detwei, sizeof(double)*num_ele* shape->getNgi());
-  
+
 }
 
 void Mesh::freeGPUMem()
@@ -593,7 +593,7 @@ void TensorField::transferHtoD()
 {
   cerr << "Oh no, I haven't implemented this yet." << __FUNCTION__ << endl;
   exit(-1);
-  
+
   cout << "Copying tensor field " << getName() << " to GPU." << endl;
   mesh->transferHtoD();
   copyHtoD(host_val, cuda_compact_val, sizeof(double)*getCompactValSize());
@@ -708,7 +708,7 @@ void StateHolder::insertTemporaryField(string newFieldName, string likeFieldName
   if (sf)
   {
     newField = new ScalarField(*sf);
-  } 
+  }
   else if (vf)
   {
     newField = new VectorField(*vf);
@@ -728,13 +728,13 @@ void StateHolder::insertTemporaryField(string newFieldName, string likeFieldName
 
 // Prototype for accessing fortran function. The prototype can't go in the
 // extractField method due to the linkage specification.
-extern "C" void extract_scalar_field_wrapper(const char*, int*, int**, int*, int**, int*, 
-		    		             int**, int*, int**, int*, 
+extern "C" void extract_scalar_field_wrapper(const char*, int*, int**, int*, int**, int*,
+		    		             int**, int*, int**, int*,
 					     int*, int*, int**, int*, int*,
 					     int*, double**, double**, int*, double**, double**);
 
-extern "C" void extract_vector_field_wrapper(const char*, int*, int**, int*, int**, int*, 
-		    		             int**, int*, int**, int*, 
+extern "C" void extract_vector_field_wrapper(const char*, int*, int**, int*, int**, int*,
+		    		             int**, int*, int**, int*,
 					     int*, int*, int**, int*, int*,
 					     int*, double**, double**, int*, double**, double**);
 
@@ -751,15 +751,15 @@ void StateHolder::extractField(string field_name, int rank)
   switch (rank)
   {
     case 0: // scalar field
-      extract_scalar_field_wrapper(fortran_name, &fortran_length, &conn_findrm, &conn_findrm_size, &conn_colm, &conn_colm_size, 
-                                      &at_findrm, &at_findrm_size, &at_colm, &at_colm_size, 
+      extract_scalar_field_wrapper(fortran_name, &fortran_length, &conn_findrm, &conn_findrm_size, &conn_colm, &conn_colm_size,
+                                      &at_findrm, &at_findrm_size, &at_colm, &at_colm_size,
   				      &num_ele, &num_nodes, &ndglno, &loc, &dim,
 				      &ngi, &n, &dn, &degree, &weight, &val);
       break;
 
     case 1: // vector field
-      extract_vector_field_wrapper(fortran_name, &fortran_length, &conn_findrm, &conn_findrm_size, &conn_colm, &conn_colm_size, 
-                                      &at_findrm, &at_findrm_size, &at_colm, &at_colm_size, 
+      extract_vector_field_wrapper(fortran_name, &fortran_length, &conn_findrm, &conn_findrm_size, &conn_colm, &conn_colm_size,
+                                      &at_findrm, &at_findrm_size, &at_colm, &at_colm_size,
   				      &num_ele, &num_nodes, &ndglno, &loc, &dim,
 				      &ngi, &n, &dn, &degree, &weight, &val);
       break;
@@ -800,7 +800,7 @@ void StateHolder::extractField(string field_name, int rank)
     case 0:
       field = new ScalarField(dim, field_name);
       break;
-    
+
     case 1:
       field = new VectorField(dim, field_name);
       break;
@@ -809,7 +809,7 @@ void StateHolder::extractField(string field_name, int rank)
       field = new TensorField(dim, field_name);
       break;
   }
-  
+
   field->setHostPointers(val);
 
   field->setMesh(mesh);
@@ -868,7 +868,7 @@ double* StateHolder::getQuadWeights()
   // Just using the first field we find for now.
   FieldIterator fi = fields.begin();
   Mesh *mesh = ((*fi).second)->getMesh();
-  return mesh->getShape()->getQuadrature()->getWeights(); 
+  return mesh->getShape()->getQuadrature()->getWeights();
 }
 
 double* StateHolder::getReferenceN()

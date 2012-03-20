@@ -105,7 +105,7 @@ contains
 
     ! Connectivity sparsity
     conn_sparsity = get_csr_sparsity_firstorder(state, field%mesh, field%mesh)
-    
+
     tmp_int_ptr => conn_sparsity%findrm(1)
     conn_findrm = c_loc(tmp_int_ptr)
 
@@ -175,7 +175,7 @@ contains
     ! Field
     tmp_real_ptr => field%val(1)
     val = c_loc(tmp_real_ptr)
-  
+
     print *,"Finished extraction wrapper for scalar field: ",field_name
 
   end subroutine extract_scalar_field_wrapper
@@ -238,7 +238,7 @@ contains
 
     ! Connectivity sparsity
     conn_sparsity = get_csr_sparsity_firstorder(state, field%mesh, field%mesh)
-    
+
     tmp_int_ptr => conn_sparsity%findrm(1)
     conn_findrm = c_loc(tmp_int_ptr)
 
