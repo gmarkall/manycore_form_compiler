@@ -822,64 +822,6 @@ double* StateHolder::getCoordinates()
   return fields["Coordinate"]->getVal();
 }
 
-int StateHolder::getNumEle()
-{
-  // Just using the first field we find for now.
-  FieldIterator fi = fields.begin();
-  Mesh *mesh = ((*fi).second)->getMesh();
-  return mesh->getNumEle();
-}
-
-int StateHolder::getNumNodes()
-{
-  // Just using the first field we find for now.
-  FieldIterator fi = fields.begin();
-  Mesh *mesh = ((*fi).second)->getMesh();
-  return mesh->getNumNodes();
-}
-
-double* StateHolder::getDetwei()
-{
-  // Just using the first field we find for now.
-  FieldIterator fi = fields.begin();
-  Mesh *mesh = ((*fi).second)->getMesh();
-  return mesh->getDetwei();
-}
-
-int* StateHolder::getEleNodes()
-{
-  // Just using the first field we find for now.
-  FieldIterator fi = fields.begin();
-  Mesh *mesh = ((*fi).second)->getMesh();
-  return mesh->getCudaNdglno();
-}
-
-double* StateHolder::getReferenceDn()
-{
-  // Just using the first field we find for now.
-  FieldIterator fi = fields.begin();
-  //cout << ((*fi).first) << endl;
-  Mesh *mesh = ((*fi).second)->getMesh();
-  return mesh->getShape()->getDn();
-}
-
-double* StateHolder::getQuadWeights()
-{
-  // Just using the first field we find for now.
-  FieldIterator fi = fields.begin();
-  Mesh *mesh = ((*fi).second)->getMesh();
-  return mesh->getShape()->getQuadrature()->getWeights();
-}
-
-double* StateHolder::getReferenceN()
-{
-  // Just using the first field we find for now.
-  FieldIterator fi = fields.begin();
-  Mesh *mesh = ((*fi).second)->getMesh();
-  return mesh->getShape()->getN();
-}
-
-
 int StateHolder::getNumEle(string fieldName)
 {
   return fields[fieldName]->getMesh()->getNumEle();
