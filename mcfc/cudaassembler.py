@@ -228,48 +228,44 @@ class CudaAssemblerBackend(AssemblerBackend):
         gridXDim = Variable('gridXDim', Integer())
         func.append(AssignmentOp(Declaration(gridXDim), Literal(128)))
 
-        # These parameters will be needed by every matrix/vector assembly
-        # see also the KernelParameterComputer in cudaform.py.
-        matrixParameters = [numEle, localMatrix, dt]
-        vectorParameters = [numEle, localVector, dt]
-
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
             result = self._eq.getResultCoeffName(count)
             matrix, vector = forms
             sparsity = self._sparsities[result]
 
-            # Call the matrix assembly
-            params = self._makeParameterListAndGetters(func, matrix, matrixParameters)
+            # Matrix assembly
+
+            # Compute the local matrix
+            params = self._makeParameterListAndGetters(func, matrix, [numEle, localMatrix, dt])
             func.append(CudaKernelCall(matrix.form_data().name, params, gridXDim, blockXDim))
-
-            # Then call the rhs assembly
-            params = self._makeParameterListAndGetters(func, vector, vectorParameters)
-            func.append(CudaKernelCall(vector.form_data().name, params, gridXDim, blockXDim))
-
-            # Zero the global matrix and vector
-            # First we need to get numvalspernode, for the length of the global vector
+            # Zero the global matrix
             buildAppendCudaMemsetZero(func, globalMatrix, sparsity['colm_size'])
-            size = MultiplyOp(stateGetter(numValsPerNode, param=result), numNodes)
-            buildAppendCudaMemsetZero(func, globalVector, size)
-
-            # Build calls to addto kernels. 
-            # For the matrix
+            # Build call to addto kernel for the matrix
             params = [ sparsity['findrm'], sparsity['colm'], globalMatrix, eleNodes, \
                          localMatrix, numEle, stateGetter(nodesPerEle, param=result) ]
             func.append(CudaKernelCall('matrix_addto', params, gridXDim, blockXDim))
 
-            # And the vector
+            # RHS assembly
+
+            # Comput the local vector
+            params = self._makeParameterListAndGetters(func, vector, [numEle, localVector, dt])
+            func.append(CudaKernelCall(vector.form_data().name, params, gridXDim, blockXDim))
+            # Zero the global vector
+            # First we need to get numvalspernode, for the length of the global vector
+            size = MultiplyOp(stateGetter(numValsPerNode, param=result), numNodes)
+            buildAppendCudaMemsetZero(func, globalVector, size)
+            # Build call to addto kernel for the vector
             params = [ globalVector, eleNodes, localVector, numEle, stateGetter(nodesPerEle, param=result) ]
             func.append(CudaKernelCall('vector_addto', params, gridXDim, blockXDim))
             
-            # call the solve
+            # Call the solve
             params = [ sparsity['findrm'], sparsity['findrm_size'], \
                        sparsity['colm'], sparsity['colm_size'], \
                        globalMatrix, globalVector, numNodes, solutionVector ]
             func.append(FunctionCall('cg_solve', params))
 
-            # expand the result
+            # Expand the result
             var = self.extractCoefficient(func, result)
             params = [ var, solutionVector, eleNodes, numEle, \
                     stateGetter(numValsPerNode, param=result), stateGetter(nodesPerEle, param=result) ]
