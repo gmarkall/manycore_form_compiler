@@ -23,7 +23,12 @@
 from ufl.argument import Argument
 from ufl.coefficient import Coefficient
 from ufl.common import Counted
-from ufl.expr import Operator
+# FIXME: adapt to UFL module refactoring in rev 1299
+try:
+    from ufl.operatorbase import Operator
+# FIXME: maintain backwards compatibility to previous interface
+except ImportError:
+    from ufl.expr import Operator
 from ufl.form import Form
 from ufl.algorithms.transformations import Transformer as UflTransformer, is_post_handler
 from ufl.differentiation import SpatialDerivative
