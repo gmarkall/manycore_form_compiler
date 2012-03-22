@@ -4,11 +4,6 @@
 
 #include "cudastatic.hpp"
 #include "cudastate.hpp"
-double* localVector;
-double* localMatrix;
-double* globalVector;
-double* globalMatrix;
-double* solutionVector;
 
 
 StateHolder* state;
@@ -20,8 +15,6 @@ extern "C" void initialise_gpu_()
   state->extractField("Tracer", 0);
   state->allocateAllGPUMemory();
   state->transferAllFields();
-  int numEle = state->getNumEle();
-  int numNodes = state->getNumNodes();
 }
 
 extern "C" void finalise_gpu_()
@@ -37,6 +30,13 @@ extern "C" void run_model_(double* dt_pointer)
   int* eleNodes = state->getEleNodes();
   int blockXDim = 64;
   int gridXDim = 128;
+  double* localVector;
+  double* localMatrix;
+  double* globalVector;
+  double* globalMatrix;
+  double* solutionVector;
+  int numValsPerNode;
+  int numVectorEntries;
 }
 
 extern "C" void return_fields_()
