@@ -224,6 +224,7 @@ class StateHolder
     void insertEntity(StateEntity *entity);
     void insertField(Field *field);
     void insertTemporaryField(string newFieldName, string likeFieldName);
+    double* getCoordinates();
     // We're assuming that there's only one mesh upon which all function spaces
     // are build for now, so we can get the number of elements and detwei for
     // any field and it will do.
@@ -231,10 +232,16 @@ class StateHolder
     int getNumNodes();
     int* getEleNodes();
     double* getDetwei();
-    double* getCoordinates();
     double* getReferenceDn();
     double* getQuadWeights();
     double* getReferenceN();
+    int getNumEle(string fieldName);
+    int getNumNodes(string fieldName);
+    int* getEleNodes(string fieldName);
+    double* getDetwei(string fieldName);
+    double* getReferenceDn(string fieldName);
+    double* getQuadWeights(string fieldName);
+    double* getReferenceN(string fieldName);
     double* getBasisFunction(string fieldName);
     double* getBasisFunctionDerivative(string fieldName);
     double* getElementValue(string fieldName);

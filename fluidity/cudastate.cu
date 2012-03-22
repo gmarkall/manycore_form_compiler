@@ -817,6 +817,11 @@ void StateHolder::extractField(string field_name, int rank)
   insertField(field);
 }
 
+double* StateHolder::getCoordinates()
+{
+  return fields["Coordinate"]->getVal();
+}
+
 int StateHolder::getNumEle()
 {
   // Just using the first field we find for now.
@@ -849,11 +854,6 @@ int* StateHolder::getEleNodes()
   return mesh->getCudaNdglno();
 }
 
-double* StateHolder::getCoordinates()
-{
-  return fields["Coordinate"]->getVal();
-}
-
 double* StateHolder::getReferenceDn()
 {
   // Just using the first field we find for now.
@@ -877,6 +877,42 @@ double* StateHolder::getReferenceN()
   FieldIterator fi = fields.begin();
   Mesh *mesh = ((*fi).second)->getMesh();
   return mesh->getShape()->getN();
+}
+
+
+int StateHolder::getNumEle(string fieldName)
+{
+  return fields[fieldName]->getMesh()->getNumEle();
+}
+
+int StateHolder::getNumNodes(string fieldName)
+{
+  return fields[fieldName]->getMesh()->getNumNodes();
+}
+
+double* StateHolder::getDetwei(string fieldName)
+{
+  return fields[fieldName]->getMesh()->getDetwei();
+}
+
+int* StateHolder::getEleNodes(string fieldName)
+{
+  return fields[fieldName]->getMesh()->getCudaNdglno();
+}
+
+double* StateHolder::getReferenceDn(string fieldName)
+{
+  return fields[fieldName]->getMesh()->getShape()->getDn();
+}
+
+double* StateHolder::getQuadWeights(string fieldName)
+{
+  return fields[fieldName]->getMesh()->getShape()->getQuadrature()->getWeights();
+}
+
+double* StateHolder::getReferenceN(string fieldName)
+{
+  return fields[fieldName]->getMesh()->getShape()->getN();
 }
 
 int StateHolder::getDimension(string fieldName)
