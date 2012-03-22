@@ -25,9 +25,6 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   double dt = *dt_pointer;
-  int numEle = state->getNumEle();
-  int numNodes = state->getNumNodes();
-  int* eleNodes = state->getEleNodes();
   int blockXDim = 64;
   int gridXDim = 128;
   double* localVector;
@@ -35,8 +32,6 @@ extern "C" void run_model_(double* dt_pointer)
   double* globalVector;
   double* globalMatrix;
   double* solutionVector;
-  int numValsPerNode;
-  int numVectorEntries;
 }
 
 extern "C" void return_fields_()

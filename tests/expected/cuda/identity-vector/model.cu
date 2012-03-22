@@ -300,9 +300,6 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   double dt = *dt_pointer;
-  int numEle = state->getNumEle();
-  int numNodes = state->getNumNodes();
-  int* eleNodes = state->getEleNodes();
   int blockXDim = 64;
   int gridXDim = 128;
   double* localVector;
@@ -310,35 +307,37 @@ extern "C" void run_model_(double* dt_pointer)
   double* globalVector;
   double* globalMatrix;
   double* solutionVector;
-  int numValsPerNode;
-  int numVectorEntries;
   CsrSparsity* Velocity_sparsity = state->getSparsity("Velocity");
   int* Velocity_colm = Velocity_sparsity->getCudaColm();
   int* Velocity_findrm = Velocity_sparsity->getCudaFindrm();
   int Velocity_colm_size = Velocity_sparsity->getSizeColm();
   int Velocity_findrm_size = Velocity_sparsity->getSizeFindrm();
-  numValsPerNode = state->getValsPerNode("Velocity");
-  numVectorEntries = state->getNodesPerEle("Velocity");
-  numVectorEntries = numVectorEntries * numValsPerNode;
-  cudaMalloc((void**)(&localMatrix), sizeof(double) * numEle * numVectorEntries * numVectorEntries);
+  int Velocity_numEle = state->getNumEle("Velocity");
+  int Velocity_numNodes = state->getNumNodes("Velocity");
+  int* Velocity_eleNodes = state->getEleNodes("Velocity");
+  int Velocity_nodesPerEle = state->getNodesPerEle("Velocity");
+  int Velocity_numValsPerNode = state->getValsPerNode("Velocity");
+  int Velocity_numVectorEntries = state->getNodesPerEle("Velocity");
+  Velocity_numVectorEntries = Velocity_numVectorEntries * Velocity_numValsPerNode;
+  cudaMalloc((void**)(&localMatrix), sizeof(double) * Velocity_numEle * Velocity_numVectorEntries * Velocity_numVectorEntries);
   double* CoordinateCoeff = state->getElementValue("Coordinate");
-  A<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
+  A<<<gridXDim,blockXDim>>>(Velocity_numEle, localMatrix, dt, CoordinateCoeff);
   cudaMalloc((void**)(&globalMatrix), sizeof(double) * Velocity_colm_size);
   cudaMemset(globalMatrix, 0, sizeof(double) * Velocity_colm_size);
-  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, state->getNodesPerEle("Velocity"));
+  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, Velocity_eleNodes, localMatrix, Velocity_numEle, Velocity_nodesPerEle);
   cudaFree(localMatrix);
-  cudaMalloc((void**)(&localVector), sizeof(double) * numEle * numVectorEntries);
+  cudaMalloc((void**)(&localVector), sizeof(double) * Velocity_numEle * Velocity_numVectorEntries);
   double* VelocityCoeff = state->getElementValue("Velocity");
-  RHS<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff);
-  cudaMalloc((void**)(&globalVector), sizeof(double) * numNodes * numValsPerNode);
-  cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Velocity") * numNodes);
-  vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, state->getNodesPerEle("Velocity"));
+  RHS<<<gridXDim,blockXDim>>>(Velocity_numEle, localVector, dt, CoordinateCoeff, VelocityCoeff);
+  cudaMalloc((void**)(&globalVector), sizeof(double) * Velocity_numNodes * Velocity_numValsPerNode);
+  cudaMemset(globalVector, 0, sizeof(double) * Velocity_numValsPerNode * Velocity_numNodes);
+  vector_addto<<<gridXDim,blockXDim>>>(globalVector, Velocity_eleNodes, localVector, Velocity_numEle, Velocity_nodesPerEle);
   cudaFree(localVector);
-  cudaMalloc((void**)(&solutionVector), sizeof(double) * numNodes * numValsPerNode);
-  cg_solve(Velocity_findrm, Velocity_findrm_size, Velocity_colm, Velocity_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
+  cudaMalloc((void**)(&solutionVector), sizeof(double) * Velocity_numNodes * Velocity_numValsPerNode);
+  cg_solve(Velocity_findrm, Velocity_findrm_size, Velocity_colm, Velocity_colm_size, globalMatrix, globalVector, Velocity_numNodes, solutionVector);
   cudaFree(globalMatrix);
   cudaFree(globalVector);
-  expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Velocity"), state->getNodesPerEle("Velocity"));
+  expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, Velocity_eleNodes, Velocity_numEle, Velocity_numValsPerNode, Velocity_nodesPerEle);
   cudaFree(solutionVector);
 }
 
