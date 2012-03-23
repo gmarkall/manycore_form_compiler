@@ -629,15 +629,21 @@ int TensorField::getExpandedValSize() const
 
 StateHolder::StateHolder()
 {
+  #if DEBUG_MEM
   cout << "Constructing state" << endl;
+  #endif
 }
 
 StateHolder::~StateHolder()
 {
+  #if DEBUG_MEM
   cout << "Destroying state" <<endl;
+  #endif
   for(EntityIterator i=entities.begin(); i!=entities.end(); ++i)
   {
+    #if DEBUG_MEM
     cout << "Deleting object " << i->first << " (" << i->second->getName() << ")" << endl;
+    #endif
     i->second->freeGPUMem();
     delete i->second;
   }
@@ -649,7 +655,9 @@ StateHolder::~StateHolder()
 
 void StateHolder::initialise()
 {
+  #if DEBUG_MEM
   cout << "Initialising state..." << endl;
+  #endif
   extractField("Coordinate", 1);
 
   #if DEBUG_MEM
