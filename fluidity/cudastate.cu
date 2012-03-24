@@ -677,8 +677,11 @@ void StateHolder::initialise()
 void StateHolder::transferAllFields()
 {
   cout << "Transferring all fields to GPU" << endl;
-  for(FieldIterator i=fields.begin(); i!=fields.end(); ++i)
+  for(FieldIterator i=fields.begin(); i!=fields.end(); ++i) {
     i->second->transferHtoD();
+    vector_dump(i->second->getCompactVal(), i->second->getCompactValSize(), (i->first+"_compact.mtx").c_str());
+    vector_dump(i->second->getVal(), i->second->getExpandedValSize(), (i->first+"_expanded.mtx").c_str());
+  }
 }
 
 void StateHolder::allocateAllGPUMemory()
@@ -828,6 +831,8 @@ void StateHolder::extractField(string field_name, int rank)
   field->setMesh(mesh);
   insertEntity(field);
   insertField(field);
+
+  host_vector_dump(val, field->getCompactValSize(), (field_name+".mtx").c_str());
 }
 
 double* StateHolder::getCoordinates()
