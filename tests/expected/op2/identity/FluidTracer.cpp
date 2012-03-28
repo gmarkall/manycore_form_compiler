@@ -4,7 +4,7 @@
 
 
 
-void a(double localTensor[3][3], double dt, double c0[3][2])
+void a(double* localTensor, double dt, double* c0[2], int i, int j)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
@@ -49,22 +49,16 @@ void a(double localTensor[3][3], double dt, double c0[3][2])
       };
     };
   };
-  for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
+  
+  for(int i_g = 0; i_g < 6; i_g++)
   {
-    for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
-    {
-      localTensor[i_r_0][i_r_1] = 0.0;
-      for(int i_g = 0; i_g < 6; i_g++)
-      {
-        double ST0 = 0.0;
-        ST0 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]);
-        localTensor[i_r_0][i_r_1] += ST0 * w[i_g];
-      };
-    };
+    double ST0 = 0.0;
+    ST0 += CG1[i][i_g] * CG1[j][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]);
+    localTensor[i][j] += ST0 * w[i_g];
   };
 }
 
-void L(double localTensor[3], double dt, double c0[3][2], double c1[3])
+void L(double** localTensor, double dt, double* c0[2], double* c1)
 {
   const double CG1[3][6] = { {  0.09157621, 0.09157621, 0.81684757,
                                0.44594849, 0.44594849, 0.10810302 },
