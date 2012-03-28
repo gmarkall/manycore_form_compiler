@@ -36,13 +36,24 @@ class Op2FormBackend(FormBackend):
         # Do however use the Jacobian coefficent when building the name, since
         # the coordinate coefficient doesn't get renumbered!
         name = buildCoefficientName(coeff)
-        return buildArrayParameter(name, indices)
+        return buildPtrArrParameter(name, indices)
 
     def _buildLocalTensorParameter(self, form):
-        return buildArrayParameter(localTensor.name(), \
-                self._expressionBuilder.subscript_LocalTensor(form))
+        n = localTensor.name()
+        # OP2 needs a * for a local matrix or a ** for a local vector.
+        # (Yes, really).
+        if form.form_data().rank == 2:
+            return buildPtrParameter(n)
+        else: 
+            return buildPtrPtrParameter(n)
 
-def buildArrayParameter(name, indices):
-    return Variable(name, Array(Real(), [i.extent() for i in indices]))
+def buildPtrParameter(name):
+    return Variable(name, Pointer(Real()))
+
+def buildPtrPtrParameter(name):
+    return Variable(name, Pointer(Pointer(Real())))
+
+def buildPtrArrParameter(name, indices):
+    return Variable(name, Pointer(Array(Real(), [i.extent() for i in indices[1:]])))
 
 # vim:sw=4:ts=4:sts=4:et
