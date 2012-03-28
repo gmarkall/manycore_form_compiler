@@ -534,6 +534,9 @@ class Pointer(Type):
     def unparse_internal(self):
         return '%s*' % (self._base.unparse())
 
+    def unparse_post(self):
+        return self._base.unparse_post()
+
 class Array(Type):
 
     def __init__(self, base, extents):
