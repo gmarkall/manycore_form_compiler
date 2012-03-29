@@ -49,7 +49,6 @@ void a(double* localTensor, double dt, double* c0[2], int i, int j)
       };
     };
   };
-  
   for(int i_g = 0; i_g < 6; i_g++)
   {
     double ST0 = 0.0;
