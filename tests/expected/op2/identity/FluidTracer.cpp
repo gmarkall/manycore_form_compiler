@@ -53,7 +53,7 @@ void a(double* localTensor, double dt, double* c0[2], int i, int j)
   {
     double ST0 = 0.0;
     ST0 += CG1[i][i_g] * CG1[j][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]);
-    localTensor[i][j] += ST0 * w[i_g];
+    localTensor[0] += ST0 * w[i_g];
   };
 }
 
@@ -110,12 +110,12 @@ void L(double** localTensor, double dt, double* c0[2], double* c1)
   };
   for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
   {
-    localTensor[i_r_0] = 0.0;
+    localTensor[i_r_0][0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
       double ST1 = 0.0;
       ST1 += CG1[i_r_0][i_g] * c_q1[i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]);
-      localTensor[i_r_0] += ST1 * w[i_g];
+      localTensor[i_r_0][0] += ST1 * w[i_g];
     };
   };
 }
