@@ -59,7 +59,7 @@ class FormBackend(object):
         declarations = self._buildBasisTensors(form_data)
 
         # Build the loop nest
-        loopNest, tensorBody, gaussBody = self.buildExpressionLoopNest(form)
+        loopNest, gaussBody = self.buildExpressionLoopNest(form)
         statements = [loopNest]
 
         # Insert the expressions into the loop nest
@@ -139,11 +139,11 @@ class FormBackend(object):
         gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
         
         # Loops over the indices of the local tensor
-        outerLoop, tensorLoop = self.buildLocalTensorLoops(form, gaussLoop)
+        outerLoop = self.buildLocalTensorLoops(form, gaussLoop)
         
         # Hand back the outer loop, so it can be inserted into some
         # scope.
-        return outerLoop, tensorLoop.body(), gaussLoop.body()
+        return outerLoop, gaussLoop.body()
 
     def buildLocalTensorLoops(self, form, gaussLoop):
         # Build the loop over the first rank, which always exists
@@ -163,7 +163,7 @@ class FormBackend(object):
         # Put the gauss loop inside the local tensor loop nest
         loop.append(gaussLoop)
 
-        return outerLoop, loop
+        return outerLoop
 
     def buildCoefficientLoopNest(self, coeff, rank, loop):
         "Build loop nest evaluating a coefficient at a given quadrature point."

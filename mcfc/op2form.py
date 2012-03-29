@@ -48,12 +48,10 @@ class Op2FormBackend(FormBackend):
             return buildPtrPtrParameter(n)
 
     def buildLocalTensorLoops(self, form, gaussLoop):
+        # In the matrix case, there are no loops over the indices of the local
+        # tensor.
         if form.form_data().rank == 2:
-            # FIXME: (before merge) returns a dummy scope for the local tensor
-            # initialiser to go in to. ideally we should be more smart and not
-            # be attempting to build the LT initialiser at all if it's not
-            # required
-            return gaussLoop, ForLoop(0,0,0)
+            return gaussLoop
         else:
             return super(Op2FormBackend, self).buildLocalTensorLoops(form, gaussLoop)
 
