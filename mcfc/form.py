@@ -62,14 +62,8 @@ class FormBackend(object):
         loopNest, tensorBody, gaussBody = self.buildExpressionLoopNest(form)
         statements = [loopNest]
 
-        # Initialise the local tensor values to 0
-        initialiser = self.buildLocalTensorInitialiser(form)
-        #loopBody = getScopeFromNest(loopNest, rank)
-        tensorBody.prepend(initialiser)
-
         # Insert the expressions into the loop nest
         partitions = findPartitions(integrand)
-        #loopBody = getScopeFromNest(loopNest, rank + 1)
         loopBody = gaussBody
         for (tree, indices) in partitions:
             expression, listexpressions = self.buildExpression(form, tree)
@@ -143,7 +137,6 @@ class FormBackend(object):
 
         # Build a loop for the quadrature
         gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
-        #outerLoop = gaussLoop
         
         # Loops over the indices of the local tensor
         outerLoop, tensorLoop = self.buildLocalTensorLoops(form, gaussLoop)
@@ -163,6 +156,10 @@ class FormBackend(object):
             loop.append(basisLoop)
             loop = basisLoop
 
+        # Initialise the local tensor values to 0
+        initialiser = self.buildLocalTensorInitialiser(form)
+        loop.body().prepend(initialiser)
+        
         # Put the gauss loop inside the local tensor loop nest
         loop.append(gaussLoop)
 
