@@ -37,6 +37,13 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
+    def subscript_LocalTensor(self, form):
+        # For matrices the local tensor variable is a pointer to a single entry.
+        if form.form_data().rank == 2:
+            return []
+        else:
+            return super(Op2ExpressionBuilder,self).subscript_LocalTensor(form)
+
 class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def buildSubscript(self, variable, indices):
