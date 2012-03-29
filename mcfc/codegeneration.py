@@ -595,6 +595,8 @@ def getScopeFromNest(nest, depth):
     # Descend through the bodies until we reach the correct one
     for i in range(1,depth):
         loop = body.find(lambda x: isinstance(x, ForLoop))
+        if loop is None: 
+            raise RuntimeError("Loop nest depth exceeded: %d > %d" % (depth, i))
         body = loop.body()
     return body
 
