@@ -47,6 +47,13 @@ class Op2FormBackend(FormBackend):
         else: 
             return buildPtrPtrParameter(n)
 
+    def buildLocalTensorInitialiser(self, form):
+        # For matrices the local tensor doesn't need to be initialised.
+        if form.form_data().rank == 2:
+            return NullExpression();
+        else:
+            return super(Op2FormBackend, self).buildLocalTensorInitialiser(form)
+
     def _buildKernelParameters(self, form):
         p = super(Op2FormBackend, self)._buildKernelParameters(form)
         # For a local matrix, we need parameters for the op2 iteration space
