@@ -53,6 +53,16 @@ class Op2FormBackend(FormBackend):
             return NullExpression();
         else:
             return super(Op2FormBackend, self).buildLocalTensorInitialiser(form)
+    
+    def buildLocalTensorLoops(self, form, gaussLoop):
+        if form.form_data().rank == 2:
+            # FIXME: (before merge) returns a dummy scope for the local tensor
+            # initialiser to go in to. ideally we should be more smart and not
+            # be attempting to build the LT initialiser at all if it's not
+            # required
+            return gaussLoop, ForLoop(0,0,0)
+        else:
+            return super(Op2FormBackend, self).buildLocalTensorLoops(form, gaussLoop)
 
     def _buildKernelParameters(self, form):
         p = super(Op2FormBackend, self)._buildKernelParameters(form)
