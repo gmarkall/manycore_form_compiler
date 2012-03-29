@@ -276,13 +276,17 @@ class CudaKernelCall(FunctionCall):
 class Scope(BackendASTNode):
 
     def __init__(self, statements=None):
-        self._statements = as_list(statements)
+        s = as_list(statements)
+        s = filter(lambda x: not isinstance(x, NullExpression), s)
+        self._statements = s
 
     def append(self, statement):
-        self._statements.append(statement)
+        if not isinstance(statement, NullExpression):
+            self._statements.append(statement)
 
     def prepend(self, statement):
-        self._statements.insert(0, statement)
+        if not isinstance(statement, NullExpression):
+            self._statements.insert(0, statement)
 
     def find(self, matches):
         for s in self._statements:
