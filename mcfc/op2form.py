@@ -59,7 +59,8 @@ class Op2FormBackend(FormBackend):
         p = super(Op2FormBackend, self)._buildKernelParameters(form)
         # For a local matrix, we need parameters for the op2 iteration space
         if form.form_data().rank == 2:
-            p.extend([Variable("i", Integer()), Variable("j", Integer())])
+            i, j = BasisIndex(0, 0), BasisIndex(0, 1)
+            p.extend([Variable(i.name(), Integer()), Variable(j.name(), Integer())])
         return p
 
 def buildPtrParameter(name):
