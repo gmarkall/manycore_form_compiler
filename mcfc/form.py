@@ -178,7 +178,7 @@ class FormBackend(object):
         loop.append(self.buildCoeffQuadratureInitialiser(coeff))
 
         # One loop over the basis functions of the scalar element
-        basisLoop = buildIndexForLoop(buildBasisIndex(0, extract_subelement(coeff)))
+        basisLoop = buildIndexForLoop(buildQuadratureBasisIndex(0, extract_subelement(coeff)))
         loop.append(basisLoop)
 
         # Add the expression to compute the value inside the basis loop

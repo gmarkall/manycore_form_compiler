@@ -86,7 +86,7 @@ class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
         indices = [ ElementIndex() ]
         for r in range(tree.rank()):
             indices.append(buildDimIndex(r,tree))
-        indices.append(buildBasisIndex(0, extract_subelement(tree)))
+        indices.append(buildQuadratureBasisIndex(0, extract_subelement(tree)))
         return indices
 
 # vim:sw=4:ts=4:sts=4:et

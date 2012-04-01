@@ -57,9 +57,9 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # indexed by separate indices for the scalar basis and the spatial
         # dimension(s) (same for tensor-valued coefficients). Hence we need to
         # extract the scalar element to build the appropriate basis index.
-        indices = [buildBasisIndex(0, extract_subelement(tree))]
+        indices = [buildQuadratureBasisIndex(0, extract_subelement(tree))]
         for r in range(tree.rank()):
             indices.append(buildDimIndex(r,tree))
         return indices
-
+    
 # vim:sw=4:ts=4:sts=4:et

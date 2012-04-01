@@ -302,7 +302,7 @@ class QuadratureExpressionBuilder:
         # tensor basis since that is (in UFL) by definition a tensor product of
         # the scalar basis. So we need to extract the sub element.
         # FIXME: This will break for mixed elements
-        indices = [buildBasisIndex(0, extract_subelement(tree)),
+        indices = [buildQuadratureBasisIndex(0, extract_subelement(tree)),
                    buildGaussIndex()]
         return indices
 

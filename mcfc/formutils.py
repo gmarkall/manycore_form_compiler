@@ -307,6 +307,11 @@ class BasisIndex(CodeIndex):
     def name(self):
         return "i_r_%d" % (self._count)
 
+class QuadratureBasisIndex(BasisIndex):
+
+    def name(self):
+        return "q_r_%d" % (self._count)
+
 class GaussIndex(CodeIndex):
 
     def name(self):
@@ -341,6 +346,10 @@ def extract_subelement(expr):
 def buildBasisIndex(count, e):
     "Build index for a loop over basis function values."
     return BasisIndex(numBasisFunctions(e), count)
+
+def buildQuadratureBasisIndex(count, e):
+    "Build index for a loop over basis function values in the quadrature loop."
+    return QuadratureBasisIndex(numBasisFunctions(e), count)
 
 def buildDimIndex(count, e):
     "Build index for a loop over spatial dimensions."
