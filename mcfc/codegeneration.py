@@ -144,7 +144,7 @@ class ArrayInitialiserList(BackendASTNode):
         self._indentation = indentation
 
     def unparse(self):
-        self.arrStr = numpy.array2string(self._array, separator=',',
+        self.arrStr = numpy.array2string(self._array, precision=16, separator=',',
                 prefix=self._indentation + ' =  ' + getIndent())
         if not self._newlines:
            self.arrStr = self.arrStr.replace('\n','')
