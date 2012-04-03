@@ -59,17 +59,12 @@ class FormBackend(object):
         declarations = self._buildBasisTensors(form_data)
 
         # Build the loop nest
-        loopNest = self.buildExpressionLoopNest(form)
+        loopNest, gaussBody = self.buildExpressionLoopNest(form)
         statements = [loopNest]
-
-        # Initialise the local tensor values to 0
-        initialiser = self.buildLocalTensorInitialiser(form)
-        loopBody = getScopeFromNest(loopNest, rank)
-        loopBody.prepend(initialiser)
 
         # Insert the expressions into the loop nest
         partitions = findPartitions(integrand)
-        loopBody = getScopeFromNest(loopNest, rank + 1)
+        loopBody = gaussBody
         for (tree, indices) in partitions:
             expression, listexpressions = self.buildExpression(form, tree)
             buildLoopNest(loopBody, indices).prepend(expression)
@@ -140,6 +135,17 @@ class FormBackend(object):
         # FIXME what if we have multiple integrals?
         integrand = form.integrals()[0].integrand()
 
+        # Build a loop for the quadrature
+        gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
+        
+        # Loops over the indices of the local tensor
+        outerLoop = self.buildLocalTensorLoops(form, gaussLoop)
+        
+        # Hand back the outer loop, so it can be inserted into some
+        # scope.
+        return outerLoop, gaussLoop.body()
+
+    def buildLocalTensorLoops(self, form, gaussLoop):
         # Build the loop over the first rank, which always exists
         loop = buildIndexForLoop(buildBasisIndex(0, form))
         outerLoop = loop
@@ -150,13 +156,13 @@ class FormBackend(object):
             loop.append(basisLoop)
             loop = basisLoop
 
-        # Add a loop for the quadrature
-        gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
+        # Initialise the local tensor values to 0
+        initialiser = self.buildLocalTensorInitialiser(form)
+        loop.body().prepend(initialiser)
+        
+        # Put the gauss loop inside the local tensor loop nest
         loop.append(gaussLoop)
-        loop = gaussLoop
 
-        # Hand back the outer loop, so it can be inserted into some
-        # scope.
         return outerLoop
 
     def buildCoefficientLoopNest(self, coeff, rank, loop):
@@ -172,7 +178,7 @@ class FormBackend(object):
         loop.append(self.buildCoeffQuadratureInitialiser(coeff))
 
         # One loop over the basis functions of the scalar element
-        basisLoop = buildIndexForLoop(buildBasisIndex(0, extract_subelement(coeff)))
+        basisLoop = buildIndexForLoop(buildQuadratureBasisIndex(0, extract_subelement(coeff)))
         loop.append(basisLoop)
 
         # Add the expression to compute the value inside the basis loop

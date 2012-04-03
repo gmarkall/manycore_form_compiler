@@ -276,13 +276,17 @@ class CudaKernelCall(FunctionCall):
 class Scope(BackendASTNode):
 
     def __init__(self, statements=None):
-        self._statements = as_list(statements)
+        s = as_list(statements)
+        s = filter(lambda x: not isinstance(x, NullExpression), s)
+        self._statements = s
 
     def append(self, statement):
-        self._statements.append(statement)
+        if not isinstance(statement, NullExpression):
+            self._statements.append(statement)
 
     def prepend(self, statement):
-        self._statements.insert(0, statement)
+        if not isinstance(statement, NullExpression):
+            self._statements.insert(0, statement)
 
     def find(self, matches):
         for s in self._statements:
@@ -534,6 +538,9 @@ class Pointer(Type):
     def unparse_internal(self):
         return '%s*' % (self._base.unparse())
 
+    def unparse_post(self):
+        return self._base.unparse_post()
+
 class Array(Type):
 
     def __init__(self, base, extents):
@@ -588,6 +595,8 @@ def getScopeFromNest(nest, depth):
     # Descend through the bodies until we reach the correct one
     for i in range(1,depth):
         loop = body.find(lambda x: isinstance(x, ForLoop))
+        if loop is None: 
+            raise RuntimeError("Loop nest depth exceeded: %d > %d" % (depth, i))
         body = loop.body()
     return body
 

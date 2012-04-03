@@ -37,6 +37,16 @@ class Op2ExpressionBuilder(ExpressionBuilder):
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
+    def subscript_LocalTensor(self, form):
+        # For matrices the local tensor variable is a pointer to a single entry.
+        if form.form_data().rank == 2:
+            i = []
+        else:
+            i = super(Op2ExpressionBuilder,self).subscript_LocalTensor(form)
+
+        i.append(buildConstDimIndex(0))
+        return i
+
 class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def buildSubscript(self, variable, indices):
@@ -47,9 +57,9 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # indexed by separate indices for the scalar basis and the spatial
         # dimension(s) (same for tensor-valued coefficients). Hence we need to
         # extract the scalar element to build the appropriate basis index.
-        indices = [buildBasisIndex(0, extract_subelement(tree))]
+        indices = [buildQuadratureBasisIndex(0, extract_subelement(tree))]
         for r in range(tree.rank()):
             indices.append(buildDimIndex(r,tree))
         return indices
-
+    
 # vim:sw=4:ts=4:sts=4:et
