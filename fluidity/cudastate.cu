@@ -941,6 +941,8 @@ void matrix_dump(int* findrm, int* colm, double* val, int findrm_size, int colm_
   copyDtoH(val, host_val, colm_size*sizeof(double));
 
   ofstream f(filename);
+  f.precision(16);
+  f.setf(ios::scientific);
   // Matrix Market header
   f << "%%MatrixMarket matrix coordinate real general\n";
   // rows cols nonzeros
@@ -964,6 +966,8 @@ void vector_dump(double* val, int size, const char* filename)
   double *host_val = new double[size];
   copyDtoH(val, host_val, size*sizeof(double));
   ofstream f(filename);
+  f.precision(16);
+  f.setf(ios::scientific);
   for (int i = 0; i < size; i++) {
     f << host_val[i] << "\n";
   }
@@ -974,6 +978,8 @@ void vector_dump(double* val, int size, const char* filename)
 void host_vector_dump(double* val, int size, const char* filename)
 {
   ofstream f(filename);
+  f.precision(16);
+  f.setf(ios::scientific);
   for (int i = 0; i < size; i++) {
     f << val[i] << "\n";
   }
