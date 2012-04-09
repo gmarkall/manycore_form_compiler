@@ -68,6 +68,17 @@ class Subscript(BackendASTNode):
 
     __str__ = unparse
 
+class Member(BackendASTNode):
+
+    def __init__(self, base, member):
+        self._base = base
+        self._member = member # a string
+
+    def unparse(self):
+        return '%s.%s' % (self._base.unparse(), self._member)
+
+    __str__ = unparse
+
 class Dereference(BackendASTNode):
 
     def __init__(self, expr):
