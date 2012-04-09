@@ -173,13 +173,13 @@ extern "C" void run_model_(double* dt_pointer)
   op_dat Coordinate_data = get_op_dat("Coordinate");
   op_map Coordinate_map = get_op_map("Coordinate");
   op_set Coordinate_set = get_op_set("Coordinate");
-  op_sparsity Mass_sparsity = op_decl_sparsity(Coordinate_map, Coordinate_map);
+  op_sparsity Mass_sparsity = op_decl_sparsity(Tracer_map, Tracer_map);
   op_mat Mass_mat = op_decl_mat(Mass_sparsity);
   op_par_loop(Mass, "Mass", elements, 
               op_arg_mat(Mass_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
                          OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
-  op_dat rhs_vec = op_decl_vec(Coordinate_data, "rhs_vec");
+  op_dat rhs_vec = op_decl_vec(Tracer_data, "rhs_vec");
   op_par_loop(rhs, "rhs", elements, 
               op_arg_dat(rhs_vec, OP_ALL, Tracer_map, OP_INC), 
               op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 

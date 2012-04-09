@@ -176,8 +176,7 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             # Get sparsity of the field we're solving for
             sparsity = Variable(matname+'_sparsity', OpSparsity)
-            fieldmap = field_data[field][1]
-            call = opDeclSparsity(fieldmap, fieldmap)
+            call = opDeclSparsity(mmap, mmap)
             func.append(AssignmentOp(Declaration(sparsity), call))
 
             # Call the op_par_loops
@@ -194,7 +193,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Create the resulting vector
             vector = Variable(vecname+'_vec', OpDat)
             func.append(AssignmentOp(Declaration(vector),
-                opDeclVec(field_data[field][0], vector.name())))
+                opDeclVec(mdat, vector.name())))
             # Vector
             datArg = opArgDat(vector, OpAll, mmap, OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg])
