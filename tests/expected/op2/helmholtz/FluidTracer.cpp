@@ -164,8 +164,8 @@ extern "C" void run_model_(double* dt_pointer)
   op_dat Tracer_data = get_op_dat("Tracer");
   op_map Tracer_map = get_op_map("Tracer");
   op_set Tracer_set = get_op_set("Tracer");
-  op_sparsity A_sparsity = op_decl_sparsity(Tracer_map, Tracer_map);
-  op_mat A_mat = op_decl_mat(A_sparsity);
+  op_sparsity A_sparsity = op_decl_sparsity(Tracer_map, Tracer_map, "A_sparsity");
+  op_mat A_mat = op_decl_mat(A_sparsity, Tracer_data.dim, "double", 8, "A_mat");
   op_par_loop(A, "A", elements, 
               op_arg_mat(A_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
                          OP_INC), 

@@ -296,8 +296,8 @@ extern "C" void run_model_(double* dt_pointer)
   op_dat Velocity_data = get_op_dat("Velocity");
   op_map Velocity_map = get_op_map("Velocity");
   op_set Velocity_set = get_op_set("Velocity");
-  op_sparsity A_sparsity = op_decl_sparsity(Velocity_map, Velocity_map);
-  op_mat A_mat = op_decl_mat(A_sparsity);
+  op_sparsity A_sparsity = op_decl_sparsity(Velocity_map, Velocity_map, "A_sparsity");
+  op_mat A_mat = op_decl_mat(A_sparsity, Velocity_data.dim, "double", 8, "A_mat");
   op_par_loop(A, "A", elements, 
               op_arg_mat(A_mat, OP_ALL, Velocity_map, OP_ALL, Velocity_map, 
                          OP_INC), 

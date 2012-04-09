@@ -38,10 +38,11 @@ opInit = lambda diags: FunctionCall('op_init', [Literal(0), Literal(0), diags])
 opExit = lambda : FunctionCall('op_exit', [])
 opDeclVec = lambda origin, name: \
     FunctionCall('op_decl_vec', [origin, Literal(name)])
-opDeclSparsity = lambda rowmap, colmap: \
-    FunctionCall('op_decl_sparsity', [rowmap, colmap])
-opDeclMat = lambda sparsity: \
-    FunctionCall('op_decl_mat', [sparsity])
+opDeclSparsity = lambda rowmap, colmap, name: \
+    FunctionCall('op_decl_sparsity', [rowmap, colmap, Literal(name)])
+# FIXME: Default to double for now
+opDeclMat = lambda sparsity, dim, name: \
+    FunctionCall('op_decl_mat', [sparsity, dim, Literal('double'), Literal(8), Literal(name)])
 opFreeVec = lambda vec: \
     FunctionCall('op_free_vec', [vec])
 opFreeSparsity = lambda sparsity: \
@@ -176,14 +177,15 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             # Get sparsity of the field we're solving for
             sparsity = Variable(matname+'_sparsity', OpSparsity)
-            call = opDeclSparsity(mmap, mmap)
+            call = opDeclSparsity(mmap, mmap, sparsity.name())
             func.append(AssignmentOp(Declaration(sparsity), call))
 
             # Call the op_par_loops
 
             # Create a matrix
             matrix = Variable(matname+'_mat', OpMat)
-            func.append(AssignmentOp(Declaration(matrix), opDeclMat(sparsity)))
+            decl = opDeclMat(sparsity, Member(mdat, 'dim'), matrix.name())
+            func.append(AssignmentOp(Declaration(matrix), decl))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
             matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, OpInc)

@@ -365,8 +365,8 @@ extern "C" void run_model_(double* dt_pointer)
   op_dat TracerDiffusivity_data = get_op_dat("TracerDiffusivity");
   op_map TracerDiffusivity_map = get_op_map("TracerDiffusivity");
   op_set TracerDiffusivity_set = get_op_set("TracerDiffusivity");
-  op_sparsity A_sparsity = op_decl_sparsity(Tracer_map, Tracer_map);
-  op_mat A_mat = op_decl_mat(A_sparsity);
+  op_sparsity A_sparsity = op_decl_sparsity(Tracer_map, Tracer_map, "A_sparsity");
+  op_mat A_mat = op_decl_mat(A_sparsity, Tracer_data.dim, "double", 8, "A_mat");
   op_par_loop(A, "A", elements, 
               op_arg_mat(A_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
                          OP_INC), 
