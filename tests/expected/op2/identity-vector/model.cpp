@@ -312,7 +312,6 @@ extern "C" void return_fields_()
 {
   op_dat Velocity_data = get_op_dat("Velocity");
   op_fetch_data(Velocity_data);
-  set_op_dat("Velocity", Velocity_data);
 }
 
 

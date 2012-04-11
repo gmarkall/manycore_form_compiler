@@ -383,7 +383,6 @@ extern "C" void return_fields_()
 {
   op_dat Tracer_data = get_op_dat("Tracer");
   op_fetch_data(Tracer_data);
-  set_op_dat("Tracer", Tracer_data);
 }
 
 

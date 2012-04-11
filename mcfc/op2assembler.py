@@ -62,7 +62,6 @@ opSolve = lambda A, b, x: FunctionCall('op_solve', [A, b, x])
 rank2type = { 0: 'scalar', 1: 'vector', 2: 'tensor' }
 # Fluidity OP2 state functions
 opGetDat = lambda fieldname: FunctionCall('get_op_dat', [fieldname])
-opSetDat = lambda fieldname, dat: FunctionCall('set_op_dat', [fieldname, dat])
 opGetMap = lambda fieldname: FunctionCall('get_op_map', [fieldname])
 opGetSet = lambda fieldname: FunctionCall('get_op_set', [fieldname])
 opExtractField = lambda fieldname, rank, codim=0: \
@@ -216,7 +215,6 @@ class Op2AssemblerBackend(AssemblerBackend):
                 dat = Variable(field+'_data', OpDat)
                 func.append(AssignmentOp(Declaration(dat), opGetDat(Literal(field))))
                 func.append(opFetchData(dat))
-                func.append(opSetDat(Literal(field), dat))
 
         return func
 
