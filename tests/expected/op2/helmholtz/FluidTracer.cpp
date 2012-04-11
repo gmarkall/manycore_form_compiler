@@ -178,8 +178,8 @@ extern "C" void run_model_(double* dt_pointer)
 
 extern "C" void return_fields_()
 {
-  op_dat Tracer_data = get_op_dat("Tracer");
-  op_fetch_data(Tracer_data);
+  op_field_struct Tracer = extract_op_scalar_field("Tracer", 0);
+  op_fetch_data(Tracer.dat);
 }
 
 

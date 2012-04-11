@@ -310,8 +310,8 @@ extern "C" void run_model_(double* dt_pointer)
 
 extern "C" void return_fields_()
 {
-  op_dat Velocity_data = get_op_dat("Velocity");
-  op_fetch_data(Velocity_data);
+  op_field_struct Velocity = extract_op_vector_field("Velocity", 0);
+  op_fetch_data(Velocity.dat);
 }
 
 

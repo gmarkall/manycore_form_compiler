@@ -61,9 +61,6 @@ opSolve = lambda A, b, x: FunctionCall('op_solve', [A, b, x])
 
 rank2type = { 0: 'scalar', 1: 'vector', 2: 'tensor' }
 # Fluidity OP2 state functions
-opGetDat = lambda fieldname: FunctionCall('get_op_dat', [fieldname])
-opGetMap = lambda fieldname: FunctionCall('get_op_map', [fieldname])
-opGetSet = lambda fieldname: FunctionCall('get_op_set', [fieldname])
 opExtractField = lambda fieldname, rank, codim=0: \
         FunctionCall('extract_op_%s_field' % rank2type[rank], [fieldname, Literal(codim)])
 
@@ -209,12 +206,12 @@ class Op2AssemblerBackend(AssemblerBackend):
         func = FunctionDefinition(Void(), 'return_fields_', [])
         func.setExternC(True)
         # Transfer all fields solved for on the GPU and written back to state
-        for _, field in self._eq.getReturnedFieldNames():
+        for rank, field in self._eq.getReturnedFieldNames():
             # Sanity check: only copy back fields that were solved for
             if field in self._eq.getResultCoeffNames():
-                dat = Variable(field+'_data', OpDat)
-                func.append(AssignmentOp(Declaration(dat), opGetDat(Literal(field))))
-                func.append(opFetchData(dat))
+                var = Variable(field, OpFieldStruct)
+                func.append(AssignmentOp(Declaration(var), opExtractField(Literal(field), rank)))
+                func.append(opFetchData(Member(var, 'dat')))
 
         return func
 
