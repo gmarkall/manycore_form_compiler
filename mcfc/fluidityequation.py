@@ -145,7 +145,7 @@ def div(u):
     def getReturnedFieldName(self, count):
         "Get the field name of a returned field from the coefficient count"
         try:
-            return self.state.returnedFields()[count]
+            return self.state.returnedFields()[count][1]
         except:
             # Raise a more informative exception
             raise RuntimeError("Coefficient with count %s is not returned to state." % count)

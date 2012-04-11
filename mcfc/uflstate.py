@@ -48,7 +48,7 @@ class field_dict(dict):
         # Sanity check: only Coefficients can be written back to state
         assert isinstance(coeff, Coefficient), "Only Coefficients can be written back to state"
         if self._run:
-            self._returnedFields[coeff.count()] = field
+            self._returnedFields[coeff.count()] = (self._rank, field)
         dict.__setitem__(self, field, coeff)
 
 class UflState:

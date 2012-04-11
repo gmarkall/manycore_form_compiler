@@ -281,7 +281,7 @@ class CudaAssemblerBackend(AssemblerBackend):
         func = FunctionDefinition(Void(), 'return_fields_', [])
         func.setExternC(True)
         # Transfer all fields solved for on the GPU and written back to state
-        for field in self._eq.getReturnedFieldNames():
+        for _, field in self._eq.getReturnedFieldNames():
             # Sanity check: only copy back fields that were solved for
             if field in self._eq.getResultCoeffNames():
                 params = [ Literal(field) ]
