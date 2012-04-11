@@ -164,28 +164,22 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   op_set elements = get_op_element_set();
-  op_dat Tracer_data = get_op_dat("Tracer");
-  op_map Tracer_map = get_op_map("Tracer");
-  op_set Tracer_set = get_op_set("Tracer");
-  op_dat Velocity_data = get_op_dat("Velocity");
-  op_map Velocity_map = get_op_map("Velocity");
-  op_set Velocity_set = get_op_set("Velocity");
-  op_dat Coordinate_data = get_op_dat("Coordinate");
-  op_map Coordinate_map = get_op_map("Coordinate");
-  op_set Coordinate_set = get_op_set("Coordinate");
-  op_sparsity Mass_sparsity = op_decl_sparsity(Tracer_map, Tracer_map, "Mass_sparsity");
-  op_mat Mass_mat = op_decl_mat(Mass_sparsity, Tracer_data.dim, "double", 8, "Mass_mat");
+  op_field_struct Tracer = extract_op_scalar_field("Tracer", 0);
+  op_field_struct Velocity = extract_op_vector_field("Velocity", 0);
+  op_field_struct Coordinate = extract_op_vector_field("Coordinate", 0);
+  op_sparsity Mass_sparsity = op_decl_sparsity(Tracer.map, Tracer.map, "Mass_sparsity");
+  op_mat Mass_mat = op_decl_mat(Mass_sparsity, Tracer.dat.dim, "double", 8, "Mass_mat");
   op_par_loop(Mass, "Mass", elements, 
-              op_arg_mat(Mass_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
+              op_arg_mat(Mass_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
                          OP_INC), 
-              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
-  op_dat rhs_vec = op_decl_vec(Tracer_data, "rhs_vec");
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
+  op_dat rhs_vec = op_decl_vec(Tracer.dat, "rhs_vec");
   op_par_loop(rhs, "rhs", elements, 
-              op_arg_dat(rhs_vec, OP_ALL, Tracer_map, OP_INC), 
-              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
-              op_arg_dat(Tracer_data, OP_ALL, Tracer_map, OP_READ), 
-              op_arg_dat(Velocity_data, OP_ALL, Velocity_map, OP_READ));
-  op_solve(Mass_mat, rhs_vec, Tracer_data);
+              op_arg_dat(rhs_vec, OP_ALL, Tracer.map, OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
+              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, OP_READ), 
+              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, OP_READ));
+  op_solve(Mass_mat, rhs_vec, Tracer.dat);
   op_free_vec(rhs_vec);
   op_free_mat(Mass_mat);
   op_free_sparsity(Mass_sparsity);

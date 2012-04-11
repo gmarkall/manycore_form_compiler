@@ -143,23 +143,19 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   op_set elements = get_op_element_set();
-  op_dat Coordinate_data = get_op_dat("Coordinate");
-  op_map Coordinate_map = get_op_map("Coordinate");
-  op_set Coordinate_set = get_op_set("Coordinate");
-  op_dat Tracer_data = get_op_dat("Tracer");
-  op_map Tracer_map = get_op_map("Tracer");
-  op_set Tracer_set = get_op_set("Tracer");
-  op_sparsity a_sparsity = op_decl_sparsity(Tracer_map, Tracer_map, "a_sparsity");
-  op_mat a_mat = op_decl_mat(a_sparsity, Tracer_data.dim, "double", 8, "a_mat");
+  op_field_struct Coordinate = extract_op_vector_field("Coordinate", 0);
+  op_field_struct Tracer = extract_op_scalar_field("Tracer", 0);
+  op_sparsity a_sparsity = op_decl_sparsity(Tracer.map, Tracer.map, "a_sparsity");
+  op_mat a_mat = op_decl_mat(a_sparsity, Tracer.dat.dim, "double", 8, "a_mat");
   op_par_loop(a, "a", elements, 
-              op_arg_mat(a_mat, OP_ALL, Tracer_map, OP_ALL, Tracer_map, 
+              op_arg_mat(a_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
                          OP_INC), 
-              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
-  op_dat L_vec = op_decl_vec(Tracer_data, "L_vec");
-  op_par_loop(L, "L", elements, op_arg_dat(L_vec, OP_ALL, Tracer_map, OP_INC), 
-              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
-              op_arg_dat(Tracer_data, OP_ALL, Tracer_map, OP_READ));
-  op_solve(a_mat, L_vec, Tracer_data);
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
+  op_dat L_vec = op_decl_vec(Tracer.dat, "L_vec");
+  op_par_loop(L, "L", elements, op_arg_dat(L_vec, OP_ALL, Tracer.map, OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
+              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, OP_READ));
+  op_solve(a_mat, L_vec, Tracer.dat);
   op_free_vec(L_vec);
   op_free_mat(a_mat);
   op_free_sparsity(a_sparsity);

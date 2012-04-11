@@ -29,6 +29,7 @@ OpMap = Class('op_map')
 OpDat = Class('op_dat')
 OpMat = Class('op_mat')
 OpSparsity = Class('op_sparsity')
+OpFieldStruct = Class('op_field_struct')
 OpAll = Constant('OP_ALL')
 OpInc = Constant('OP_INC')
 OpRead = Constant('OP_READ')
@@ -58,25 +59,23 @@ opParLoop = lambda kernel, iterationset, arguments: \
     FunctionCall('op_par_loop', [FunctionPointer(kernel), Literal(kernel), iterationset] + arguments)
 opSolve = lambda A, b, x: FunctionCall('op_solve', [A, b, x])
 
+rank2type = { 0: 'scalar', 1: 'vector', 2: 'tensor' }
 # Fluidity OP2 state functions
 opGetDat = lambda fieldname: FunctionCall('get_op_dat', [fieldname])
 opSetDat = lambda fieldname, dat: FunctionCall('set_op_dat', [fieldname, dat])
 opGetMap = lambda fieldname: FunctionCall('get_op_map', [fieldname])
 opGetSet = lambda fieldname: FunctionCall('get_op_set', [fieldname])
 opGetElementSet = lambda : FunctionCall('get_op_element_set', [])
+opExtractField = lambda fieldname, rank, codim=0: \
+        FunctionCall('extract_op_%s_field' % rank2type[rank], [fieldname, Literal(codim)])
 
-def extractOpFieldData(scope, field):
-    # Get op_dat
-    datVar = Variable(field+'_data', OpDat)
-    scope.append(AssignmentOp(Declaration(datVar), opGetDat(Literal(field))))
-    # Get op_map
-    mapVar = Variable(field+'_map', OpMap)
-    scope.append(AssignmentOp(Declaration(mapVar), opGetMap(Literal(field))))
-    # Get op_set (currently unused)
-    setVar = Variable(field+'_set', OpSet)
-    scope.append(AssignmentOp(Declaration(setVar), opGetSet(Literal(field))))
-
-    return datVar, mapVar, setVar
+def extractOpFieldData(scope, field, rank):
+    # Get OP2 data structures
+    var = Variable(field, OpFieldStruct)
+    # FIXME: We stupidly default to requesting co-dimension 0.
+    # This should be infered from the integral's measure.
+    scope.append(AssignmentOp(Declaration(var), opExtractField(Literal(field), rank)))
+    return Member(var, 'dat'), Member(var, 'map')
 
 # Global Variables
 elements         = Variable('elements',          OpSet)
@@ -135,7 +134,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             for coeff in form.form_data().original_coefficients:
                 # find which field this coefficient came from, then get data for that field
                 field = self._eq.getInputCoeffName(extractCoordinates(coeff).count())
-                mdat, mmap, _ = field_data[field]
+                mdat, mmap = field_data[field]
                 params.append(opArgDat(mdat, OpAll, mmap, OpRead))
 
             return params
@@ -147,25 +146,24 @@ class Op2AssemblerBackend(AssemblerBackend):
         # Get element set
         func.append(AssignmentOp(Declaration(elements), opGetElementSet()))
 
-        # Triplets of op_dat, op_map, op_set per field solved for
+        # op_field_data struct per field solved for
         field_data = {}
-        # Extract op_dat, op_map, op_set for accessed fields
-        # FIXME: Do we need different call for different ranks?
+        # Extract op_dat, op_map for accessed fields
         for rank, field in self._eq.state.accessedFields().values():
-            field_data[field] = extractOpFieldData(func, field)
+            field_data[field] = extractOpFieldData(func, field, rank)
 
         # If the coefficient is not written back to state, insert a
         # temporary field to solve for
         temp_dats = []
         for field in self._eq.getTmpCoeffNames():
-            # Get field data for orginal coefficient (dat, map, set)
+            # Get field data for orginal coefficient (dat, map)
             orig_data = field_data[self._eq.getFieldFromCoeff(field)]
             datVar = Variable(field, OpDat)
             call = opDeclVec(orig_data[0], field)
             func.append(AssignmentOp(Declaration(datVar), call))
-            # The temporary dat has the same associate map and set as the
+            # The temporary dat has the same associate map as the
             # origin it has been derived from
-            field_data[field] = datVar, orig_data[1], orig_data[2]
+            field_data[field] = datVar, orig_data[1]
             temp_dats.append(datVar)
 
         for count, forms in self._eq.solves.items():
@@ -173,7 +171,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             matform, vecform = forms
             matname = matform.form_data().name
             vecname = vecform.form_data().name
-            mdat, mmap, _ = field_data[self._eq.getResultCoeffName(count)]
+            mdat, mmap = field_data[self._eq.getResultCoeffName(count)]
 
             # Get sparsity of the field we're solving for
             sparsity = Variable(matname+'_sparsity', OpSparsity)

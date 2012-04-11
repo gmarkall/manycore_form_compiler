@@ -290,24 +290,20 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   op_set elements = get_op_element_set();
-  op_dat Coordinate_data = get_op_dat("Coordinate");
-  op_map Coordinate_map = get_op_map("Coordinate");
-  op_set Coordinate_set = get_op_set("Coordinate");
-  op_dat Velocity_data = get_op_dat("Velocity");
-  op_map Velocity_map = get_op_map("Velocity");
-  op_set Velocity_set = get_op_set("Velocity");
-  op_sparsity A_sparsity = op_decl_sparsity(Velocity_map, Velocity_map, "A_sparsity");
-  op_mat A_mat = op_decl_mat(A_sparsity, Velocity_data.dim, "double", 8, "A_mat");
+  op_field_struct Coordinate = extract_op_vector_field("Coordinate", 0);
+  op_field_struct Velocity = extract_op_vector_field("Velocity", 0);
+  op_sparsity A_sparsity = op_decl_sparsity(Velocity.map, Velocity.map, "A_sparsity");
+  op_mat A_mat = op_decl_mat(A_sparsity, Velocity.dat.dim, "double", 8, "A_mat");
   op_par_loop(A, "A", elements, 
-              op_arg_mat(A_mat, OP_ALL, Velocity_map, OP_ALL, Velocity_map, 
+              op_arg_mat(A_mat, OP_ALL, Velocity.map, OP_ALL, Velocity.map, 
                          OP_INC), 
-              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ));
-  op_dat RHS_vec = op_decl_vec(Velocity_data, "RHS_vec");
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
+  op_dat RHS_vec = op_decl_vec(Velocity.dat, "RHS_vec");
   op_par_loop(RHS, "RHS", elements, 
-              op_arg_dat(RHS_vec, OP_ALL, Velocity_map, OP_INC), 
-              op_arg_dat(Coordinate_data, OP_ALL, Coordinate_map, OP_READ), 
-              op_arg_dat(Velocity_data, OP_ALL, Velocity_map, OP_READ));
-  op_solve(A_mat, RHS_vec, Velocity_data);
+              op_arg_dat(RHS_vec, OP_ALL, Velocity.map, OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
+              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, OP_READ));
+  op_solve(A_mat, RHS_vec, Velocity.dat);
   op_free_vec(RHS_vec);
   op_free_mat(A_mat);
   op_free_sparsity(A_sparsity);
