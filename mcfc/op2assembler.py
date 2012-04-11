@@ -65,7 +65,6 @@ opGetDat = lambda fieldname: FunctionCall('get_op_dat', [fieldname])
 opSetDat = lambda fieldname, dat: FunctionCall('set_op_dat', [fieldname, dat])
 opGetMap = lambda fieldname: FunctionCall('get_op_map', [fieldname])
 opGetSet = lambda fieldname: FunctionCall('get_op_set', [fieldname])
-opGetElementSet = lambda : FunctionCall('get_op_element_set', [])
 opExtractField = lambda fieldname, rank, codim=0: \
         FunctionCall('extract_op_%s_field' % rank2type[rank], [fieldname, Literal(codim)])
 
@@ -76,9 +75,6 @@ def extractOpFieldData(scope, field, rank):
     # This should be infered from the integral's measure.
     scope.append(AssignmentOp(Declaration(var), opExtractField(Literal(field), rank)))
     return Member(var, 'dat'), Member(var, 'map')
-
-# Global Variables
-elements         = Variable('elements',          OpSet)
 
 class Op2AssemblerBackend(AssemblerBackend):
 
@@ -143,9 +139,6 @@ class Op2AssemblerBackend(AssemblerBackend):
         func = FunctionDefinition(Void(), 'run_model_', [dtp])
         func.setExternC(True)
 
-        # Get element set
-        func.append(AssignmentOp(Declaration(elements), opGetElementSet()))
-
         # op_field_data struct per field solved for
         field_data = {}
         # Extract op_dat, op_map for accessed fields
@@ -188,7 +181,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # FIXME: should use mappings from the sparsity instead
             matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg])
-            func.append(opParLoop(matname, elements, arguments))
+            func.append(opParLoop(matname, Member(mmap, 'from'), arguments))
 
             # Create the resulting vector
             vector = Variable(vecname+'_vec', OpDat)
@@ -197,7 +190,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Vector
             datArg = opArgDat(vector, OpAll, mmap, OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg])
-            func.append(opParLoop(vecname, elements, arguments))
+            func.append(opParLoop(vecname, Member(mmap, 'from'), arguments))
 
             # Solve
             func.append(opSolve(matrix, vector, mdat))
