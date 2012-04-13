@@ -115,6 +115,10 @@ class Op2AssemblerBackend(AssemblerBackend):
         scope.append(Include('op_lib_cpp.h'))
         scope.append(Include('op_seq_mat.h'))
 
+        func = FunctionDefinition(Pointer(Void()), 'get_state')
+        func.setExternC(True)
+        scope.append(Declaration(func))
+
         return scope
 
     def _buildRunModel(self):

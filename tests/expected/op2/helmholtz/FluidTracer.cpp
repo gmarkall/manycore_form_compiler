@@ -4,6 +4,7 @@
 
 #include "op_lib_cpp.h"
 #include "op_seq_mat.h"
+extern "C" void* get_state();
 
 void A_0(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
 {

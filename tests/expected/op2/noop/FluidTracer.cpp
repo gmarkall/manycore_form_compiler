@@ -4,6 +4,7 @@
 
 #include "op_lib_cpp.h"
 #include "op_seq_mat.h"
+extern "C" void* get_state();
 
 extern "C" void initialise_gpu_()
 {
