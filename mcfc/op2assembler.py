@@ -59,17 +59,19 @@ opParLoop = lambda kernel, iterationset, arguments: \
     FunctionCall('op_par_loop', [FunctionPointer(kernel), Literal(kernel), iterationset] + arguments)
 opSolve = lambda A, b, x: FunctionCall('op_solve', [A, b, x])
 
+# Opaque pointer to fluidity state
+state = Variable('state', Pointer(Void()))
 rank2type = { 0: 'scalar', 1: 'vector', 2: 'tensor' }
 # Fluidity OP2 state functions
 opExtractField = lambda fieldname, rank, codim=0: \
-        FunctionCall('extract_op_%s_field' % rank2type[rank], [fieldname, Literal(codim)])
+        FunctionCall('extract_op_%s_field' % rank2type[rank], [state, fieldname, Literal(codim)])
 
 def extractOpFieldData(scope, field, rank):
     # Get OP2 data structures
     var = Variable(field, OpFieldStruct)
     # FIXME: We stupidly default to requesting co-dimension 0.
     # This should be infered from the integral's measure.
-    scope.append(AssignmentOp(Declaration(var), opExtractField(Literal(field), rank)))
+    scope.append(InitialisationOp(var, opExtractField(Literal(field), rank)))
     return Member(var, 'dat'), Member(var, 'map')
 
 class Op2AssemblerBackend(AssemblerBackend):
@@ -138,6 +140,9 @@ class Op2AssemblerBackend(AssemblerBackend):
         dtp = Variable('dt_pointer', Pointer(Real()))
         func = FunctionDefinition(Void(), 'run_model_', [dtp])
         func.setExternC(True)
+
+        # Get a handle to Fluidity state to pass to extractor functions
+        func.append(InitialisationOp(state, FunctionCall('get_state')))
 
         # op_field_data struct per field solved for
         field_data = {}
@@ -209,6 +214,11 @@ class Op2AssemblerBackend(AssemblerBackend):
 
         func = FunctionDefinition(Void(), 'return_fields_', [])
         func.setExternC(True)
+
+        # Get a handle to Fluidity state to pass to extractor functions
+        if self._eq.getReturnedFieldNames() and self._eq.getResultCoeffNames():
+            func.append(InitialisationOp(state, FunctionCall('get_state')))
+
         # Transfer all fields solved for on the GPU and written back to state
         for rank, field in self._eq.getReturnedFieldNames():
             # Sanity check: only copy back fields that were solved for
