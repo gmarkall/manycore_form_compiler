@@ -47,6 +47,11 @@ module ufl_utilities
 
 contains
 
+  type(c_ptr) function get_state() bind(c)
+    ! FIXME: always return first state since we're not supporting multi-phase
+    get_state = c_loc(state(1))
+  end function get_state
+
   subroutine extract_scalar_field_wrapper(field_name_buf, field_name_len, conn_findrm, conn_findrm_size, &
          & conn_colm, conn_colm_size, at_findrm, at_findrm_size, at_colm, &
          & at_colm_size, num_ele, num_nodes, ndglno, loc, dim, ngi, n, &
