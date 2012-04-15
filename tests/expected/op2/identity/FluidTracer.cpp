@@ -147,13 +147,13 @@ extern "C" void run_model_(double* dt_pointer)
   op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 0);
   op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 0);
   op_sparsity a_sparsity = op_decl_sparsity(Tracer.map, Tracer.map, "a_sparsity");
-  op_mat a_mat = op_decl_mat(a_sparsity, Tracer.dat.dim, "double", 8, "a_mat");
-  op_par_loop(a, "a", Tracer.map.from, 
+  op_mat a_mat = op_decl_mat(a_sparsity, Tracer.dat->dim, "double", 8, "a_mat");
+  op_par_loop(a, "a", Tracer.map->from, 
               op_arg_mat(a_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
                          OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
   op_dat L_vec = op_decl_vec(Tracer.dat, "L_vec");
-  op_par_loop(L, "L", Tracer.map.from, 
+  op_par_loop(L, "L", Tracer.map->from, 
               op_arg_dat(L_vec, OP_ALL, Tracer.map, OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
               op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, OP_READ));

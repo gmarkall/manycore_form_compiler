@@ -175,13 +175,13 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             # Create a matrix
             matrix = Variable(matname+'_mat', OpMat)
-            decl = opDeclMat(sparsity, MemberAccess(mdat, 'dim'), matrix.name())
+            decl = opDeclMat(sparsity, ArrowOp(mdat, 'dim'), matrix.name())
             func.append(AssignmentOp(Declaration(matrix), decl))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
             matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg])
-            func.append(opParLoop(matname, MemberAccess(mmap, 'from'), arguments))
+            func.append(opParLoop(matname, ArrowOp(mmap, 'from'), arguments))
 
             # Create the resulting vector
             vector = Variable(vecname+'_vec', OpDat)
@@ -190,7 +190,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Vector
             datArg = opArgDat(vector, OpAll, mmap, OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg])
-            func.append(opParLoop(vecname, MemberAccess(mmap, 'from'), arguments))
+            func.append(opParLoop(vecname, ArrowOp(mmap, 'from'), arguments))
 
             # Solve
             func.append(opSolve(matrix, vector, mdat))
