@@ -114,10 +114,7 @@ class Op2AssemblerBackend(AssemblerBackend):
         scope = GlobalScope()
         scope.append(Include('op_lib_cpp.h'))
         scope.append(Include('op_seq_mat.h'))
-
-        func = FunctionDefinition(Pointer(Void()), 'get_state')
-        func.setExternC(True)
-        scope.append(Declaration(func))
+        scope.append(Include('ufl_utilities.h'))
 
         return scope
 

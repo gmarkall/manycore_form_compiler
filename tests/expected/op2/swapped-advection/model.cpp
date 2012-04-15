@@ -4,7 +4,7 @@
 
 #include "op_lib_cpp.h"
 #include "op_seq_mat.h"
-extern "C" void* get_state();
+#include "ufl_utilities.h"
 
 void rhs_0(double** localTensor, double* dt, double* c0[2], double* c1[1], double* c2[2])
 {
