@@ -169,7 +169,7 @@ extern "C" void run_model_(double* dt_pointer)
   op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 0);
   op_sparsity Mass_sparsity = op_decl_sparsity(Tracer.map, Tracer.map, "Mass_sparsity");
   op_mat Mass_mat = op_decl_mat(Mass_sparsity, Tracer.dat->dim, "double", 8, "Mass_mat");
-  op_par_loop(Mass, "Mass", Tracer.map->from, 
+  op_par_loop(Mass, "Mass", op_iteration_space(Tracer.map->from, 3, 3), 
               op_arg_mat(Mass_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
                          Tracer.dat->dim, "double", OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 

@@ -362,7 +362,7 @@ extern "C" void run_model_(double* dt_pointer)
   op_field_struct TracerDiffusivity = extract_op_tensor_field(state, "TracerDiffusivity", 0);
   op_sparsity A_sparsity = op_decl_sparsity(Tracer.map, Tracer.map, "A_sparsity");
   op_mat A_mat = op_decl_mat(A_sparsity, Tracer.dat->dim, "double", 8, "A_mat");
-  op_par_loop(A, "A", Tracer.map->from, 
+  op_par_loop(A, "A", op_iteration_space(Tracer.map->from, 3, 3), 
               op_arg_mat(A_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
                          Tracer.dat->dim, "double", OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 

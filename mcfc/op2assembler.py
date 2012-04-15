@@ -20,7 +20,7 @@
 # MCFC libs
 from assembler import *
 from codegeneration import *
-from formutils import extractCoordinates
+from formutils import extractCoordinates, numBasisFunctions
 
 # OP2 data types
 # FIXME: introduce Type 'Struct' for these?
@@ -55,8 +55,10 @@ opArgDat = lambda dat, index, mapping, dim, access: \
 opArgMat = lambda mat, rowindex, rowmap, colindex, colmap, dim, access: \
     FunctionCall('op_arg_mat', [mat, rowindex, rowmap, colindex, colmap, dim, Literal('double'), access])
 opFetchData = lambda dat: FunctionCall('op_fetch_data', [dat])
-opParLoop = lambda kernel, iterationset, arguments: \
-    FunctionCall('op_par_loop', [FunctionPointer(kernel), Literal(kernel), iterationset] + arguments)
+opIterationSpace = lambda iterset, dims: \
+    FunctionCall('op_iteration_space', [iterset, Literal(dims[0]), Literal(dims[1])])
+opParLoop = lambda kernel, iterspace, arguments: \
+    FunctionCall('op_par_loop', [FunctionPointer(kernel), Literal(kernel), iterspace] + arguments)
 opSolve = lambda A, b, x: FunctionCall('op_solve', [A, b, x])
 
 # Opaque pointer to fluidity state
@@ -183,7 +185,9 @@ class Op2AssemblerBackend(AssemblerBackend):
             # FIXME: should use mappings from the sparsity instead
             matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, ArrowOp(mdat, 'dim'), OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg])
-            func.append(opParLoop(matname, ArrowOp(mmap, 'from'), arguments))
+            func.append(opParLoop(matname, \
+                    opIterationSpace(ArrowOp(mmap, 'from'), (numBasisFunctions(matform.form_data()),)*2), \
+                    arguments))
 
             # Create the resulting vector
             vector = Variable(vecname+'_vec', OpDat)

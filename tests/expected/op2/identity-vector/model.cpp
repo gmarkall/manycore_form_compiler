@@ -295,7 +295,7 @@ extern "C" void run_model_(double* dt_pointer)
   op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 0);
   op_sparsity A_sparsity = op_decl_sparsity(Velocity.map, Velocity.map, "A_sparsity");
   op_mat A_mat = op_decl_mat(A_sparsity, Velocity.dat->dim, "double", 8, "A_mat");
-  op_par_loop(A, "A", Velocity.map->from, 
+  op_par_loop(A, "A", op_iteration_space(Velocity.map->from, 6, 6), 
               op_arg_mat(A_mat, OP_ALL, Velocity.map, OP_ALL, Velocity.map, 
                          Velocity.dat->dim, "double", OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
