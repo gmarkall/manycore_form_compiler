@@ -68,17 +68,6 @@ class Subscript(BackendASTNode):
 
     __str__ = unparse
 
-class Member(BackendASTNode):
-
-    def __init__(self, base, member):
-        self._base = base
-        self._member = member # a string
-
-    def unparse(self):
-        return '%s.%s' % (self._base.unparse(), self._member)
-
-    __str__ = unparse
-
 class Dereference(BackendASTNode):
 
     def __init__(self, expr):
@@ -94,6 +83,16 @@ class NullExpression(BackendASTNode):
 
     def unparse(self):
         return ''
+
+class Property(BackendASTNode):
+
+    def __init__(self, name):
+        self._name = name
+
+    def unparse(self):
+        return self._name
+
+    __str__ = unparse
 
 class Variable(BackendASTNode):
 
@@ -447,10 +446,17 @@ class LessThanOp(BinaryOp):
     def __init__(self, lhs, rhs):
         BinaryOp.__init__(self, lhs, rhs, ' < ')
 
-class ArrowOp(BinaryOp):
+class MemberAccess(BinaryOp):
+
+    def __init__(self, lhs, rhs, via_pointer=False):
+        if isinstance(rhs, str):
+            rhs = Property(rhs)
+        BinaryOp.__init__(self, lhs, rhs, '->' if via_pointer else '.')
+
+class ArrowOp(MemberAccess):
 
     def __init__(self, lhs, rhs):
-        BinaryOp.__init__(self, lhs, rhs, '->')
+        MemberAccess.__init__(self, lhs, rhs, True)
 
 class PlusPlusOp(BackendASTNode):
 

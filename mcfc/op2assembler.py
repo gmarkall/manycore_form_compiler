@@ -70,7 +70,7 @@ def extractOpFieldData(scope, field, rank):
     # FIXME: We stupidly default to requesting co-dimension 0.
     # This should be infered from the integral's measure.
     scope.append(InitialisationOp(var, opExtractField(Literal(field), rank)))
-    return Member(var, 'dat'), Member(var, 'map')
+    return MemberAccess(var, 'dat'), MemberAccess(var, 'map')
 
 class Op2AssemblerBackend(AssemblerBackend):
 
@@ -175,13 +175,13 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             # Create a matrix
             matrix = Variable(matname+'_mat', OpMat)
-            decl = opDeclMat(sparsity, Member(mdat, 'dim'), matrix.name())
+            decl = opDeclMat(sparsity, MemberAccess(mdat, 'dim'), matrix.name())
             func.append(AssignmentOp(Declaration(matrix), decl))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
             matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg])
-            func.append(opParLoop(matname, Member(mmap, 'from'), arguments))
+            func.append(opParLoop(matname, MemberAccess(mmap, 'from'), arguments))
 
             # Create the resulting vector
             vector = Variable(vecname+'_vec', OpDat)
@@ -190,7 +190,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Vector
             datArg = opArgDat(vector, OpAll, mmap, OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg])
-            func.append(opParLoop(vecname, Member(mmap, 'from'), arguments))
+            func.append(opParLoop(vecname, MemberAccess(mmap, 'from'), arguments))
 
             # Solve
             func.append(opSolve(matrix, vector, mdat))
@@ -219,7 +219,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             if field in self._eq.getResultCoeffNames():
                 var = Variable(field, OpFieldStruct)
                 func.append(AssignmentOp(Declaration(var), opExtractField(Literal(field), rank)))
-                func.append(opFetchData(Member(var, 'dat')))
+                func.append(opFetchData(MemberAccess(var, 'dat')))
 
         return func
 
