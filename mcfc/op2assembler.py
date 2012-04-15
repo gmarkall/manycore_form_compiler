@@ -48,10 +48,12 @@ opFreeVec = lambda vec: \
     FunctionCall('op_free_vec', [vec])
 opFreeMat = lambda mat: \
     FunctionCall('op_free_mat', [mat])
-opArgDat = lambda dat, index, mapping, access: \
-    FunctionCall('op_arg_dat', [dat, index, mapping, access])
-opArgMat = lambda mat, rowindex, rowmap, colindex, colmap, access: \
-    FunctionCall('op_arg_mat', [mat, rowindex, rowmap, colindex, colmap, access])
+# FIXME: Default to double for now
+opArgDat = lambda dat, index, mapping, dim, access: \
+    FunctionCall('op_arg_dat', [dat, index, mapping, dim, Literal('double'), access])
+# FIXME: Default to double for now
+opArgMat = lambda mat, rowindex, rowmap, colindex, colmap, dim, access: \
+    FunctionCall('op_arg_mat', [mat, rowindex, rowmap, colindex, colmap, dim, Literal('double'), access])
 opFetchData = lambda dat: FunctionCall('op_fetch_data', [dat])
 opParLoop = lambda kernel, iterationset, arguments: \
     FunctionCall('op_par_loop', [FunctionPointer(kernel), Literal(kernel), iterationset] + arguments)
@@ -128,7 +130,7 @@ class Op2AssemblerBackend(AssemblerBackend):
                 # find which field this coefficient came from, then get data for that field
                 field = self._eq.getInputCoeffName(extractCoordinates(coeff).count())
                 mdat, mmap = field_data[field]
-                params.append(opArgDat(mdat, OpAll, mmap, OpRead))
+                params.append(opArgDat(mdat, OpAll, mmap, ArrowOp(mdat, 'dim'), OpRead))
 
             return params
 
@@ -179,7 +181,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             func.append(AssignmentOp(Declaration(matrix), decl))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
-            matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, OpInc)
+            matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, ArrowOp(mdat, 'dim'), OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg])
             func.append(opParLoop(matname, ArrowOp(mmap, 'from'), arguments))
 
@@ -188,7 +190,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             func.append(AssignmentOp(Declaration(vector),
                 opDeclVec(mdat, vector.name())))
             # Vector
-            datArg = opArgDat(vector, OpAll, mmap, OpInc)
+            datArg = opArgDat(vector, OpAll, mmap, ArrowOp(mdat, 'dim'), OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg])
             func.append(opParLoop(vecname, ArrowOp(mmap, 'from'), arguments))
 

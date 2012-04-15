@@ -413,14 +413,19 @@ extern "C" void run_model_(double* dt_pointer)
   op_mat M_mat = op_decl_mat(M_sparsity, t_adv->dim, "double", 8, "M_mat");
   op_par_loop(M, "M", Tracer.map->from, 
               op_arg_mat(M_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
-                         OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
+                         t_adv->dim, "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ));
   op_dat adv_rhs_vec = op_decl_vec(t_adv, "adv_rhs_vec");
   op_par_loop(adv_rhs, "adv_rhs", Tracer.map->from, 
-              op_arg_dat(adv_rhs_vec, OP_ALL, Tracer.map, OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
-              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, OP_READ), 
-              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, OP_READ));
+              op_arg_dat(adv_rhs_vec, OP_ALL, Tracer.map, t_adv->dim, 
+                         "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ), 
+              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, 
+                         Velocity.dat->dim, "double", OP_READ), 
+              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, Tracer.dat->dim, 
+                         "double", OP_READ));
   op_solve(M_mat, adv_rhs_vec, t_adv);
   op_free_vec(adv_rhs_vec);
   op_free_mat(M_mat);
@@ -428,13 +433,17 @@ extern "C" void run_model_(double* dt_pointer)
   op_mat A_mat = op_decl_mat(A_sparsity, Tracer.dat->dim, "double", 8, "A_mat");
   op_par_loop(A, "A", Tracer.map->from, 
               op_arg_mat(A_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
-                         OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
+                         Tracer.dat->dim, "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ));
   op_dat diff_rhs_vec = op_decl_vec(Tracer.dat, "diff_rhs_vec");
   op_par_loop(diff_rhs, "diff_rhs", Tracer.map->from, 
-              op_arg_dat(diff_rhs_vec, OP_ALL, Tracer.map, OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
-              op_arg_dat(t_adv, OP_ALL, Tracer.map, OP_READ));
+              op_arg_dat(diff_rhs_vec, OP_ALL, Tracer.map, Tracer.dat->dim, 
+                         "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ), 
+              op_arg_dat(t_adv, OP_ALL, Tracer.map, t_adv->dim, "double", 
+                         OP_READ));
   op_solve(A_mat, diff_rhs_vec, Tracer.dat);
   op_free_vec(diff_rhs_vec);
   op_free_mat(A_mat);

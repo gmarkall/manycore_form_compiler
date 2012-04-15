@@ -297,13 +297,17 @@ extern "C" void run_model_(double* dt_pointer)
   op_mat A_mat = op_decl_mat(A_sparsity, Velocity.dat->dim, "double", 8, "A_mat");
   op_par_loop(A, "A", Velocity.map->from, 
               op_arg_mat(A_mat, OP_ALL, Velocity.map, OP_ALL, Velocity.map, 
-                         OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
+                         Velocity.dat->dim, "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ));
   op_dat RHS_vec = op_decl_vec(Velocity.dat, "RHS_vec");
   op_par_loop(RHS, "RHS", Velocity.map->from, 
-              op_arg_dat(RHS_vec, OP_ALL, Velocity.map, OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
-              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, OP_READ));
+              op_arg_dat(RHS_vec, OP_ALL, Velocity.map, Velocity.dat->dim, 
+                         "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ), 
+              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, 
+                         Velocity.dat->dim, "double", OP_READ));
   op_solve(A_mat, RHS_vec, Velocity.dat);
   op_free_vec(RHS_vec);
   op_free_mat(A_mat);

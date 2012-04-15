@@ -150,13 +150,17 @@ extern "C" void run_model_(double* dt_pointer)
   op_mat a_mat = op_decl_mat(a_sparsity, Tracer.dat->dim, "double", 8, "a_mat");
   op_par_loop(a, "a", Tracer.map->from, 
               op_arg_mat(a_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
-                         OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
+                         Tracer.dat->dim, "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ));
   op_dat L_vec = op_decl_vec(Tracer.dat, "L_vec");
   op_par_loop(L, "L", Tracer.map->from, 
-              op_arg_dat(L_vec, OP_ALL, Tracer.map, OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
-              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, OP_READ));
+              op_arg_dat(L_vec, OP_ALL, Tracer.map, Tracer.dat->dim, "double", 
+                         OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ), 
+              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, Tracer.dat->dim, 
+                         "double", OP_READ));
   op_solve(a_mat, L_vec, Tracer.dat);
   op_free_vec(L_vec);
   op_free_mat(a_mat);

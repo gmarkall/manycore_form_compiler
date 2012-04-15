@@ -172,14 +172,19 @@ extern "C" void run_model_(double* dt_pointer)
   op_mat Mass_mat = op_decl_mat(Mass_sparsity, Tracer.dat->dim, "double", 8, "Mass_mat");
   op_par_loop(Mass, "Mass", Tracer.map->from, 
               op_arg_mat(Mass_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
-                         OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ));
+                         Tracer.dat->dim, "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ));
   op_dat rhs_vec = op_decl_vec(Tracer.dat, "rhs_vec");
   op_par_loop(rhs, "rhs", Tracer.map->from, 
-              op_arg_dat(rhs_vec, OP_ALL, Tracer.map, OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, OP_READ), 
-              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, OP_READ), 
-              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, OP_READ));
+              op_arg_dat(rhs_vec, OP_ALL, Tracer.map, Tracer.dat->dim, 
+                         "double", OP_INC), 
+              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
+                         Coordinate.dat->dim, "double", OP_READ), 
+              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, Tracer.dat->dim, 
+                         "double", OP_READ), 
+              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, 
+                         Velocity.dat->dim, "double", OP_READ));
   op_solve(Mass_mat, rhs_vec, Tracer.dat);
   op_free_vec(rhs_vec);
   op_free_mat(Mass_mat);
