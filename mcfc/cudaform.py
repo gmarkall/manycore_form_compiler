@@ -53,6 +53,7 @@ class CudaFormBackend(FormBackend):
 
     def _buildKernelParameters(self, form):
         # We need the number of elements as an additional parameter
-        return super(CudaFormBackend,self)._buildKernelParameters(form, [numElements])
+        return super(CudaFormBackend,self)._buildKernelParameters(form, \
+                Variable("dt", Real()), [numElements])
 
 # vim:sw=4:ts=4:sts=4:et

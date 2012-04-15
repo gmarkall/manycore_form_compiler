@@ -4,7 +4,7 @@
 
 
 
-void A(double* localTensor, double dt, double* c0[2], int i_r_0, int i_r_1)
+void A(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -78,7 +78,7 @@ void A(double* localTensor, double dt, double* c0[2], int i_r_0, int i_r_1)
   };
 }
 
-void d(double* localTensor, double dt, double* c0[2], int i_r_0, int i_r_1)
+void d(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -150,7 +150,7 @@ void d(double* localTensor, double dt, double* c0[2], int i_r_0, int i_r_1)
   };
 }
 
-void M(double* localTensor, double dt, double* c0[2], int i_r_0, int i_r_1)
+void M(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -207,7 +207,7 @@ void M(double* localTensor, double dt, double* c0[2], int i_r_0, int i_r_1)
   };
 }
 
-void rhs(double** localTensor, double dt, double* c0[2], double* c1[1])
+void rhs(double** localTensor, double* dt, double* c0[2], double* c1[1])
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,

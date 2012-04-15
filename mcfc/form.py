@@ -300,7 +300,7 @@ class FormBackend(object):
 
         return initialisers
 
-    def _buildKernelParameters(self, form, statutoryParameters = None):
+    def _buildKernelParameters(self, form, timestep, statutoryParameters = None):
         
         formalParameters = statutoryParameters or []
         # We always have local tensor to tabulate and timestep as parameters
@@ -320,7 +320,6 @@ class FormBackend(object):
 # Variables used globally
 
 weights = Variable("w", Pointer(Real()) )
-timestep = Variable("dt", Real() )
 localTensor = Variable("localTensor", Pointer(Real()) )
 
 # vim:sw=4:ts=4:sts=4:et
