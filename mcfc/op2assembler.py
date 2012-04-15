@@ -49,6 +49,9 @@ opFreeVec = lambda vec: \
 opFreeMat = lambda mat: \
     FunctionCall('op_free_mat', [mat])
 # FIXME: Default to double for now
+opArgGbl = lambda dat, dim, access: \
+    FunctionCall('op_arg_gbl', [dat, dim, Literal('double'), access])
+# FIXME: Default to double for now
 opArgDat = lambda dat, index, mapping, dim, access: \
     FunctionCall('op_arg_dat', [dat, index, mapping, dim, Literal('double'), access])
 # FIXME: Default to double for now
@@ -176,6 +179,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             func.append(AssignmentOp(Declaration(sparsity), call))
 
             # Call the op_par_loops
+            dtArg = opArgGbl(dtp, Literal(1), OpInc)
 
             # Create a matrix
             matrix = Variable(matname+'_mat', OpMat)
@@ -184,7 +188,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Matrix
             # FIXME: should use mappings from the sparsity instead
             matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, ArrowOp(mdat, 'dim'), OpInc)
-            arguments = makeParameterListAndGetters(matform, [matArg])
+            arguments = makeParameterListAndGetters(matform, [matArg, dtArg])
             func.append(opParLoop(matname, \
                     opIterationSpace(ArrowOp(mmap, 'from'), (numBasisFunctions(matform.form_data()),)*2), \
                     arguments))
@@ -195,7 +199,7 @@ class Op2AssemblerBackend(AssemblerBackend):
                 opDeclVec(mdat, vector.name())))
             # Vector
             datArg = opArgDat(vector, OpAll, mmap, ArrowOp(mdat, 'dim'), OpInc)
-            arguments = makeParameterListAndGetters(vecform, [datArg])
+            arguments = makeParameterListAndGetters(vecform, [datArg, dtArg])
             func.append(opParLoop(vecname, ArrowOp(mmap, 'from'), arguments))
 
             # Solve

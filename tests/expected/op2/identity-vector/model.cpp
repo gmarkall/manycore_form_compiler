@@ -298,12 +298,14 @@ extern "C" void run_model_(double* dt_pointer)
   op_par_loop(A, "A", op_iteration_space(Velocity.map->from, 6, 6), 
               op_arg_mat(A_mat, OP_ALL, Velocity.map, OP_ALL, Velocity.map, 
                          Velocity.dat->dim, "double", OP_INC), 
+              op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
                          Coordinate.dat->dim, "double", OP_READ));
   op_dat RHS_vec = op_decl_vec(Velocity.dat, "RHS_vec");
   op_par_loop(RHS, "RHS", Velocity.map->from, 
               op_arg_dat(RHS_vec, OP_ALL, Velocity.map, Velocity.dat->dim, 
                          "double", OP_INC), 
+              op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
                          Coordinate.dat->dim, "double", OP_READ), 
               op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, 

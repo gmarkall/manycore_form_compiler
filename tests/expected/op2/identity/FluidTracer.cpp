@@ -151,12 +151,14 @@ extern "C" void run_model_(double* dt_pointer)
   op_par_loop(a, "a", op_iteration_space(Tracer.map->from, 3, 3), 
               op_arg_mat(a_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
                          Tracer.dat->dim, "double", OP_INC), 
+              op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
                          Coordinate.dat->dim, "double", OP_READ));
   op_dat L_vec = op_decl_vec(Tracer.dat, "L_vec");
   op_par_loop(L, "L", Tracer.map->from, 
               op_arg_dat(L_vec, OP_ALL, Tracer.map, Tracer.dat->dim, "double", 
                          OP_INC), 
+              op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
               op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
                          Coordinate.dat->dim, "double", OP_READ), 
               op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, Tracer.dat->dim, 
