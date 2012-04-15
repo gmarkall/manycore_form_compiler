@@ -424,7 +424,6 @@ extern "C" void run_model_(double* dt_pointer)
   op_solve(M_mat, adv_rhs_vec, t_adv);
   op_free_vec(adv_rhs_vec);
   op_free_mat(M_mat);
-  op_free_sparsity(M_sparsity);
   op_sparsity A_sparsity = op_decl_sparsity(Tracer.map, Tracer.map, "A_sparsity");
   op_mat A_mat = op_decl_mat(A_sparsity, Tracer.dat.dim, "double", 8, "A_mat");
   op_par_loop(A, "A", Tracer.map.from, 
@@ -439,7 +438,6 @@ extern "C" void run_model_(double* dt_pointer)
   op_solve(A_mat, diff_rhs_vec, Tracer.dat);
   op_free_vec(diff_rhs_vec);
   op_free_mat(A_mat);
-  op_free_sparsity(A_sparsity);
   op_free_vec(t_adv);
 }
 

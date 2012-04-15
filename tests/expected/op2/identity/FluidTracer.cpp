@@ -160,7 +160,6 @@ extern "C" void run_model_(double* dt_pointer)
   op_solve(a_mat, L_vec, Tracer.dat);
   op_free_vec(L_vec);
   op_free_mat(a_mat);
-  op_free_sparsity(a_sparsity);
 }
 
 extern "C" void return_fields_()

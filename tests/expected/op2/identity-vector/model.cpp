@@ -307,7 +307,6 @@ extern "C" void run_model_(double* dt_pointer)
   op_solve(A_mat, RHS_vec, Velocity.dat);
   op_free_vec(RHS_vec);
   op_free_mat(A_mat);
-  op_free_sparsity(A_sparsity);
 }
 
 extern "C" void return_fields_()

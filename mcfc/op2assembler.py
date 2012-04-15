@@ -46,8 +46,6 @@ opDeclMat = lambda sparsity, dim, name: \
     FunctionCall('op_decl_mat', [sparsity, dim, Literal('double'), Literal(8), Literal(name)])
 opFreeVec = lambda vec: \
     FunctionCall('op_free_vec', [vec])
-opFreeSparsity = lambda sparsity: \
-    FunctionCall('op_free_sparsity', [sparsity])
 opFreeMat = lambda mat: \
     FunctionCall('op_free_mat', [mat])
 opArgDat = lambda dat, index, mapping, access: \
@@ -203,7 +201,6 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Free temporaries
             func.append(opFreeVec(vector))
             func.append(opFreeMat(matrix))
-            func.append(opFreeSparsity(sparsity))
 
         for dat in temp_dats:
             func.append(opFreeVec(dat))
