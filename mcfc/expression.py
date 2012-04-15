@@ -210,7 +210,7 @@ class ExpressionBuilder(Transformer):
 
     def constant_value(self, tree):
         if isinstance(tree, SymbolicValue):
-            return Variable(tree.value())
+            return self.symbolic_value(tree.value())
         else:
             return Literal(tree.value())
 

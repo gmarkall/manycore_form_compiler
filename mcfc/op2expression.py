@@ -47,6 +47,9 @@ class Op2ExpressionBuilder(ExpressionBuilder):
         i.append(buildConstDimIndex(0))
         return i
 
+    def symbolic_value(self, value):
+        return Bracketed(Dereference(Variable(value)))
+
 class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def buildSubscript(self, variable, indices):

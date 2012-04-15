@@ -74,6 +74,9 @@ class CudaExpressionBuilder(ExpressionBuilder):
         # First index is the element index
         return [ElementIndex()] + indices
 
+    def symbolic_value(self, value):
+        return Variable(value)
+
 class CudaQuadratureExpressionBuilder(QuadratureExpressionBuilder):
 
     def buildSubscript(self, variable, indices):
