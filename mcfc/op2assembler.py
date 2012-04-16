@@ -69,14 +69,15 @@ state = Variable('state', Pointer(Void()))
 rank2type = { 0: 'scalar', 1: 'vector', 2: 'tensor' }
 # Fluidity OP2 state functions
 opExtractField = lambda fieldname, rank, codim=0: \
-        FunctionCall('extract_op_%s_field' % rank2type[rank], [state, fieldname, Literal(codim)])
+        FunctionCall('extract_op_%s_field' % rank2type[rank], \
+        [state, Literal(fieldname), Literal(len(fieldname)), Literal(codim)])
 
 def extractOpFieldData(scope, field, rank):
     # Get OP2 data structures
     var = Variable(field, OpFieldStruct)
     # FIXME: We stupidly default to requesting co-dimension 0.
     # This should be infered from the integral's measure.
-    scope.append(InitialisationOp(var, opExtractField(Literal(field), rank)))
+    scope.append(InitialisationOp(var, opExtractField(field, rank)))
     return MemberAccess(var, 'dat'), MemberAccess(var, 'map')
 
 class Op2AssemblerBackend(AssemblerBackend):
@@ -228,7 +229,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             # Sanity check: only copy back fields that were solved for
             if field in self._eq.getResultCoeffNames():
                 var = Variable(field, OpFieldStruct)
-                func.append(AssignmentOp(Declaration(var), opExtractField(Literal(field), rank)))
+                func.append(AssignmentOp(Declaration(var), opExtractField(field, rank)))
                 func.append(opFetchData(MemberAccess(var, 'dat')))
 
         return func

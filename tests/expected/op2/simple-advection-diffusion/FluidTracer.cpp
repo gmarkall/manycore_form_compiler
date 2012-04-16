@@ -405,9 +405,9 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   void* state = get_state();
-  op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 0);
-  op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 0);
-  op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 0);
+  op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 10, 0);
+  op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 8, 0);
+  op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 6, 0);
   op_dat t_adv = op_decl_vec(Tracer.dat, "t_adv");
   op_sparsity M_sparsity = op_decl_sparsity(Tracer.map, Tracer.map, "M_sparsity");
   op_mat M_mat = op_decl_mat(M_sparsity, t_adv->dim, "double", 8, "M_mat");
@@ -457,7 +457,7 @@ extern "C" void run_model_(double* dt_pointer)
 extern "C" void return_fields_()
 {
   void* state = get_state();
-  op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 0);
+  op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 6, 0);
   op_fetch_data(Tracer.dat);
 }
 

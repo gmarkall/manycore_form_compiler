@@ -19,8 +19,8 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   void* state = get_state();
-  op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 0);
-  op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 0);
+  op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 6, 0);
+  op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 10, 0);
 }
 
 extern "C" void return_fields_()

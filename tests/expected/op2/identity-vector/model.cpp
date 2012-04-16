@@ -291,8 +291,8 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   void* state = get_state();
-  op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 0);
-  op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 0);
+  op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 10, 0);
+  op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 8, 0);
   op_sparsity A_sparsity = op_decl_sparsity(Velocity.map, Velocity.map, "A_sparsity");
   op_mat A_mat = op_decl_mat(A_sparsity, Velocity.dat->dim, "double", 8, "A_mat");
   op_par_loop(A, "A", op_iteration_space(Velocity.map->from, 6, 6), 
@@ -318,7 +318,7 @@ extern "C" void run_model_(double* dt_pointer)
 extern "C" void return_fields_()
 {
   void* state = get_state();
-  op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 0);
+  op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 8, 0);
   op_fetch_data(Velocity.dat);
 }
 

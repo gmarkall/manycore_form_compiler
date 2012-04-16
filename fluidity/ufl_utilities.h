@@ -39,9 +39,9 @@ typedef struct
 
 extern "C" {
 
-op_field_struct extract_op_scalar_field(void *, char const *, int);
-op_field_struct extract_op_vector_field(void *, char const *, int);
-op_field_struct extract_op_tensor_field(void *, char const *, int);
+op_field_struct extract_op_scalar_field(void *, char const *, int, int);
+op_field_struct extract_op_vector_field(void *, char const *, int, int);
+op_field_struct extract_op_tensor_field(void *, char const *, int, int);
 
 void * get_state();
 
