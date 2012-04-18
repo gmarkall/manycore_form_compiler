@@ -70,7 +70,6 @@ void rhs(double** localTensor, double dt, double* c0[2], double* c1, double* c2[
   };
   for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
   {
-    localTensor[i_r_0][0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
       double ST0 = 0.0;
