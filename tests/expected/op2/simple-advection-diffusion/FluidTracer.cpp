@@ -207,7 +207,7 @@ void M(double* localTensor, double dt, double* c0[2], int i_r_0, int i_r_1)
   };
 }
 
-void diff_rhs(double** localTensor, double dt, double* c0[2], double* c1)
+void diff_rhs(double** localTensor, double dt, double* c0[2], double* c1[1])
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -260,20 +260,19 @@ void diff_rhs(double** localTensor, double dt, double* c0[2], double* c1)
     c_q1[i_g] = 0.0;
     for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
     {
-      c_q1[i_g] += c1[q_r_0] * CG1[q_r_0][i_g];
+      c_q1[i_g] += c1[q_r_0][0] * CG1[q_r_0][i_g];
     };
     for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
     {
       d_c_q1[i_g][i_d_0] = 0.0;
       for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
       {
-        d_c_q1[i_g][i_d_0] += c1[q_r_0] * d_CG1[q_r_0][i_g][i_d_0];
+        d_c_q1[i_g][i_d_0] += c1[q_r_0][0] * d_CG1[q_r_0][i_g][i_d_0];
       };
     };
   };
   for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
   {
-    localTensor[i_r_0][0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
       double ST7 = 0.0;
@@ -300,7 +299,7 @@ void diff_rhs(double** localTensor, double dt, double* c0[2], double* c1)
   };
 }
 
-void adv_rhs(double** localTensor, double dt, double* c0[2], double* c1[2], double* c2)
+void adv_rhs(double** localTensor, double dt, double* c0[2], double* c1[2], double* c2[1])
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -353,7 +352,7 @@ void adv_rhs(double** localTensor, double dt, double* c0[2], double* c1[2], doub
     c_q2[i_g] = 0.0;
     for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
     {
-      c_q2[i_g] += c2[q_r_0] * CG1[q_r_0][i_g];
+      c_q2[i_g] += c2[q_r_0][0] * CG1[q_r_0][i_g];
     };
     for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
     {
@@ -366,7 +365,6 @@ void adv_rhs(double** localTensor, double dt, double* c0[2], double* c1[2], doub
   };
   for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
   {
-    localTensor[i_r_0][0] = 0.0;
     for(int i_g = 0; i_g < 6; i_g++)
     {
       double ST8 = 0.0;

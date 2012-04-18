@@ -58,6 +58,12 @@ class Op2QuadratureExpressionBuilder(QuadratureExpressionBuilder):
         # dimension(s) (same for tensor-valued coefficients). Hence we need to
         # extract the scalar element to build the appropriate basis index.
         indices = [buildQuadratureBasisIndex(0, extract_subelement(tree))]
+        
+        # Scalars are actually an array of length 1
+        if tree.rank() == 0:
+            indices.append(buildConstDimIndex(0))
+        
+        # This deals with the general case (vectors, tensors)
         for r in range(tree.rank()):
             indices.append(buildDimIndex(r,tree))
         return indices

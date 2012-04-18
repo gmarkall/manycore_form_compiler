@@ -55,6 +55,9 @@ class Op2FormBackend(FormBackend):
         else:
             return super(Op2FormBackend, self).buildLocalTensorLoops(form, gaussLoop)
 
+    def buildLocalTensorInitialiser(self, form):
+        return NullExpression()
+
     def _buildKernelParameters(self, form):
         p = super(Op2FormBackend, self)._buildKernelParameters(form)
         # For a local matrix, we need parameters for the op2 iteration space
