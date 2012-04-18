@@ -61,7 +61,7 @@ void a(double* localTensor, double dt, double* c0[2], int i_r_0, int i_r_1)
   };
 }
 
-void L(double** localTensor, double dt, double* c0[2], double* c1)
+void L(double** localTensor, double dt, double* c0[2], double* c1[1])
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -102,7 +102,7 @@ void L(double** localTensor, double dt, double* c0[2], double* c1)
     c_q1[i_g] = 0.0;
     for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
     {
-      c_q1[i_g] += c1[q_r_0] * CG1[q_r_0][i_g];
+      c_q1[i_g] += c1[q_r_0][0] * CG1[q_r_0][i_g];
     };
     for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
     {
