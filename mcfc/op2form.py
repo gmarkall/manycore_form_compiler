@@ -55,7 +55,7 @@ class Op2FormBackend(FormBackend):
         else:
             return super(Op2FormBackend, self).buildLocalTensorLoops(integrand, gaussLoop)
 
-    def buildLocalTensorInitialiser(self, integrand):
+    def buildLocalTensorInitialiser(self):
         return NullExpression()
 
     def _buildKernelParameters(self, integrand):

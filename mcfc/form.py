@@ -132,7 +132,7 @@ class FormBackend(object):
         return expr, listexpr
 
     def buildExpression(self, tree):
-        "Build the expression represented by tree."
+        "Build the expression represented by the SubTree tree."
         # The tree is rooted by a SubExpr, so we need to construct the 
         # expression beneath it.
         expr = tree.operands()[0]
@@ -169,7 +169,7 @@ class FormBackend(object):
             loop = basisLoop
 
         # Initialise the local tensor values to 0
-        initialiser = self.buildLocalTensorInitialiser(integrand)
+        initialiser = self.buildLocalTensorInitialiser()
         loop.body().prepend(initialiser)
         
         # Put the gauss loop inside the local tensor loop nest
@@ -226,7 +226,7 @@ class FormBackend(object):
 
         return gaussLoop
 
-    def buildLocalTensorInitialiser(self, integrand):
+    def buildLocalTensorInitialiser(self):
         lhs = self._expressionBuilder.buildLocalTensorAccessor(self._form_data)
         rhs = Literal(0.0)
         initialiser = AssignmentOp(lhs, rhs)
