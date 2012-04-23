@@ -47,12 +47,16 @@ class FormBackend(object):
         assert form_data, "Form has no form data attached!"
         self._form_data = form_data
 
-        #for i in form.integrals():
-            # FIXME what if we have multiple integrals?
-        
-        return self._compile_integral(form.integrals()[0])
+        scope = GlobalScope()
+
+        i = form.integrals()
+        for c in range(len(i)):
+            name = form_data.name + "_" + str(c)
+            scope.append(self._compile_integral(i[c], name))
+
+        return scope
     
-    def _compile_integral(self, integral, outerScope=None):
+    def _compile_integral(self, integral, name, outerScope=None):
         
         # NOTE: measure is not yet used but will be necessary when we support
         # surface integrals
@@ -113,7 +117,7 @@ class FormBackend(object):
 
         # Build the function with the loop nest inside
         body = Scope(declarations + statements)
-        kernel = FunctionDefinition(Void(), fd.name, formalParameters, body)
+        kernel = FunctionDefinition(Void(), name, formalParameters, body)
 
         return kernel
 

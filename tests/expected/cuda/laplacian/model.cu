@@ -15,7 +15,7 @@ int* Tracer_colm;
 int Tracer_colm_size;
 
 
-__global__ void A(int n_ele, double* localTensor, double dt, double* c0)
+__global__ void A_0(int n_ele, double* localTensor, double dt, double* c0)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -95,7 +95,9 @@ __global__ void A(int n_ele, double* localTensor, double dt, double* c0)
   };
 }
 
-__global__ void RHS(int n_ele, double* localTensor, double dt, double* c0, double* c1)
+
+
+__global__ void RHS_0(int n_ele, double* localTensor, double dt, double* c0, double* c1)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -164,6 +166,8 @@ __global__ void RHS(int n_ele, double* localTensor, double dt, double* c0, doubl
     };
   };
 }
+
+
 
 StateHolder* state;
 extern "C" void initialise_gpu_()

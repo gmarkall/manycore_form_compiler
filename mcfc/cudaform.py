@@ -30,7 +30,7 @@ class CudaFormBackend(FormBackend):
         self._expressionBuilder = CudaExpressionBuilder()
         self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
 
-    def _compile_integral(self, integral):
+    def _compile_integral(self, integral, name):
         "Compile an integrand."
 
         # The element loop is the outermost loop
@@ -38,7 +38,7 @@ class CudaFormBackend(FormBackend):
 
         # Build the kernel as normal, but pass the element loop as the outer
         # scope to nest the other loop nests under
-        kernel = super(CudaFormBackend, self)._compile_integral(integral, outerLoop)
+        kernel = super(CudaFormBackend, self)._compile_integral(integral, name, outerLoop)
 
         # Make this a Cuda kernel.
         kernel.setCudaKernel(True)
