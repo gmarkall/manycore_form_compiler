@@ -78,7 +78,7 @@ class FormBackend(object):
         partitions = findPartitions(integrand)
         loopBody = gaussBody
         for (tree, indices) in partitions:
-            expression, listexpressions = self.buildExpression(integrand, tree)
+            expression, listexpressions = self.buildExpression(tree)
             buildLoopNest(loopBody, indices).prepend(expression)
             for expr in listexpressions:
                 loopBody.prepend(expr)
@@ -118,10 +118,10 @@ class FormBackend(object):
         return kernel
 
     def buildLocalTensorExpression(self, tree):
-        return self.buildExpression(tree, tree, True)
+        return self.buildExpression(tree, True)
 
-    def buildExpression(self, integrand, tree, localTensor=False):
-        "Build the expression represented by the subtree tree of integrand."
+    def buildExpression(self, tree, localTensor=False):
+        "Build the expression represented by tree."
         # If the tree is rooted by a SubExpr, we need to construct the 
         # expression beneath it.
         expr = tree if localTensor else tree.operands()[0]
