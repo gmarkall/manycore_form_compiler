@@ -118,25 +118,28 @@ class FormBackend(object):
         return kernel
 
     def buildLocalTensorExpression(self, tree):
-        return self.buildExpression(tree, True)
+        rhs, listexpr = self._expressionBuilder.build(tree)
+        
+        # The rhs of an integrand needs to be multiplied by the quadrature weights
+        indices = self.subscript_weights()
+        weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
+        rhs = MultiplyOp(rhs, weightsExpr)
+        
+        # Assign expression to the local tensor
+        lhs = self._expressionBuilder.buildLocalTensorAccessor(self._form_data)
 
-    def buildExpression(self, tree, localTensor=False):
+        expr = PlusAssignmentOp(lhs, rhs)
+        return expr, listexpr
+
+    def buildExpression(self, tree):
         "Build the expression represented by tree."
-        # If the tree is rooted by a SubExpr, we need to construct the 
+        # The tree is rooted by a SubExpr, so we need to construct the 
         # expression beneath it.
-        expr = tree if localTensor else tree.operands()[0]
+        expr = tree.operands()[0]
         rhs, listexpr = self._expressionBuilder.build(expr)
 
-        if localTensor:
-            # The rhs of an integrand needs to be multiplied by the quadrature weights
-            indices = self.subscript_weights()
-            weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
-            rhs = MultiplyOp(rhs, weightsExpr)
-            # Assign expression to the local tensor
-            lhs = self._expressionBuilder.buildLocalTensorAccessor(self._form_data)
-        else:
-            # Assign expression to the correct Subexpression variable
-            lhs = self._expressionBuilder.sub_expr(tree)
+        # Assign expression to the correct Subexpression variable
+        lhs = self._expressionBuilder.sub_expr(tree)
         
         expr = PlusAssignmentOp(lhs, rhs)
         return expr, listexpr
