@@ -173,6 +173,8 @@ class Op2AssemblerBackend(AssemblerBackend):
             matname = matform.form_data().name
             vecname = vecform.form_data().name
             mdat, mmap = field_data[self._eq.getResultCoeffName(count)]
+            dim = ArrowOp(mdat, 'dim')
+            mfrom = ArrowOp(mmap, 'from')
 
             # Get sparsity of the field we're solving for
             sparsity = Variable(matname+'_sparsity', OpSparsity)
@@ -184,24 +186,29 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             # Create a matrix
             matrix = Variable(matname+'_mat', OpMat)
-            decl = opDeclMat(sparsity, ArrowOp(mdat, 'dim'), matrix.name())
+            decl = opDeclMat(sparsity, dim, matrix.name())
             func.append(AssignmentOp(Declaration(matrix), decl))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
-            matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, ArrowOp(mdat, 'dim'), OpInc)
+            matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, dim, OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg, dtArg])
-            func.append(opParLoop(matname, \
-                    opIterationSpace(ArrowOp(mmap, 'from'), (numBasisFunctions(matform.form_data()),)*2), \
-                    arguments))
+            itbounds = (numBasisFunctions(matform.form_data()),)*2
+            # FIXME: To properly support multiple integrals, we need to get
+            # the mappings per integral
+            for _, name in matform.form_data().named_integrals:
+                func.append(opParLoop(name, opIterationSpace(mfrom, itbounds), arguments))
 
             # Create the resulting vector
             vector = Variable(vecname+'_vec', OpDat)
             func.append(AssignmentOp(Declaration(vector),
                 opDeclVec(mdat, vector.name())))
             # Vector
-            datArg = opArgDat(vector, OpAll, mmap, ArrowOp(mdat, 'dim'), OpInc)
+            datArg = opArgDat(vector, OpAll, mmap, dim, OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg, dtArg])
-            func.append(opParLoop(vecname, ArrowOp(mmap, 'from'), arguments))
+            # FIXME: To properly support multiple integrals, we need to get
+            # the mappings per integral
+            for _, name in vecform.form_data().named_integrals:
+                func.append(opParLoop(name, mfrom, arguments))
 
             # Solve
             func.append(opSolve(matrix, vector, mdat))
