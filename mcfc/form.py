@@ -47,17 +47,11 @@ class FormBackend(object):
         assert form_data, "Form has no form data attached!"
         self._form_data = form_data
 
-        scope = GlobalScope()
-
-        i = form.integrals()
-        for c in range(len(i)):
-            name = form_data.name + "_" + str(c)
-            scope.append(self._compile_integral(i[c], name))
-
-        return scope
+        return GlobalScope([self._compile_integral(i) for i in form_data.named_integrals])
     
-    def _compile_integral(self, integral, name, outerScope=None):
+    def _compile_integral(self, named_integral, outerScope=None):
         
+        integral, name = named_integral
         # NOTE: measure is not yet used but will be necessary when we support
         # surface integrals
         integrand = integral.integrand()

@@ -245,8 +245,7 @@ class CudaAssemblerBackend(AssemblerBackend):
             buildAppendCudaMemsetZero(func, globalVector, size)
 
             # Generate calls for matrix assembly
-            for i in range(len(matrix.integrals())):
-                name = matrix.form_data().name + "_" + str(i)
+            for _, name in matrix.form_data().named_integrals:
                 params = self._makeParameterListAndGetters(func, matrix, matrixParameters)
                 func.append(CudaKernelCall(name, params, gridXDim, blockXDim))
 
@@ -255,8 +254,7 @@ class CudaAssemblerBackend(AssemblerBackend):
                 func.append(CudaKernelCall('matrix_addto', params, gridXDim, blockXDim))
 
             # Generate calls for RHS assembly
-            for i in range(len(vector.integrals())):
-                name = vector.form_data().name + "_" + str(i)
+            for _, name in vector.form_data().named_integrals:
                 params = self._makeParameterListAndGetters(func, vector, vectorParameters)
                 func.append(CudaKernelCall(name, params, gridXDim, blockXDim))
 

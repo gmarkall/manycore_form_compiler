@@ -50,6 +50,7 @@ def canonicalise(equation):
             form_data.original_form = form
             form_data.coordinates = coordinates
             form = form_data.preprocessed_form
+            form_data.named_integrals = [(i, name + "_" + str(c)) for c, i in enumerate(form.integrals())]
             form._form_data = form_data
             equation.uflObjects[name] = form
         # UFL Coefficients and Arguments
