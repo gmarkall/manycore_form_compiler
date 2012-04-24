@@ -239,27 +239,27 @@ class CudaAssemblerBackend(AssemblerBackend):
             matrix, vector = forms
             sparsity = self._sparsities[result]
 
-            # Call the matrix assembly
+            # Call the matrix local assembly
             params = self._makeParameterListAndGetters(func, matrix, matrixParameters)
             func.append(CudaKernelCall(matrix.form_data().name, params, gridXDim, blockXDim))
 
-            # Then call the rhs assembly
-            params = self._makeParameterListAndGetters(func, vector, vectorParameters)
-            func.append(CudaKernelCall(vector.form_data().name, params, gridXDim, blockXDim))
-
-            # Zero the global matrix and vector
-            # First we need to get numvalspernode, for the length of the global vector
+            # Zero the global matrix
             buildAppendCudaMemsetZero(func, globalMatrix, sparsity['colm_size'])
-            size = MultiplyOp(stateGetter(numValsPerNode, param=result), numNodes)
-            buildAppendCudaMemsetZero(func, globalVector, size)
 
-            # Build calls to addto kernels. 
-            # For the matrix
+            # Build calls to the matrix addto 
             params = [ sparsity['findrm'], sparsity['colm'], globalMatrix, eleNodes, \
                          localMatrix, numEle, nodesPerEle ]
             func.append(CudaKernelCall('matrix_addto', params, gridXDim, blockXDim))
 
-            # And the vector
+            # Then call the rhs local assembly
+            params = self._makeParameterListAndGetters(func, vector, vectorParameters)
+            func.append(CudaKernelCall(vector.form_data().name, params, gridXDim, blockXDim))
+
+            # Zero the global vector
+            size = MultiplyOp(stateGetter(numValsPerNode, param=result), numNodes)
+            buildAppendCudaMemsetZero(func, globalVector, size)
+
+            # Build calls to the vector addto
             params = [ globalVector, eleNodes, localVector, numEle, nodesPerEle ]
             func.append(CudaKernelCall('vector_addto', params, gridXDim, blockXDim))
             

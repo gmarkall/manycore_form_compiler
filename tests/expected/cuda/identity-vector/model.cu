@@ -346,11 +346,11 @@ extern "C" void run_model_(double* dt_pointer)
   int gridXDim = 128;
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   A<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
+  cudaMemset(globalMatrix, 0, sizeof(double) * Velocity_colm_size);
+  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   double* VelocityCoeff = state->getElementValue("Velocity");
   RHS<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff);
-  cudaMemset(globalMatrix, 0, sizeof(double) * Velocity_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Velocity") * numNodes);
-  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
   cg_solve(Velocity_findrm, Velocity_findrm_size, Velocity_colm, Velocity_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
   expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Velocity"), nodesPerEle);

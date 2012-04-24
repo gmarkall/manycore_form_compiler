@@ -436,11 +436,11 @@ extern "C" void run_model_(double* dt_pointer)
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   double* TracerDiffusivityCoeff = state->getElementValue("TracerDiffusivity");
   A<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff, TracerDiffusivityCoeff);
+  cudaMemset(globalMatrix, 0, sizeof(double) * Tracer_colm_size);
+  matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   double* TracerCoeff = state->getElementValue("Tracer");
   rhs<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, TracerCoeff, TracerDiffusivityCoeff);
-  cudaMemset(globalMatrix, 0, sizeof(double) * Tracer_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
-  matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
   cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
   expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Tracer"), nodesPerEle);
