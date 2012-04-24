@@ -245,12 +245,10 @@ def partition(equation):
     # Reset the subexpression count so the naming of subexpressions is less
     # arbitrary
     SubExpr.reset()
-    for name, form in equation.forms().iteritems():
-        integrals = []
+    for form in equation.forms().values():
         for integral in form.integrals():
-            integrals.append(Integral(_partition(integral.integrand()), integral.measure()))
-        form._integrals = tuple(integrals)
-        equation.uflObjects[name] = form
+            # Mutate the integrand
+            integral._integrand = _partition(integral.integrand())
     return equation
 
 class PartitionFinder(Transformer):
