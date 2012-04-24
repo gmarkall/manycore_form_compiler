@@ -4,7 +4,7 @@
 
 
 
-void A(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
+void A_0(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -74,7 +74,9 @@ void A(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
   };
 }
 
-void RHS(double** localTensor, double* dt, double* c0[2], double* c1[1])
+
+
+void RHS_0(double** localTensor, double* dt, double* c0[2], double* c1[1])
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -139,6 +141,8 @@ void RHS(double** localTensor, double* dt, double* c0[2], double* c1[1])
     };
   };
 }
+
+
 
 
 

@@ -30,15 +30,15 @@ class CudaFormBackend(FormBackend):
         self._expressionBuilder = CudaExpressionBuilder()
         self._quadratureExpressionBuilder = CudaQuadratureExpressionBuilder()
 
-    def compile(self, form):
-        "Compile a pre-processed form."
+    def _compile_integral(self, integral, name):
+        "Compile an integrand."
 
         # The element loop is the outermost loop
         outerLoop = buildElementLoop()
 
         # Build the kernel as normal, but pass the element loop as the outer
         # scope to nest the other loop nests under
-        kernel = super(CudaFormBackend, self).compile(form, outerLoop)
+        kernel = super(CudaFormBackend, self)._compile_integral(integral, name, outerLoop)
 
         # Make this a Cuda kernel.
         kernel.setCudaKernel(True)
@@ -48,12 +48,12 @@ class CudaFormBackend(FormBackend):
         name = buildCoefficientName(coeff)
         return Variable(name, Pointer(Real()))
 
-    def _buildLocalTensorParameter(self, form):
+    def _buildLocalTensorParameter(self, integrand):
         return localTensor
 
-    def _buildKernelParameters(self, form):
+    def _buildKernelParameters(self, integrand):
         # We need the number of elements as an additional parameter
-        return super(CudaFormBackend,self)._buildKernelParameters(form, \
+        return super(CudaFormBackend,self)._buildKernelParameters(integrand, \
                 Variable("dt", Real()), [numElements])
 
 # vim:sw=4:ts=4:sts=4:et

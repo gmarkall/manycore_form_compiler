@@ -95,14 +95,13 @@ class ExpressionBuilder(Transformer):
         self._indexStack.pop()
         return indices
 
-    def subscript_LocalTensor(self, form):
-        form_data = form.form_data()
+    def subscript_LocalTensor(self, form_data):
         rank = form_data.rank
 
         indices = []
         # One rank index for each rank
         for r in range(rank):
-            indices.append(buildBasisIndex(r, form))
+            indices.append(buildBasisIndex(r, form_data))
 
         return indices
 
@@ -132,8 +131,8 @@ class ExpressionBuilder(Transformer):
         coeffExpr = buildMultiArraySubscript(base, indices)
         return coeffExpr
 
-    def buildLocalTensorAccessor(self, form):
-        indices = self.subscript_LocalTensor(form)
+    def buildLocalTensorAccessor(self, form_data):
+        indices = self.subscript_LocalTensor(form_data)
 
         # Subscript the local tensor variable
         expr = self.buildSubscript(localTensor, indices)

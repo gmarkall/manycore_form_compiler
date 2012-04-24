@@ -19,7 +19,7 @@ int* t_adv_colm;
 int t_adv_colm_size;
 
 
-__global__ void A(int n_ele, double* localTensor, double dt, double* c0)
+__global__ void A_0(int n_ele, double* localTensor, double dt, double* c0)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -103,7 +103,9 @@ __global__ void A(int n_ele, double* localTensor, double dt, double* c0)
   };
 }
 
-__global__ void d(int n_ele, double* localTensor, double dt, double* c0)
+
+
+__global__ void d_0(int n_ele, double* localTensor, double dt, double* c0)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -185,7 +187,9 @@ __global__ void d(int n_ele, double* localTensor, double dt, double* c0)
   };
 }
 
-__global__ void M(int n_ele, double* localTensor, double dt, double* c0)
+
+
+__global__ void M_0(int n_ele, double* localTensor, double dt, double* c0)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -252,7 +256,9 @@ __global__ void M(int n_ele, double* localTensor, double dt, double* c0)
   };
 }
 
-__global__ void diff_rhs(int n_ele, double* localTensor, double dt, double* c0, double* c1)
+
+
+__global__ void diff_rhs_0(int n_ele, double* localTensor, double dt, double* c0, double* c1)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -348,7 +354,9 @@ __global__ void diff_rhs(int n_ele, double* localTensor, double dt, double* c0, 
   };
 }
 
-__global__ void adv_rhs(int n_ele, double* localTensor, double dt, double* c0, double* c1, double* c2)
+
+
+__global__ void adv_rhs_0(int n_ele, double* localTensor, double dt, double* c0, double* c1, double* c2)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -438,6 +446,8 @@ __global__ void adv_rhs(int n_ele, double* localTensor, double dt, double* c0, d
   };
 }
 
+
+
 StateHolder* state;
 extern "C" void initialise_gpu_()
 {
@@ -486,23 +496,23 @@ extern "C" void run_model_(double* dt_pointer)
   int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
-  double* CoordinateCoeff = state->getElementValue("Coordinate");
-  M<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
-  double* VelocityCoeff = state->getElementValue("Velocity");
-  double* TracerCoeff = state->getElementValue("Tracer");
-  adv_rhs<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff, TracerCoeff);
   cudaMemset(globalMatrix, 0, sizeof(double) * t_adv_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("t_adv") * numNodes);
+  double* CoordinateCoeff = state->getElementValue("Coordinate");
+  M_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   matrix_addto<<<gridXDim,blockXDim>>>(t_adv_findrm, t_adv_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
+  double* VelocityCoeff = state->getElementValue("Velocity");
+  double* TracerCoeff = state->getElementValue("Tracer");
+  adv_rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, VelocityCoeff, TracerCoeff);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
   cg_solve(t_adv_findrm, t_adv_findrm_size, t_adv_colm, t_adv_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
   double* t_advCoeff = state->getElementValue("t_adv");
   expand_data<<<gridXDim,blockXDim>>>(t_advCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("t_adv"), nodesPerEle);
-  A<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
-  diff_rhs<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, t_advCoeff);
   cudaMemset(globalMatrix, 0, sizeof(double) * Tracer_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
+  A_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
+  diff_rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, t_advCoeff);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
   cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
   expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Tracer"), nodesPerEle);

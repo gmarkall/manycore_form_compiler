@@ -69,8 +69,8 @@ class CudaExpressionBuilder(ExpressionBuilder):
     def buildSubscript(self, variable, indices):
         return buildSubscript(variable, indices)
 
-    def subscript_LocalTensor(self, form):
-        indices = super(CudaExpressionBuilder,self).subscript_LocalTensor(form)
+    def subscript_LocalTensor(self, form_data):
+        indices = super(CudaExpressionBuilder,self).subscript_LocalTensor(form_data)
         # First index is the element index
         return [ElementIndex()] + indices
 

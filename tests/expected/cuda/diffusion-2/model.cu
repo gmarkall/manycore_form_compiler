@@ -15,7 +15,7 @@ int* Tracer_colm;
 int Tracer_colm_size;
 
 
-__global__ void A(int n_ele, double* localTensor, double dt, double* c0, double* c1)
+__global__ void A_0(int n_ele, double* localTensor, double dt, double* c0, double* c1)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -112,7 +112,9 @@ __global__ void A(int n_ele, double* localTensor, double dt, double* c0, double*
   };
 }
 
-__global__ void d(int n_ele, double* localTensor, double dt, double* c0, double* c1)
+
+
+__global__ void d_0(int n_ele, double* localTensor, double dt, double* c0, double* c1)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -207,7 +209,9 @@ __global__ void d(int n_ele, double* localTensor, double dt, double* c0, double*
   };
 }
 
-__global__ void M(int n_ele, double* localTensor, double dt, double* c0)
+
+
+__global__ void M_0(int n_ele, double* localTensor, double dt, double* c0)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -274,7 +278,9 @@ __global__ void M(int n_ele, double* localTensor, double dt, double* c0)
   };
 }
 
-__global__ void rhs(int n_ele, double* localTensor, double dt, double* c0, double* c1, double* c2)
+
+
+__global__ void rhs_0(int n_ele, double* localTensor, double dt, double* c0, double* c1, double* c2)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
                                0.8168475729804585, 0.4459484909159649,
@@ -383,6 +389,8 @@ __global__ void rhs(int n_ele, double* localTensor, double dt, double* c0, doubl
   };
 }
 
+
+
 StateHolder* state;
 extern "C" void initialise_gpu_()
 {
@@ -425,14 +433,14 @@ extern "C" void run_model_(double* dt_pointer)
   int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
-  double* CoordinateCoeff = state->getElementValue("Coordinate");
-  double* TracerDiffusivityCoeff = state->getElementValue("TracerDiffusivity");
-  A<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff, TracerDiffusivityCoeff);
-  double* TracerCoeff = state->getElementValue("Tracer");
-  rhs<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, TracerCoeff, TracerDiffusivityCoeff);
   cudaMemset(globalMatrix, 0, sizeof(double) * Tracer_colm_size);
   cudaMemset(globalVector, 0, sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
+  double* CoordinateCoeff = state->getElementValue("Coordinate");
+  double* TracerDiffusivityCoeff = state->getElementValue("TracerDiffusivity");
+  A_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff, TracerDiffusivityCoeff);
   matrix_addto<<<gridXDim,blockXDim>>>(Tracer_findrm, Tracer_colm, globalMatrix, eleNodes, localMatrix, numEle, nodesPerEle);
+  double* TracerCoeff = state->getElementValue("Tracer");
+  rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, TracerCoeff, TracerDiffusivityCoeff);
   vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, numEle, nodesPerEle);
   cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, globalMatrix, globalVector, numNodes, solutionVector);
   expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, numEle, state->getValsPerNode("Tracer"), nodesPerEle);

@@ -40,33 +40,49 @@ class FormBackend(object):
         self._quadratureExpressionBuilder = None
         self._coefficientUseFinder = CoefficientUseFinder()
 
-    def compile(self, form, outerScope = None):
+    def compile(self, form):
         "Compile a pre-processed form."
 
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
         form_data = form.form_data()
         assert form_data, "Form has no form data attached!"
-        rank = form_data.rank
+        self._form_data = form_data
 
+        scope = GlobalScope()
+
+        i = form.integrals()
+        for c in range(len(i)):
+            name = form_data.name + "_" + str(c)
+            scope.append(self._compile_integral(i[c], name))
+
+        return scope
+    
+    def _compile_integral(self, integral, name, outerScope=None):
+        
+        # NOTE: measure is not yet used but will be necessary when we support
+        # surface integrals
+        integrand = integral.integrand()
+        measure = integral.measure()
+        fd = self._form_data
+        rank = fd.rank
+        
         # Set basic properties of the element
         # FIXME: We only look at the element of the coordinate field for now
-        self.numNodesPerEle = d2v[form_data.coordinates.cell().domain()]
-        self.numDimensions = form_data.coordinates.cell().topological_dimension()
-        self.numGaussPoints = form_data.coordinates.element().quadrature_scheme()
+        self.numNodesPerEle = d2v[fd.coordinates.cell().domain()]
+        self.numDimensions = fd.coordinates.cell().topological_dimension()
+        self.numGaussPoints = fd.coordinates.element().quadrature_scheme()
 
         # Initialise basis tensors if necessary
-        declarations = self._buildBasisTensors(form_data)
+        declarations = self._buildBasisTensors()
 
         # Build the loop nest
-        loopNest, gaussBody = self.buildExpressionLoopNest(form)
+        loopNest, gaussBody = self.buildExpressionLoopNest(integrand)
         statements = [loopNest]
 
         # Insert the expressions into the loop nest
         partitions = findPartitions(integrand)
         loopBody = gaussBody
         for (tree, indices) in partitions:
-            expression, listexpressions = self.buildExpression(form, tree)
+            expression, listexpressions = self.buildExpression(tree)
             buildLoopNest(loopBody, indices).prepend(expression)
             for expr in listexpressions:
                 loopBody.prepend(expr)
@@ -78,7 +94,7 @@ class FormBackend(object):
         
         # Insert the local tensor expression into the loop nest. There should
         # be no listexpressions.
-        expression, _ = self.buildLocalTensorExpression(form, integrand)
+        expression, _ = self.buildLocalTensorExpression(integrand)
         loopBody.append(expression)
 
         # If there's any coefficients, we need to build a loop nest
@@ -86,9 +102,9 @@ class FormBackend(object):
         # Note: this uses data generated during building of the expressions,
         # hence needs to be done afterwards, though it comes first in the
         # generated code
-        if form_data.num_coefficients > 0:
-            declarations += self.buildCoeffQuadDeclarations(form)
-            statements = [self.buildQuadratureLoopNest(form)] + statements
+        if fd.num_coefficients > 0:
+            declarations += self.buildCoeffQuadDeclarations(integrand)
+            statements = [self.buildQuadratureLoopNest(integrand)] + statements
 
         # If we are given an outer scope, append the statements to it
         if outerScope:
@@ -97,67 +113,67 @@ class FormBackend(object):
             statements = [outerScope]
 
         # Get parameter list for kernel declaration.
-        formalParameters = self._buildKernelParameters(form)
+        formalParameters = self._buildKernelParameters(integrand)
 
         # Build the function with the loop nest inside
         body = Scope(declarations + statements)
-        kernel = FunctionDefinition(Void(), form_data.name, formalParameters, body)
+        kernel = FunctionDefinition(Void(), name, formalParameters, body)
 
         return kernel
 
-    def buildLocalTensorExpression(self, form, tree):
-        return self.buildExpression(form, tree, True)
+    def buildLocalTensorExpression(self, tree):
+        rhs, listexpr = self._expressionBuilder.build(tree)
+        
+        # The rhs of an integrand needs to be multiplied by the quadrature weights
+        indices = self.subscript_weights()
+        weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
+        rhs = MultiplyOp(rhs, weightsExpr)
+        
+        # Assign expression to the local tensor
+        lhs = self._expressionBuilder.buildLocalTensorAccessor(self._form_data)
 
-    def buildExpression(self, form, tree, localTensor=False):
-        "Build the expression represented by the subtree tree of form."
-        # If the tree is rooted by a SubExpr, we need to construct the 
+        expr = PlusAssignmentOp(lhs, rhs)
+        return expr, listexpr
+
+    def buildExpression(self, tree):
+        "Build the expression represented by the SubTree tree."
+        # The tree is rooted by a SubExpr, so we need to construct the 
         # expression beneath it.
-        expr = tree if localTensor else tree.operands()[0]
+        expr = tree.operands()[0]
         rhs, listexpr = self._expressionBuilder.build(expr)
 
-        if localTensor:
-            # The rhs of a form needs to be multiplied by the quadrature weights
-            indices = self.subscript_weights()
-            weightsExpr = self._expressionBuilder.buildSubscript(weights, indices)
-            rhs = MultiplyOp(rhs, weightsExpr)
-            # Assign expression to the local tensor
-            lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
-        else:
-            # Assign expression to the correct Subexpression variable
-            lhs = self._expressionBuilder.sub_expr(tree)
+        # Assign expression to the correct Subexpression variable
+        lhs = self._expressionBuilder.sub_expr(tree)
         
         expr = PlusAssignmentOp(lhs, rhs)
         return expr, listexpr
 
-    def buildExpressionLoopNest(self, form):
-        "Build the loop nest for evaluating a form expression."
-
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
+    def buildExpressionLoopNest(self, integrand):
+        "Build the loop nest for evaluating an integrand expression."
 
         # Build a loop for the quadrature
         gaussLoop = buildIndexForLoop(buildGaussIndex(self.numGaussPoints))
         
         # Loops over the indices of the local tensor
-        outerLoop = self.buildLocalTensorLoops(form, gaussLoop)
+        outerLoop = self.buildLocalTensorLoops(integrand, gaussLoop)
         
         # Hand back the outer loop, so it can be inserted into some
         # scope.
         return outerLoop, gaussLoop.body()
 
-    def buildLocalTensorLoops(self, form, gaussLoop):
+    def buildLocalTensorLoops(self, integrand, gaussLoop):
         # Build the loop over the first rank, which always exists
-        loop = buildIndexForLoop(buildBasisIndex(0, form))
+        loop = buildIndexForLoop(buildBasisIndex(0, self._form_data))
         outerLoop = loop
 
         # Add a loop over basis functions for each rank of the form
-        for r in range(1,form.form_data().rank):
-            basisLoop = buildIndexForLoop(buildBasisIndex(r, form))
+        for r in range(1, self._form_data.rank):
+            basisLoop = buildIndexForLoop(buildBasisIndex(r, self._form_data))
             loop.append(basisLoop)
             loop = basisLoop
 
         # Initialise the local tensor values to 0
-        initialiser = self.buildLocalTensorInitialiser(form)
+        initialiser = self.buildLocalTensorInitialiser()
         loop.body().prepend(initialiser)
         
         # Put the gauss loop inside the local tensor loop nest
@@ -193,11 +209,9 @@ class FormBackend(object):
 
         return expr
 
-    def buildQuadratureLoopNest(self, form):
-        "Build quadrature loop nest evaluating all coefficients of the form."
+    def buildQuadratureLoopNest(self, integrand):
+        "Build quadrature loop nest evaluating all coefficients of the integrand."
 
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         # Outer loop over gauss points
@@ -216,8 +230,8 @@ class FormBackend(object):
 
         return gaussLoop
 
-    def buildLocalTensorInitialiser(self, form):
-        lhs = self._expressionBuilder.buildLocalTensorAccessor(form)
+    def buildLocalTensorInitialiser(self):
+        lhs = self._expressionBuilder.buildLocalTensorAccessor(self._form_data)
         rhs = Literal(0.0)
         initialiser = AssignmentOp(lhs, rhs)
         return initialiser
@@ -232,9 +246,8 @@ class FormBackend(object):
         initialiser = AssignmentOp(accessor, Literal(0.0))
         return initialiser
 
-    def buildCoeffQuadDeclarations(self, form):
-        # FIXME what if we have multiple integrals?
-        integrand = form.integrals()[0].integrand()
+    def buildCoeffQuadDeclarations(self, integrand):
+        
         coefficients, spatialDerivatives = self._coefficientUseFinder.find(integrand)
 
         declarations = []
@@ -258,14 +271,15 @@ class FormBackend(object):
         extents = [Literal(self.numGaussPoints)] + [Literal(self.numDimensions)]*rank
         return Declaration(Variable(name, Array(Real(), extents)))
 
-    def _buildBasisTensors(self, form_data):
+    def _buildBasisTensors(self):
         """When using a basis that is a tensor product of the scalar basis, we
         need to create an array that holds the tensor product. This function
         generates the code to declare and initialise that array."""
 
         # Build constant initialisers for shape functions/derivatives and
         # quadrature weights
-        element = form_data.coordinates.element()
+        fd = self._form_data
+        element = fd.coordinates.element()
         # We need to construct a fake argument and derivative to get the
         # proper names for the shape functions and derivatives
         from ufl.objects import i
@@ -282,7 +296,7 @@ class FormBackend(object):
 
         initialisers = [nInit, dnInit, wInit]
 
-        for argument in uniqify(form_data.arguments, lambda x: x.element()):
+        for argument in uniqify(fd.arguments, lambda x: x.element()):
             # Ignore scalars
             if isinstance(argument.element(), FiniteElement):
                 continue
@@ -300,14 +314,14 @@ class FormBackend(object):
 
         return initialisers
 
-    def _buildKernelParameters(self, form, timestep, statutoryParameters = None):
+    def _buildKernelParameters(self, integrand, timestep, statutoryParameters = None):
         
         formalParameters = statutoryParameters or []
         # We always have local tensor to tabulate and timestep as parameters
-        formalParameters += [self._buildLocalTensorParameter(form), timestep]
+        formalParameters += [self._buildLocalTensorParameter(integrand), timestep]
 
         # Build a parameter for each coefficient encoutered in the form
-        for coeff in form.form_data().coefficients:
+        for coeff in self._form_data.coefficients:
             param = self._buildCoefficientParameter(coeff)
             formalParameters.append(param)
 

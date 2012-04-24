@@ -30,6 +30,7 @@ try:
 except ImportError:
     from ufl.expr import Operator
 from ufl.form import Form
+from ufl.algorithms.formdata import FormData
 from ufl.algorithms.transformations import Transformer as UflTransformer, is_post_handler
 from ufl.differentiation import SpatialDerivative
 from ufl.finiteelement import FiniteElement, VectorElement, TensorElement
@@ -437,9 +438,9 @@ def extractCoordinates(coeff):
 def numBasisFunctions(e):
     """Return the number of basis functions. e can be a form or an element -
     if e is a form, the element from the test function is used."""
-    if isinstance(e, Form):
+    if isinstance(e, FormData):
         # Use the element from the first argument, which should be the TestFunction
-        e = e.form_data().arguments[0].element()
+        e = e.arguments[0].element()
     element = create_element(e)
     if isinstance(element, FFCMixedElement):
         return len(element.entity_dofs()) * element.num_components()
