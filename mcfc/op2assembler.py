@@ -136,7 +136,10 @@ class Op2AssemblerBackend(AssemblerBackend):
             func.append(InitialisationOp(Variable(field, OpDat), \
                     opDeclDat(dof_set, dim**rank, field)))
 
-        return func
+        # Make sure only the ROSE frontend sees this function since it would
+        # otherwise require OP2 C library functions to be available in the OP2
+        # library Fluidity is linked against
+        return PreprocessorScope('__EDG__', func)
 
     def _buildInitialiser(self):
 

@@ -278,6 +278,8 @@ void RHS_0(double** localTensor, double* dt, double* c0[2], double* c1[2])
 }
 
 
+#ifdef __EDG__
+
 extern "C" void initialise_rose_()
 {
   op_set Coordinate_elements = op_decl_set(0, "Coordinate_elements");
@@ -290,6 +292,8 @@ extern "C" void initialise_rose_()
               "Velocity_element_dofs");
   op_dat Velocity = op_decl_dat(Velocity_dofs, 2, "double", 0, "Velocity");
 }
+
+#endif
 
 extern "C" void initialise_gpu_()
 {

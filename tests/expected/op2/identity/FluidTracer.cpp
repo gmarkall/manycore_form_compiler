@@ -131,6 +131,8 @@ void L_0(double** localTensor, double* dt, double* c0[2], double* c1[1])
 }
 
 
+#ifdef __EDG__
+
 extern "C" void initialise_rose_()
 {
   op_set Coordinate_elements = op_decl_set(0, "Coordinate_elements");
@@ -142,6 +144,8 @@ extern "C" void initialise_rose_()
   op_map Tracer_element_dofs = op_decl_map(Coordinate_elements, Tracer_dofs, 3, 0, "Tracer_element_dofs");
   op_dat Tracer = op_decl_dat(Tracer_dofs, 1, "double", 0, "Tracer");
 }
+
+#endif
 
 extern "C" void initialise_gpu_()
 {

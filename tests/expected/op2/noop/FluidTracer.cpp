@@ -6,6 +6,8 @@
 #include "op_seq_mat.h"
 #include "ufl_utilities.h"
 
+#ifdef __EDG__
+
 extern "C" void initialise_rose_()
 {
   op_set Coordinate_elements = op_decl_set(0, "Coordinate_elements");
@@ -17,6 +19,8 @@ extern "C" void initialise_rose_()
               "Coordinate_element_dofs");
   op_dat Coordinate = op_decl_dat(Coordinate_dofs, 2, "double", 0, "Coordinate");
 }
+
+#endif
 
 extern "C" void initialise_gpu_()
 {

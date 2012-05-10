@@ -344,6 +344,8 @@ void rhs_0(double** localTensor, double* dt, double* c0[2], double* c1[1], doubl
 }
 
 
+#ifdef __EDG__
+
 extern "C" void initialise_rose_()
 {
   op_set Coordinate_elements = op_decl_set(0, "Coordinate_elements");
@@ -359,6 +361,8 @@ extern "C" void initialise_rose_()
               "TracerDiffusivity_element_dofs");
   op_dat TracerDiffusivity = op_decl_dat(TracerDiffusivity_dofs, 4, "double", 0, "TracerDiffusivity");
 }
+
+#endif
 
 extern "C" void initialise_gpu_()
 {

@@ -372,7 +372,7 @@ class PreprocessorScope(GlobalScope):
         self._macro = macro
 
     def unparse(self):
-        code = "#ifdef " + self._macro + "\n"
+        code = "#ifdef " + self._macro + "\n\n"
         code += GlobalScope.unparse(self)
         code += "#endif\n"
         return code
