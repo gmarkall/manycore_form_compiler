@@ -284,14 +284,6 @@ void cg_solve(int* k_findrm, int size_findrm, int* k_colm, int size_colm, double
 
 // LMA Addtions
 
-__device__ int eleId(int ele, int node, int n) {
-  return node*n+ele;
-}
-
-__device__ int lmatIdx(int a, int b, int c, int n) {
-  return a*3*n+b*n+c;
-}
-
 // This definitely gives me the diagonal of the BD local matrix
 __global__ void extract_diagonal(int n_ele, double *matrix, double *jac_tmp)
 {
@@ -347,7 +339,7 @@ __global__ void spmv_stage3(int nodes, double *temp2, double *dest, int *findrm,
   }
 }
 
-void cg_solve_lma(int* k_findrm, int size_findrm, int* k_colm, int size_colm, double* k_val, double* k_b, int rhs_val_size, double *x_p)
+void cg_solve_lma(int* k_findrm, int size_findrm, int* k_colm, int size_colm, double* k_val, double* k_b, int rhs_val_size, double *x_p, int n_ele, double *matrix, int *node_nums)
 {
   // Vectors on the GPU
   double *k_d, *k_q, *k_s;
