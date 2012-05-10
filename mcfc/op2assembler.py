@@ -22,6 +22,10 @@ from assembler import *
 from codegeneration import *
 from formutils import extractCoordinates, numBasisFunctions
 
+# Global paramters
+# FIXME: Default to double for now
+real_kind = Literal('double')
+
 # OP2 data types
 # FIXME: introduce Type 'Struct' for these?
 OpSet = Class('op_set')
@@ -41,22 +45,18 @@ opDeclVec = lambda origin, name: \
     FunctionCall('op_decl_vec', [origin, Literal(name)])
 opDeclSparsity = lambda rowmap, colmap, name: \
     FunctionCall('op_decl_sparsity', [rowmap, colmap, Literal(name)])
-# FIXME: Default to double for now
 opDeclMat = lambda sparsity, dim, name: \
-    FunctionCall('op_decl_mat', [sparsity, dim, Literal('double'), Literal(8), Literal(name)])
+    FunctionCall('op_decl_mat', [sparsity, dim, real_kind, Literal(8), Literal(name)])
 opFreeVec = lambda vec: \
     FunctionCall('op_free_vec', [vec])
 opFreeMat = lambda mat: \
     FunctionCall('op_free_mat', [mat])
-# FIXME: Default to double for now
 opArgGbl = lambda dat, dim, access: \
-    FunctionCall('op_arg_gbl', [dat, dim, Literal('double'), access])
-# FIXME: Default to double for now
+    FunctionCall('op_arg_gbl', [dat, dim, real_kind, access])
 opArgDat = lambda dat, index, mapping, dim, access: \
-    FunctionCall('op_arg_dat', [dat, index, mapping, dim, Literal('double'), access])
-# FIXME: Default to double for now
+    FunctionCall('op_arg_dat', [dat, index, mapping, dim, real_kind, access])
 opArgMat = lambda mat, rowindex, rowmap, colindex, colmap, dim, access: \
-    FunctionCall('op_arg_mat', [mat, rowindex, rowmap, colindex, colmap, dim, Literal('double'), access])
+    FunctionCall('op_arg_mat', [mat, rowindex, rowmap, colindex, colmap, dim, real_kind, access])
 opFetchData = lambda dat: FunctionCall('op_fetch_data', [dat])
 opIterationSpace = lambda iterset, dims: \
     FunctionCall('op_iteration_space', [iterset, Literal(dims[0]), Literal(dims[1])])
