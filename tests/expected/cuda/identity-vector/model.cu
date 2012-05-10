@@ -348,19 +348,11 @@ extern "C" void run_model_(double* dt_pointer)
   int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
-  cudaMemset(globalMatrix, 0, sizeof(double) * Velocity_colm_size);
-  cudaMemset(globalVector, 0, 
-             sizeof(double) * state->getValsPerNode("Velocity") * numNodes);
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   A_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
-  matrix_addto<<<gridXDim,blockXDim>>>(Velocity_findrm, Velocity_colm, 
-                                       globalMatrix, eleNodes, localMatrix, 
-                                       numEle, nodesPerEle);
   double* VelocityCoeff = state->getElementValue("Velocity");
   RHS_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
                                 VelocityCoeff);
-  vector_addto<<<gridXDim,blockXDim>>>(globalVector, eleNodes, localVector, 
-                                       numEle, nodesPerEle);
   cg_solve(Velocity_findrm, Velocity_findrm_size, Velocity_colm, 
            Velocity_colm_size, globalMatrix, globalVector, numNodes, 
            solutionVector);
