@@ -365,6 +365,20 @@ class GlobalScope(Scope):
 
     __str__ = unparse
 
+class PreprocessorScope(GlobalScope):
+
+    def __init__(self, macro, statements):
+        GlobalScope.__init__(self, statements)
+        self._macro = macro
+
+    def unparse(self):
+        code = "#ifdef " + self._macro + "\n"
+        code += GlobalScope.unparse(self)
+        code += "#endif\n"
+        return code
+
+    __str__ = unparse
+
 class New(BackendASTNode):
 
     def __init__(self, t, params=None):
