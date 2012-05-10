@@ -353,9 +353,9 @@ extern "C" void run_model_(double* dt_pointer)
   double* VelocityCoeff = state->getElementValue("Velocity");
   RHS_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
                                 VelocityCoeff);
-  cg_solve(Velocity_findrm, Velocity_findrm_size, Velocity_colm, 
-           Velocity_colm_size, globalMatrix, globalVector, numNodes, 
-           solutionVector);
+  cg_solve_lma(Velocity_findrm, Velocity_findrm_size, Velocity_colm, 
+               Velocity_colm_size, globalMatrix, globalVector, numNodes, 
+               solutionVector, numEle, localMatrix, eleNodes);
   expand_data<<<gridXDim,blockXDim>>>(VelocityCoeff, solutionVector, eleNodes, 
                                       numEle, 
                                       state->getValsPerNode("Velocity"), 

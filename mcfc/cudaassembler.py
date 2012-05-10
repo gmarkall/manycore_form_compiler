@@ -264,8 +264,9 @@ class CudaAssemblerBackend(AssemblerBackend):
             # Call the solve
             params = [ sparsity['findrm'], sparsity['findrm_size'], \
                        sparsity['colm'], sparsity['colm_size'], \
-                       globalMatrix, globalVector, numNodes, solutionVector ]
-            func.append(FunctionCall('cg_solve', params))
+                       globalMatrix, globalVector, numNodes, solutionVector,
+                       numEle, localMatrix, eleNodes ]
+            func.append(FunctionCall('cg_solve_lma', params))
 
             # Expand the result
             var = self.extractCoefficient(func, result)

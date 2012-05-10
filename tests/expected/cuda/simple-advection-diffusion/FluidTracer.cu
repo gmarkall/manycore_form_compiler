@@ -506,8 +506,9 @@ extern "C" void run_model_(double* dt_pointer)
   double* TracerCoeff = state->getElementValue("Tracer");
   adv_rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
                                     VelocityCoeff, TracerCoeff);
-  cg_solve(t_adv_findrm, t_adv_findrm_size, t_adv_colm, t_adv_colm_size, 
-           globalMatrix, globalVector, numNodes, solutionVector);
+  cg_solve_lma(t_adv_findrm, t_adv_findrm_size, t_adv_colm, t_adv_colm_size, 
+               globalMatrix, globalVector, numNodes, solutionVector, numEle, 
+               localMatrix, eleNodes);
   double* t_advCoeff = state->getElementValue("t_adv");
   expand_data<<<gridXDim,blockXDim>>>(t_advCoeff, solutionVector, eleNodes, 
                                       numEle, state->getValsPerNode("t_adv"), 
@@ -515,8 +516,9 @@ extern "C" void run_model_(double* dt_pointer)
   A_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   diff_rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
                                      t_advCoeff);
-  cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, 
-           globalMatrix, globalVector, numNodes, solutionVector);
+  cg_solve_lma(Tracer_findrm, Tracer_findrm_size, Tracer_colm, 
+               Tracer_colm_size, globalMatrix, globalVector, numNodes, 
+               solutionVector, numEle, localMatrix, eleNodes);
   expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, 
                                       numEle, state->getValsPerNode("Tracer"), 
                                       nodesPerEle);

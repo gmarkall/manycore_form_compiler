@@ -229,8 +229,9 @@ extern "C" void run_model_(double* dt_pointer)
   double* VelocityCoeff = state->getElementValue("Velocity");
   rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
                                 TracerCoeff, VelocityCoeff);
-  cg_solve(Tracer_findrm, Tracer_findrm_size, Tracer_colm, Tracer_colm_size, 
-           globalMatrix, globalVector, numNodes, solutionVector);
+  cg_solve_lma(Tracer_findrm, Tracer_findrm_size, Tracer_colm, 
+               Tracer_colm_size, globalMatrix, globalVector, numNodes, 
+               solutionVector, numEle, localMatrix, eleNodes);
   expand_data<<<gridXDim,blockXDim>>>(TracerCoeff, solutionVector, eleNodes, 
                                       numEle, state->getValsPerNode("Tracer"), 
                                       nodesPerEle);
