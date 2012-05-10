@@ -350,13 +350,12 @@ __global__ void spmv_stage3(int nodes, double *temp2, double *dest, int *findrm,
 void cg_solve_lma(int* k_findrm, int size_findrm, int* k_colm, int size_colm, double* k_val, double* k_b, int rhs_val_size, double *x_p)
 {
   // Vectors on the GPU
-  double
-    //*k_x, *k_r,
-    *k_d, *k_q, *k_s;
-
+  double *k_d, *k_q, *k_s;
   double *temp1, *temp2, *k_jac_tmp;
+
   // Diagonal matrix on the GPU (stored as a vector)
   double* k_jac;
+
   // Scalars on the GPU
   double  *k_alpha, *k_snew, *k_beta, *k_sold, *k_s0;
 
@@ -364,12 +363,7 @@ void cg_solve_lma(int* k_findrm, int size_findrm, int* k_colm, int size_colm, do
   double s0, snew;
   int iterations = 0;
 
-  // Allocate space on the GPU for the CSR matrix and RHS vector, and copy from host to GPU
-  cudaBindTexture(NULL, tex_colm, k_colm, sizeof(int)*(size_colm));
-
   // Allocate space for vectors on the GPU
-  //cudaMalloc((void**)&k_x, sizeof(double)*(*rhs_val_size));
-  //cudaMalloc((void**)&k_r, sizeof(double)*(*rhs_val_size));
   cudaMalloc((void**)&k_s, sizeof(double)*(rhs_val_size));
   cudaMalloc((void**)&k_d, sizeof(double)*(rhs_val_size));
   cudaMalloc((void**)&k_q, sizeof(double)*(rhs_val_size));
@@ -392,17 +386,11 @@ void cg_solve_lma(int* k_findrm, int size_findrm, int* k_colm, int size_colm, do
   // Create diagonal preconditioning matrix (J = 1/diag(M)) 
   extract_diagonal<<<GridDim,BlockDim>>>(n_ele, matrix, k_jac_tmp);
   create_jac_pc<<<GridDim,BlockDim>>>(rhs_val_size, k_findrm, k_colm, k_jac, k_jac_tmp);
-  //create_jac_sym<<<GridDim,BlockDim>>>(rhs_val_size, k_findrm, k_colm, k_val, k_jac);
-  //  printd("jac", k_jac, 1000);
-  // Bind the matrix to the texture cache - this was not done earlier as we modified the matrix
-  cudaBindTexture(NULL, tex_val, k_val, sizeof(double)*(size_colm));
 
   // Initialise result vector (x=0)
   veczero<<<GridDim,BlockDim>>>(rhs_val_size, x_p);
 
   // r=b-Ax (r=b since x=0), and d=M^(-1)r
-  //cudaMemcpy(k_r, k_b, sizeof(double)*(*rhs_val_size), cudaMemcpyDeviceToDevice);
-  //cudaMemcpy(k_d, k_r, sizeof(double)*(*rhs_val_size), cudaMemcpyDeviceToDevice);
   diag_spmv<<<GridDim,BlockDim>>>(rhs_val_size, k_jac, k_b, k_d);
 
   // s0 = r.d
@@ -413,13 +401,13 @@ void cg_solve_lma(int* k_findrm, int size_findrm, int* k_colm, int size_colm, do
   // Copy snew and s0 back to host so that host can evaluate stopping condition
   cudaMemcpy(&snew, k_snew, sizeof(double), cudaMemcpyDeviceToHost);
   cudaMemcpy(&s0, k_s0, sizeof(double), cudaMemcpyDeviceToHost);
+  
   // While i < imax and snew > epsilon^2*s0
   while (iterations < IMAX && snew > epsilon2*s0)
   {
     // q = Ad
     spmv_stage1_2<<<GridDim,BlockDim>>>(n_ele, matrix, k_d, temp2, node_nums);
     spmv_stage3<<<GridDim,BlockDim>>>(rhs_val_size, temp2, k_q, k_findrm, k_colm);
-    //csr_spmv<<<GridDim,BlockDim>>>(rhs_val_size, k_d, k_q, k_findrm);
     // alpha = snew/(d.q)
     vecdot(rhs_val_size, k_d, k_q, k_alpha);
     scalardiv<<<1,1>>>(k_snew, k_alpha, k_alpha);
@@ -442,9 +430,6 @@ void cg_solve_lma(int* k_findrm, int size_findrm, int* k_colm, int size_colm, do
     // i = i+1
     iterations++;
   }
-
-  cudaUnbindTexture(tex_colm);
-  cudaUnbindTexture(tex_val);
 
   cudaFree(k_s);
   cudaFree(k_d);
