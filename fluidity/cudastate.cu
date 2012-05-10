@@ -751,8 +751,9 @@ void StateHolder::extractField(string field_name, int rank)
   switch (rank)
   {
     case 0: // scalar field
-      extract_scalar_field_wrapper(fortran_name, &fortran_length, &conn_findrm, &conn_findrm_size, &conn_colm, &conn_colm_size, 
-                                      &at_findrm, &at_findrm_size, &at_colm, &at_colm_size, 
+      // Very dirty hack to get the A^T sparsity pattern where we need it to be.
+      extract_scalar_field_wrapper(fortran_name, &fortran_length, &at_findrm, &at_findrm_size, &at_colm, &at_colm_size, 
+                                      &conn_findrm, &conn_findrm_size, &conn_colm, &conn_colm_size, 
   				      &num_ele, &num_nodes, &ndglno, &loc, &dim,
 				      &ngi, &n, &dn, &degree, &weight, &val);
       break;
