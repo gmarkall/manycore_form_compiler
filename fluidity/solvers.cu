@@ -282,3 +282,183 @@ void cg_solve(int* k_findrm, int size_findrm, int* k_colm, int size_colm, double
 
 }
 
+// LMA Addtions
+
+__device__ int eleId(int ele, int node, int n) {
+  return node*n+ele;
+}
+
+__device__ int lmatIdx(int a, int b, int c, int n) {
+  return a*3*n+b*n+c;
+}
+
+// This definitely gives me the diagonal of the BD local matrix
+__global__ void extract_diagonal(int n_ele, double *matrix, double *jac_tmp)
+{
+  for(int i=THREAD_ID; i<n_ele; i+=THREAD_COUNT) {
+    jac_tmp[i*3  ] = matrix[lmatIdx(0,0,i,n_ele)];
+    jac_tmp[i*3+1] = matrix[lmatIdx(1,1,i,n_ele)];
+    jac_tmp[i*3+2] = matrix[lmatIdx(2,2,i,n_ele)];
+  }
+}
+
+__global__ void create_jac_pc(int n, int *findrm, int *colm, double *jac, double *jac_tmp) {
+  for(int row=THREAD_ID; row<n; row+=THREAD_COUNT) {
+    jac[row] = 0;
+    int a=findrm[row];
+    int b=findrm[row+1];
+    for(int k=a;k<b;k++) {
+      jac[row] += jac_tmp[colm[k-1]-1];
+    }
+    jac[row] = 1.0/jac[row];
+  }
+}
+
+__global__ void spmv_stage1_2(int n_ele, double *matrix, double *src, double *temp2, int *node_nums)
+{
+
+  //Compute M*s*b
+  for(int ele=THREAD_ID; ele<n_ele; ele+=THREAD_COUNT) {
+
+    double tmpa = src[node_nums[eleId(ele,0,n_ele)]-1];
+    double tmpb = src[node_nums[eleId(ele,1,n_ele)]-1];
+    double tmpc = src[node_nums[eleId(ele,2,n_ele)]-1];
+    temp2[ele*3]   = matrix[lmatIdx(0,0,ele,n_ele)]*tmpa
+                   + matrix[lmatIdx(0,1,ele,n_ele)]*tmpb
+                   + matrix[lmatIdx(0,2,ele,n_ele)]*tmpc;
+    temp2[ele*3+1] = matrix[lmatIdx(1,0,ele,n_ele)]*tmpa
+                   + matrix[lmatIdx(1,1,ele,n_ele)]*tmpb
+                   + matrix[lmatIdx(1,2,ele,n_ele)]*tmpc;
+    temp2[ele*3+2] = matrix[lmatIdx(2,0,ele,n_ele)]*tmpa
+                   + matrix[lmatIdx(2,1,ele,n_ele)]*tmpb
+                   + matrix[lmatIdx(2,2,ele,n_ele)]*tmpc;
+  }
+}
+
+__global__ void spmv_stage3(int nodes, double *temp2, double *dest, int *findrm, int *colm)
+{
+  // Compute s^T*M*s*b
+  for(int row=THREAD_ID; row<nodes; row+=THREAD_COUNT) {
+    dest[row] = 0;
+    int a=findrm[row];
+    int b=findrm[row+1];
+    for(int k=a;k<b;k++)
+      dest[row] += temp2[colm[k-1]-1];
+  }
+}
+
+void cg_solve_lma(int* k_findrm, int size_findrm, int* k_colm, int size_colm, double* k_val, double* k_b, int rhs_val_size, double *x_p)
+{
+  // Vectors on the GPU
+  double
+    //*k_x, *k_r,
+    *k_d, *k_q, *k_s;
+
+  double *temp1, *temp2, *k_jac_tmp;
+  // Diagonal matrix on the GPU (stored as a vector)
+  double* k_jac;
+  // Scalars on the GPU
+  double  *k_alpha, *k_snew, *k_beta, *k_sold, *k_s0;
+
+  // Scalars on the host
+  double s0, snew;
+  int iterations = 0;
+
+  // Allocate space on the GPU for the CSR matrix and RHS vector, and copy from host to GPU
+  cudaBindTexture(NULL, tex_colm, k_colm, sizeof(int)*(size_colm));
+
+  // Allocate space for vectors on the GPU
+  //cudaMalloc((void**)&k_x, sizeof(double)*(*rhs_val_size));
+  //cudaMalloc((void**)&k_r, sizeof(double)*(*rhs_val_size));
+  cudaMalloc((void**)&k_s, sizeof(double)*(rhs_val_size));
+  cudaMalloc((void**)&k_d, sizeof(double)*(rhs_val_size));
+  cudaMalloc((void**)&k_q, sizeof(double)*(rhs_val_size));
+  cudaMalloc((void**)&k_jac, sizeof(double)*(rhs_val_size));
+  cudaMalloc((void**)&k_alpha, sizeof(double));
+  cudaMalloc((void**)&scratchpad, sizeof(double)*NUM_BLOCKS);
+  cudaMalloc((void**)&k_snew, sizeof(double));
+  cudaMalloc((void**)&k_sold, sizeof(double));
+  cudaMalloc((void**)&k_beta, sizeof(double));
+  cudaMalloc((void**)&k_s0, sizeof(double));
+  cudaMalloc((void**)&temp1, sizeof(double)*n_ele*3);
+  cudaMalloc((void**)&temp2, sizeof(double)*n_ele*3);
+  cudaMalloc((void**)&k_jac_tmp, sizeof(double)*n_ele*3);
+
+
+  // Dimensions of blocks and grid on the GPU
+  dim3 BlockDim(NUM_THREADS);
+  dim3 GridDim(NUM_BLOCKS);
+
+  // Create diagonal preconditioning matrix (J = 1/diag(M)) 
+  extract_diagonal<<<GridDim,BlockDim>>>(n_ele, matrix, k_jac_tmp);
+  create_jac_pc<<<GridDim,BlockDim>>>(rhs_val_size, k_findrm, k_colm, k_jac, k_jac_tmp);
+  //create_jac_sym<<<GridDim,BlockDim>>>(rhs_val_size, k_findrm, k_colm, k_val, k_jac);
+  //  printd("jac", k_jac, 1000);
+  // Bind the matrix to the texture cache - this was not done earlier as we modified the matrix
+  cudaBindTexture(NULL, tex_val, k_val, sizeof(double)*(size_colm));
+
+  // Initialise result vector (x=0)
+  veczero<<<GridDim,BlockDim>>>(rhs_val_size, x_p);
+
+  // r=b-Ax (r=b since x=0), and d=M^(-1)r
+  //cudaMemcpy(k_r, k_b, sizeof(double)*(*rhs_val_size), cudaMemcpyDeviceToDevice);
+  //cudaMemcpy(k_d, k_r, sizeof(double)*(*rhs_val_size), cudaMemcpyDeviceToDevice);
+  diag_spmv<<<GridDim,BlockDim>>>(rhs_val_size, k_jac, k_b, k_d);
+
+  // s0 = r.d
+  vecdot(rhs_val_size, k_b, k_d, k_s0);
+  // snew = s0
+  scalarassign(k_snew, k_s0);
+
+  // Copy snew and s0 back to host so that host can evaluate stopping condition
+  cudaMemcpy(&snew, k_snew, sizeof(double), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&s0, k_s0, sizeof(double), cudaMemcpyDeviceToHost);
+  // While i < imax and snew > epsilon^2*s0
+  while (iterations < IMAX && snew > epsilon2*s0)
+  {
+    // q = Ad
+    spmv_stage1_2<<<GridDim,BlockDim>>>(n_ele, matrix, k_d, temp2, node_nums);
+    spmv_stage3<<<GridDim,BlockDim>>>(rhs_val_size, temp2, k_q, k_findrm, k_colm);
+    //csr_spmv<<<GridDim,BlockDim>>>(rhs_val_size, k_d, k_q, k_findrm);
+    // alpha = snew/(d.q)
+    vecdot(rhs_val_size, k_d, k_q, k_alpha);
+    scalardiv<<<1,1>>>(k_snew, k_alpha, k_alpha);
+    // x = x + alpha*d
+    axpy<<<GridDim,BlockDim>>>(rhs_val_size, k_alpha, k_d, x_p, x_p);
+    // r = r - alpha*q
+    ymax<<<GridDim,BlockDim>>>(rhs_val_size, k_alpha, k_q, k_b);
+    // s = M^(-1)r
+    diag_spmv<<<GridDim,BlockDim>>>(rhs_val_size, k_jac, k_b, k_s);
+    // sold = snew
+    scalarassign(k_sold, k_snew);
+    // snew = r.s
+    vecdot(rhs_val_size, k_b, k_s, k_snew);
+    // beta = snew/sold
+    scalardiv<<<1,1>>>(k_snew, k_sold, k_beta);
+    // d = s + beta*d
+    axpy<<<GridDim,BlockDim>>>(rhs_val_size, k_beta, k_d, k_s, k_d);
+    // Copy back snew so the host can evaluate the stopping condition
+    cudaMemcpy(&snew, k_snew, sizeof(double), cudaMemcpyDeviceToHost);
+    // i = i+1
+    iterations++;
+  }
+
+  cudaUnbindTexture(tex_colm);
+  cudaUnbindTexture(tex_val);
+
+  cudaFree(k_s);
+  cudaFree(k_d);
+  cudaFree(k_q);
+  cudaFree(k_jac);
+  cudaFree(k_alpha);
+  cudaFree(k_snew);
+  cudaFree(k_sold);
+  cudaFree(k_beta);
+  cudaFree(k_s0);
+  cudaFree(scratchpad);
+  cudaFree(temp1);
+  cudaFree(temp2);
+  cudaFree(k_jac_tmp);
+
+}
+
