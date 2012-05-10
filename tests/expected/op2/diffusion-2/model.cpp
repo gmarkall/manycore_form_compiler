@@ -344,6 +344,22 @@ void rhs_0(double** localTensor, double* dt, double* c0[2], double* c1[1], doubl
 }
 
 
+extern "C" void initialise_rose_()
+{
+  op_set Coordinate_elements = op_decl_set(0, "Coordinate_elements");
+  op_set Coordinate_dofs = op_decl_set(0, "Coordinate_dofs");
+  op_map Coordinate_element_dofs = op_decl_map(Coordinate_elements, Coordinate_dofs, 3, 0, 
+              "Coordinate_element_dofs");
+  op_dat Coordinate = op_decl_dat(Coordinate_dofs, 2, "double", 0, "Coordinate");
+  op_set Tracer_dofs = op_decl_set(0, "Tracer_dofs");
+  op_map Tracer_element_dofs = op_decl_map(Coordinate_elements, Tracer_dofs, 3, 0, "Tracer_element_dofs");
+  op_dat Tracer = op_decl_dat(Tracer_dofs, 1, "double", 0, "Tracer");
+  op_set TracerDiffusivity_dofs = op_decl_set(0, "TracerDiffusivity_dofs");
+  op_map TracerDiffusivity_element_dofs = op_decl_map(Coordinate_elements, TracerDiffusivity_dofs, 3, 0, 
+              "TracerDiffusivity_element_dofs");
+  op_dat TracerDiffusivity = op_decl_dat(TracerDiffusivity_dofs, 4, "double", 0, "TracerDiffusivity");
+}
+
 extern "C" void initialise_gpu_()
 {
   op_init(0, 0, 2);

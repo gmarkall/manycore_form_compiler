@@ -278,6 +278,19 @@ void RHS_0(double** localTensor, double* dt, double* c0[2], double* c1[2])
 }
 
 
+extern "C" void initialise_rose_()
+{
+  op_set Coordinate_elements = op_decl_set(0, "Coordinate_elements");
+  op_set Coordinate_dofs = op_decl_set(0, "Coordinate_dofs");
+  op_map Coordinate_element_dofs = op_decl_map(Coordinate_elements, Coordinate_dofs, 3, 0, 
+              "Coordinate_element_dofs");
+  op_dat Coordinate = op_decl_dat(Coordinate_dofs, 2, "double", 0, "Coordinate");
+  op_set Velocity_dofs = op_decl_set(0, "Velocity_dofs");
+  op_map Velocity_element_dofs = op_decl_map(Coordinate_elements, Velocity_dofs, 3, 0, 
+              "Velocity_element_dofs");
+  op_dat Velocity = op_decl_dat(Velocity_dofs, 2, "double", 0, "Velocity");
+}
+
 extern "C" void initialise_gpu_()
 {
   op_init(0, 0, 2);

@@ -21,6 +21,7 @@
 from assembler import *
 from codegeneration import *
 from formutils import extractCoordinates, numBasisFunctions
+from uflnamespace import domain2num_vertices as d2v
 
 # Global paramters
 # FIXME: Default to double for now
@@ -41,6 +42,15 @@ OpRead = Constant('OP_READ')
 # OP2 functions
 opInit = lambda diags: FunctionCall('op_init', [Literal(0), Literal(0), diags])
 opExit = lambda : FunctionCall('op_exit', [])
+# The set sizes are inherently runtime, so we pass a constant 0
+opDeclSet = lambda name: \
+    FunctionCall('op_decl_set',  [Literal(0), Literal(name)]);
+# We pass a NULL pointer for the data since these are only fake calls
+opDeclMap = lambda from_set, to_set, dim, name: \
+    FunctionCall('op_decl_map',  [from_set, to_set, Literal(dim), Literal(0), Literal(name)]);
+# We pass a NULL pointer for the data since these are only fake calls
+opDeclDat = lambda dataset, dim, name: \
+    FunctionCall('op_decl_dat', [dataset, Literal(dim), real_kind, Literal(0), Literal(name)]);
 opDeclVec = lambda origin, name: \
     FunctionCall('op_decl_vec', [origin, Literal(name)])
 opDeclSparsity = lambda rowmap, colmap, name: \
@@ -88,6 +98,7 @@ class Op2AssemblerBackend(AssemblerBackend):
 
         # Build declarations
         declarations = GlobalScope()
+        declarations.append(self._buildFakeInitialiser())
         declarations.append(self._buildInitialiser())
         declarations.append(self._buildFinaliser())
         declarations.append(self._buildRunModel())
@@ -98,6 +109,34 @@ class Op2AssemblerBackend(AssemblerBackend):
         definitions = self._buildHeadersAndGlobals()
 
         return definitions, declarations
+
+    def _buildFakeInitialiser(self):
+        """Build fake initialisers for all used OP2 data structures for the
+           ROSE source-to-source translator to analyse. Since we don't have
+           runtime information about set sizes and the actual data pointers,
+           we use dummy values. This function is never called by the Fluidity
+           driver routines."""
+
+        func = FunctionDefinition(Void(), 'initialise_rose_')
+        func.setExternC(True)
+
+        # We always have a Coordinate field, so start with that
+
+        loc = d2v[self._eq.state[1]['Coordinate'].cell().domain()]
+        dim = self._eq.state[1]['Coordinate'].cell().d
+        # Element set (used by all maps)
+        elem_set = Variable('Coordinate_elements', OpSet)
+        func.append(InitialisationOp(elem_set, opDeclSet('Coordinate_elements')))
+
+        for rank, field in self._eq.state.accessedFields().values():
+            dof_set = Variable(field+'_dofs', OpSet)
+            func.append(InitialisationOp(dof_set, opDeclSet(field+'_dofs')))
+            func.append(InitialisationOp(Variable(field+'_element_dofs', OpMap), \
+                    opDeclMap(elem_set, dof_set, loc, field+'_element_dofs')))
+            func.append(InitialisationOp(Variable(field, OpDat), \
+                    opDeclDat(dof_set, dim**rank, field)))
+
+        return func
 
     def _buildInitialiser(self):
 
