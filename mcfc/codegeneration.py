@@ -365,16 +365,20 @@ class GlobalScope(Scope):
 
     __str__ = unparse
 
-class PreprocessorScope(GlobalScope):
+class PreprocessorScope(Scoped):
 
-    def __init__(self, macro, statements):
-        GlobalScope.__init__(self, statements)
+    def __init__(self, macro, if_scope, else_scope=None):
         self._macro = macro
+        self._if_scope = if_scope
+        self._else_scope = else_scope
 
     def unparse(self):
         code = "#ifdef " + self._macro + "\n\n"
-        code += GlobalScope.unparse(self)
-        code += "#endif\n"
+        code += self._if_scope.unparse()
+        if self._else_scope:
+            code += "\n#else\n\n"
+            code += self._else_scope.unparse()
+        code += "\n#endif\n"
         return code
 
     __str__ = unparse
