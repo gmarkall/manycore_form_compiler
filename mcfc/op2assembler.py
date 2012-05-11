@@ -161,12 +161,9 @@ class Op2AssemblerBackend(AssemblerBackend):
         return func
 
     def _buildHeadersAndGlobals(self):
-        scope = GlobalScope()
-        scope.append(Include('op_lib_cpp.h'))
-        scope.append(Include('op_seq_mat.h'))
-        scope.append(Include('ufl_utilities.h'))
-
-        return scope
+        seq_includes = GlobalScope([Include('op_lib_cpp.h'), Include('op_seq_mat.h'), Include('ufl_utilities.h')])
+        rose_includes = GlobalScope([Include('OP2_OXFORD.h')])
+        return PreprocessorScope('__EDG__', rose_includes, seq_includes)
 
     def _buildRunModel(self):
 

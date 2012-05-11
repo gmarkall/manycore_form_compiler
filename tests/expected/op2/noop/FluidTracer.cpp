@@ -2,9 +2,17 @@
 // https://github.com/gmarkall/manycore_form_compiler
 
 
+#ifdef __EDG__
+
+#include "OP2_OXFORD.h"
+
+#else
+
 #include "op_lib_cpp.h"
 #include "op_seq_mat.h"
 #include "ufl_utilities.h"
+
+#endif
 
 #ifdef __EDG__
 

@@ -2,9 +2,17 @@
 // https://github.com/gmarkall/manycore_form_compiler
 
 
+#ifdef __EDG__
+
+#include "OP2_OXFORD.h"
+
+#else
+
 #include "op_lib_cpp.h"
 #include "op_seq_mat.h"
 #include "ufl_utilities.h"
+
+#endif
 
 void A_0(double* localTensor, double* dt, double* c0[2], double* c1[2][2], int i_r_0, int i_r_1)
 {
