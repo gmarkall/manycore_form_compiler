@@ -10,7 +10,6 @@ double* globalVector;
 double* globalMatrix;
 double* solutionVector;
 
-
 StateHolder* state;
 extern "C" void initialise_gpu_()
 {
@@ -44,6 +43,5 @@ extern "C" void return_fields_()
 {
 
 }
-
 
 

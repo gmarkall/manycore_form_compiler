@@ -41,6 +41,9 @@ class ModifierMixin:
 class BackendASTNode:
     pass
 
+class Scoped(BackendASTNode):
+    pass
+
 class Bracketed(BackendASTNode):
 
     def __init__(self, op):
@@ -151,7 +154,7 @@ class ArrayInitialiserList(BackendASTNode):
         # Replace all [ delimiters by { in string representation of the array
         return self.arrStr.replace('[','{ ').replace(']',' }')
 
-class ForLoop(BackendASTNode):
+class ForLoop(Scoped):
 
     def __init__(self, init, test, inc, body=None):
         self._init = init
@@ -216,7 +219,7 @@ class ExpressionList(BackendASTNode):
 
     __str__ = unparse
 
-class FunctionDefinition(BackendASTNode, ModifierMixin):
+class FunctionDefinition(Scoped, ModifierMixin):
 
     def __init__(self, t, name, params=None, body=None):
         ModifierMixin.__init__(self)
@@ -242,7 +245,7 @@ class FunctionDefinition(BackendASTNode, ModifierMixin):
         t = self._t.unparse()
         params = self._params.unparse()
         body = self._body.unparse()
-        return '%s%s %s%s\n%s' % (mod, t, self._name, params, body)
+        return '%s%s %s%s\n%s\n' % (mod, t, self._name, params, body)
 
     __str__ = unparse
 
@@ -285,7 +288,7 @@ class CudaKernelCall(FunctionCall):
 
         return '%s<<<%s>>>' % (self._name, config)
 
-class Scope(BackendASTNode):
+class Scope(Scoped):
 
     def __init__(self, statements=None):
         s = as_list(statements)
@@ -305,10 +308,18 @@ class Scope(BackendASTNode):
             if matches(s):
                 return s
 
+    def unparse_statements(self):
+        def unparse_statement(s):
+            if isinstance(s, (Include, Scoped)):
+                return s.unparse()
+            else:
+                return s.unparse() + ';'
+        return '\n'.join([getIndent() + unparse_statement(s) for s in self._statements])
+
     def unparse(self):
         code = getIndent() + '{\n'
         incIndent()
-        code += '\n'.join([getIndent() + s.unparse() + ';' for s in self._statements])
+        code += self.unparse_statements()
         decIndent()
         code += '\n' + getIndent() + '}'
         return code
@@ -318,15 +329,7 @@ class Scope(BackendASTNode):
 class GlobalScope(Scope):
 
     def unparse(self):
-        code = ''
-        for s in self._statements:
-            if isinstance(s, Include):
-                code += s.unparse() + '\n'
-            elif isinstance(s, FunctionDefinition):
-                code += s.unparse() + '\n\n'
-            else:
-                code += s.unparse() + ';\n'
-        return code
+        return self.unparse_statements() + '\n'
 
     __str__ = unparse
 

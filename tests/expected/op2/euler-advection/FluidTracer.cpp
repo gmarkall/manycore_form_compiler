@@ -3,7 +3,6 @@
 
 
 
-
 void rhs_0(double** localTensor, double* dt, double* c0[2], double* c1[1], double* c2[2])
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
@@ -51,23 +50,23 @@ void rhs_0(double** localTensor, double* dt, double* c0[2], double* c1[1], doubl
         for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
         {
           c_q0[i_g][i_d_0][i_d_1] += c0[q_r_0][i_d_0] * d_CG1[q_r_0][i_g][i_d_1];
-        };
-      };
-    };
+        }
+      }
+    }
     c_q1[i_g] = 0.0;
     for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
     {
       c_q1[i_g] += c1[q_r_0][0] * CG1[q_r_0][i_g];
-    };
+    }
     for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
     {
       c_q2[i_g][i_d_0] = 0.0;
       for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
       {
         c_q2[i_g][i_d_0] += c2[q_r_0][i_d_0] * CG1[q_r_0][i_g];
-      };
-    };
-  };
+      }
+    }
+  }
   for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
   {
     for(int i_g = 0; i_g < 6; i_g++)
@@ -83,13 +82,12 @@ void rhs_0(double** localTensor, double* dt, double* c0[2], double* c1[1], doubl
         for(int i_d_4 = 0; i_d_4 < 2; i_d_4++)
         {
           ST1 += c_q2[i_g][i_d_0] * (l40[i_d_4][i_d_0] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_4];
-        };
-      };
+        }
+      }
       localTensor[i_r_0][0] += ST2 * (c_q1[i_g] * *dt * ST1 + ST0) * w[i_g];
-    };
-  };
+    }
+  }
 }
-
 
 
 void Mass_0(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
@@ -137,19 +135,17 @@ void Mass_0(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1
         for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
         {
           c_q0[i_g][i_d_0][i_d_1] += c0[q_r_0][i_d_0] * d_CG1[q_r_0][i_g][i_d_1];
-        };
-      };
-    };
-  };
+        }
+      }
+    }
+  }
   for(int i_g = 0; i_g < 6; i_g++)
   {
     double ST3 = 0.0;
     ST3 += CG1[i_r_0][i_g] * CG1[i_r_1][i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]);
     localTensor[0] += ST3 * w[i_g];
-  };
+  }
 }
-
-
 
 
 

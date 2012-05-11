@@ -14,7 +14,6 @@ int Tracer_findrm_size;
 int* Tracer_colm;
 int Tracer_colm_size;
 
-
 __global__ void A_0(int n_ele, double* localTensor, double dt, double* c0)
 {
   const double CG1[3][6] = { {  0.0915762135097707, 0.0915762135097707,
@@ -62,10 +61,10 @@ __global__ void A_0(int n_ele, double* localTensor, double dt, double* c0)
           for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
           {
             c_q0[i_g][i_d_0][i_d_1] += c0[i_ele + n_ele * (i_d_0 + 2 * q_r_0)] * d_CG1[q_r_0][i_g][i_d_1];
-          };
-        };
-      };
-    };
+          }
+        }
+      }
+    }
     for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
     {
       for(int i_r_1 = 0; i_r_1 < 3; i_r_1++)
@@ -85,16 +84,15 @@ __global__ void A_0(int n_ele, double* localTensor, double dt, double* c0)
               for(int i_d_9 = 0; i_d_9 < 2; i_d_9++)
               {
                 ST0 += (l35[i_d_3][i_d_5] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_3] * (l95[i_d_9][i_d_5] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_1][i_g][i_d_9];
-              };
-            };
-          };
+              }
+            }
+          }
           localTensor[i_ele + n_ele * (i_r_0 + 3 * i_r_1)] += ST0 * ST1 * w[i_g];
-        };
-      };
-    };
-  };
+        }
+      }
+    }
+  }
 }
-
 
 
 __global__ void RHS_0(int n_ele, double* localTensor, double dt, double* c0, double* c1)
@@ -141,7 +139,7 @@ __global__ void RHS_0(int n_ele, double* localTensor, double dt, double* c0, dou
       for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
       {
         c_q1[i_g] += c1[i_ele + n_ele * q_r_0] * CG1[q_r_0][i_g];
-      };
+      }
       for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
       {
         for(int i_d_1 = 0; i_d_1 < 2; i_d_1++)
@@ -150,10 +148,10 @@ __global__ void RHS_0(int n_ele, double* localTensor, double dt, double* c0, dou
           for(int q_r_0 = 0; q_r_0 < 3; q_r_0++)
           {
             c_q0[i_g][i_d_0][i_d_1] += c0[i_ele + n_ele * (i_d_0 + 2 * q_r_0)] * d_CG1[q_r_0][i_g][i_d_1];
-          };
-        };
-      };
-    };
+          }
+        }
+      }
+    }
     for(int i_r_0 = 0; i_r_0 < 3; i_r_0++)
     {
       localTensor[i_ele + n_ele * i_r_0] = 0.0;
@@ -162,11 +160,10 @@ __global__ void RHS_0(int n_ele, double* localTensor, double dt, double* c0, dou
         double ST2 = 0.0;
         ST2 += CG1[i_r_0][i_g] * c_q1[i_g] * (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0]);
         localTensor[i_ele + n_ele * i_r_0] += ST2 * w[i_g];
-      };
-    };
-  };
+      }
+    }
+  }
 }
-
 
 
 StateHolder* state;
@@ -238,6 +235,5 @@ extern "C" void return_fields_()
 {
   state->returnFieldToHost("Tracer");
 }
-
 
 
