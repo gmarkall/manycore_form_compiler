@@ -321,10 +321,10 @@ extern "C" void initialise_rose_()
   op_set Coordinate_dofs = op_decl_set(0, "Coordinate_dofs");
   op_map Coordinate_element_dofs = op_decl_map(Coordinate_elements, Coordinate_dofs, 3, 0, 
               "Coordinate_element_dofs");
-  op_dat Coordinate = op_decl_dat(Coordinate_dofs, 2, "double", 0, "Coordinate");
+  op_dat Coordinate = op_decl_dat(Coordinate_dofs, 2, "double", (double*)(0), "Coordinate");
   op_set Tracer_dofs = op_decl_set(0, "Tracer_dofs");
   op_map Tracer_element_dofs = op_decl_map(Coordinate_elements, Tracer_dofs, 3, 0, "Tracer_element_dofs");
-  op_dat Tracer = op_decl_dat(Tracer_dofs, 1, "double", 0, "Tracer");
+  op_dat Tracer = op_decl_dat(Tracer_dofs, 1, "double", (double*)(0), "Tracer");
 }
 
 #endif

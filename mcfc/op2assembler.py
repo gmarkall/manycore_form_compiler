@@ -50,7 +50,7 @@ opDeclMap = lambda from_set, to_set, dim, name: \
     FunctionCall('op_decl_map',  [from_set, to_set, Literal(dim), Literal(0), Literal(name)]);
 # We pass a NULL pointer for the data since these are only fake calls
 opDeclDat = lambda dataset, dim, name: \
-    FunctionCall('op_decl_dat', [dataset, Literal(dim), real_kind, Literal(0), Literal(name)]);
+    FunctionCall('op_decl_dat', [dataset, Literal(dim), real_kind, Cast(Pointer(Real()), Literal(0)), Literal(name)]);
 opDeclVec = lambda origin, name: \
     FunctionCall('op_decl_vec', [origin, Literal(name)])
 opDeclSparsity = lambda rowmap, colmap, name: \
