@@ -25,8 +25,7 @@
       --visualise, -v to output a visualisation of the AST
       --objvisualise  to output a deep visualisation of every ufl object
                       (warning: creates very big PDFs), implies --visualise
-      -o:<filename>   to specify the output filename
-      -p, --print     to print code to screen
+      -o:<filename>   to specify the output filename (- to print to stdout)
       -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
@@ -48,16 +47,16 @@ def run(inputFile, opts = None):
         backend = "cuda"
 
     # Output file name
+    screen = None
     if 'o' in opts:
-        outputFileBase = os.path.splitext(opts['o'])[0]
+        # Output to stdout
+        if opts['o'] == '-':
+            screen = sys.stdout
+            outputFileBase = '.'
+        else:
+            outputFileBase = os.path.splitext(opts['o'])[0]
     else:
         outputFileBase = os.path.splitext(inputFile)[0]
-
-    # Output to stdout
-    if 'p' in opts:
-        screen = sys.stdout
-    else:
-        screen = None
 
     # PDF visualiser
     vis = False
@@ -86,7 +85,7 @@ def run(inputFile, opts = None):
 
 def _get_options():
     try: 
-        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvo:p", ["visualise", "objvisualise", "print"])
+        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvo:", ["visualise", "objvisualise"])
     except getopt.error, msg:
         print msg
         print __doc__
