@@ -136,6 +136,18 @@ __global__ void vector_addto(double *global_vector, int *local_to_global, double
   }
 }
 
+__global__ void vector_addto_spmv(int n, int n_ele, int *findrm, int *colm, double *vec, double *vec_elemental) {
+  for(int row=THREAD_ID; row<n; row+=THREAD_COUNT) {
+    int a=findrm[row];
+    int b=findrm[row+1];
+    for(int k=a;k<b;k++) {
+      int i=colm[k-1]-1;
+      vec[row] += vec_elemental[eleIdx(i/3,i%3,n_ele)];
+    }
+  }
+}
+
+
 // Data Expansion and contraction kernels
 
 __global__ void expand_data(double *dest, double *src, int *local_to_global, int n_ele, int n_vals_per_node, int nodes_per_ele)
