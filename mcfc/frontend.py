@@ -26,6 +26,7 @@
       --objvisualise  to output a deep visualisation of every ufl object
                       (warning: creates very big PDFs), implies --visualise
       -o:<filename>   to specify the output filename (- to print to stdout)
+      -g, --debug     enable debugging mode (drop into pdb on error)
       -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
@@ -40,6 +41,26 @@ def run(inputFile, opts = None):
 
     # Parse options
 
+    # Debugging mode
+    debug = False
+    if 'g' in opts or 'debug' in opts:
+        # A nicer traceback from IPython
+        # Try IPython.core.ultratb first (recommended from 0.11)
+        try:
+            from IPython.core import ultratb
+        # If that fails fall back to ultraTB (deprecated as of 0.11)
+        except ImportError:
+            try:
+                from IPython import ultraTB as ultratb
+            except ImportError:
+                print "Warning: IPython not available, not enabling debug mode."
+        else:
+            # Print a verbose backtrace and drop into pdb on error
+            # Note: will automatically choose ipdb if available
+            sys.excepthook = ultratb.FormattedTB(mode='Verbose',
+                    color_scheme='Linux', call_pdb=1)
+            debug = True
+
     # Backend
     if 'b' in opts:
         backend = opts['b']
@@ -48,15 +69,16 @@ def run(inputFile, opts = None):
 
     # Output file name
     screen = None
+    outputFileBase = os.path.splitext(inputFile)[0]
     if 'o' in opts:
         # Output to stdout
-        if opts['o'] == '-':
+        if opts['o'] == '-' and debug:
+            print "Warning: Cannot print to stdout when debugging is enabled."
+        elif opts['o'] == '-':
             screen = sys.stdout
             outputFileBase = '.'
         else:
             outputFileBase = os.path.splitext(opts['o'])[0]
-    else:
-        outputFileBase = os.path.splitext(inputFile)[0]
 
     # PDF visualiser
     vis = False
@@ -85,7 +107,8 @@ def run(inputFile, opts = None):
 
 def _get_options():
     try: 
-        opts_list, args = getopt.getopt(sys.argv[1:], "b:hvo:", ["visualise", "objvisualise"])
+        opts_list, args = getopt.getopt(sys.argv[1:], "b:ghvo:",
+            ["debug", "visualise", "objvisualise"])
     except getopt.error, msg:
         print msg
         print __doc__
