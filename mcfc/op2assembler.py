@@ -17,6 +17,8 @@
 # the AUTHORS file in the main source directory for a full list of copyright
 # holders.
 
+from copy import copy
+
 # MCFC libs
 from assembler import *
 from codegeneration import *
@@ -50,13 +52,14 @@ opDeclMap = lambda from_set, to_set, dim, name: \
     FunctionCall('op_decl_map',  [from_set, to_set, Literal(dim), Literal(0), Literal(name)]);
 # We pass a NULL pointer for the data since these are only fake calls
 opDeclDat = lambda dataset, dim, name: \
-    FunctionCall('op_decl_dat', [dataset, Literal(dim), real_kind, Cast(Pointer(Real()), Literal(0)), Literal(name)]);
+    FunctionCall('op_decl_dat', \
+            [dataset, Literal(dim), real_kind, Cast(Pointer(Real()), Literal(0)), Literal(name)]);
 opDeclVec = lambda origin, name: \
     FunctionCall('op_decl_vec', [origin, Literal(name)])
 opDeclSparsity = lambda rowmap, colmap, name: \
     FunctionCall('op_decl_sparsity', [rowmap, colmap, Literal(name)])
 opDeclMat = lambda sparsity, dim, name: \
-    FunctionCall('op_decl_mat', [sparsity, dim, real_kind, Literal(8), Literal(name)])
+    FunctionCall('op_decl_mat', [sparsity, Literal(dim), real_kind, Literal(8), Literal(name)])
 opFreeVec = lambda vec: \
     FunctionCall('op_free_vec', [vec])
 opFreeMat = lambda mat: \
@@ -82,19 +85,51 @@ opExtractField = lambda fieldname, rank, codim=0: \
         FunctionCall('extract_op_%s_field' % rank2type[rank], \
         [state, Literal(fieldname), Literal(len(fieldname)), Literal(codim)])
 
-def extractOpFieldData(scope, field, rank):
-    # Get OP2 data structures
-    var = Variable(field, OpFieldStruct)
-    # FIXME: We stupidly default to requesting co-dimension 0.
-    # This should be infered from the integral's measure.
-    scope.append(InitialisationOp(var, opExtractField(field, rank)))
-    return MemberAccess(var, 'dat'), MemberAccess(var, 'map')
+class Field:
+
+    def __init__(self, rank, name, dim, loc):
+        self.rank = rank
+        self.name = name
+        self.dim = dim
+        self.loc = loc
+        self.dof_set = Variable(name+'_dofs', OpSet)
+        self.map = Variable(name+'_element_dofs', OpMap)
+        self.dat = Variable(name, OpDat)
+
+    def buildFakeInitialiser(self, scope, elem_set):
+        scope.append(InitialisationOp(self.dof_set, opDeclSet(self.dof_set.name())))
+        scope.append(InitialisationOp(self.map, \
+                opDeclMap(elem_set, self.dof_set, self.loc, self.map.name())))
+        scope.append(InitialisationOp(self.dat, \
+                opDeclDat(self.dof_set, self.dim**self.rank, self.name)))
+
+    def buildInitialiser(self, scope):
+        # Get OP2 data structures
+        var = Variable(self.name + '_field', OpFieldStruct)
+        # FIXME: We stupidly default to requesting co-dimension 0.
+        # This should be infered from the integral's measure.
+        scope.append(InitialisationOp(var, opExtractField(self.name, self.rank)))
+        scope.append(InitialisationOp(self.map, MemberAccess(var, 'map')))
+        # The field dof set is not currently needed
+        #scope.append(InitialisationOp(self.dof_set, MemberAccess(self.map, 'to', True)))
+        scope.append(InitialisationOp(self.dat, MemberAccess(var, 'dat')))
 
 class Op2AssemblerBackend(AssemblerBackend):
 
     def compile(self, equation):
 
         self._eq = equation
+
+        # Mesh constants
+        # FIXME: We'll need the same for facets once we support facet integrals
+        cell = equation.state[1]['Coordinate'].cell()
+        self.loc = d2v[cell.domain()]
+        self.dim = cell.d
+        # Element set (used by all maps)
+        self.elem_set = Variable('Coordinate_elements', OpSet)
+        # Create field meta data for all fields used
+        self._fields = dict((field, Field(rank, field, self.dim, self.loc)) \
+                for rank, field in equation.state.accessedFields().values())
 
         # Build declarations
         declarations = GlobalScope()
@@ -120,21 +155,10 @@ class Op2AssemblerBackend(AssemblerBackend):
         func = FunctionDefinition(Void(), 'initialise_rose_')
         func.setExternC(True)
 
-        # We always have a Coordinate field, so start with that
-
-        loc = d2v[self._eq.state[1]['Coordinate'].cell().domain()]
-        dim = self._eq.state[1]['Coordinate'].cell().d
-        # Element set (used by all maps)
-        elem_set = Variable('Coordinate_elements', OpSet)
-        func.append(InitialisationOp(elem_set, opDeclSet('Coordinate_elements')))
-
-        for rank, field in self._eq.state.accessedFields().values():
-            dof_set = Variable(field+'_dofs', OpSet)
-            func.append(InitialisationOp(dof_set, opDeclSet(field+'_dofs')))
-            func.append(InitialisationOp(Variable(field+'_element_dofs', OpMap), \
-                    opDeclMap(elem_set, dof_set, loc, field+'_element_dofs')))
-            func.append(InitialisationOp(Variable(field, OpDat), \
-                    opDeclDat(dof_set, dim**rank, field)))
+        # The element set is always defined on the Coordinate field
+        func.append(InitialisationOp(self.elem_set, opDeclSet(self.elem_set.name())))
+        for f in self._fields.values():
+            f.buildFakeInitialiser(func, self.elem_set)
 
         # Make sure only the ROSE frontend sees this function since it would
         # otherwise require OP2 C library functions to be available in the OP2
@@ -174,8 +198,8 @@ class Op2AssemblerBackend(AssemblerBackend):
             for coeff in form.form_data().original_coefficients:
                 # find which field this coefficient came from, then get data for that field
                 field = self._eq.getInputCoeffName(extractCoordinates(coeff).count())
-                mdat, mmap = field_data[field]
-                params.append(opArgDat(mdat, OpAll, mmap, ArrowOp(mdat, 'dim'), OpRead))
+                f = self._fields[field]
+                params.append(opArgDat(f.dat, OpAll, f.map, Literal(f.dim), OpRead))
 
             return params
 
@@ -186,38 +210,37 @@ class Op2AssemblerBackend(AssemblerBackend):
         # Get a handle to Fluidity state to pass to extractor functions
         func.append(InitialisationOp(state, FunctionCall('get_state')))
 
-        # op_field_data struct per field solved for
-        field_data = {}
-        # Extract op_dat, op_map for accessed fields
-        for rank, field in self._eq.state.accessedFields().values():
-            field_data[field] = extractOpFieldData(func, field, rank)
+        # Element set (used by all maps) is always defined on the Coordinate field
+        coord_field = self._fields['Coordinate']
+        for f in self._fields.values():
+            f.buildInitialiser(func)
+        func.append(InitialisationOp(self.elem_set, MemberAccess(coord_field.map, 'from', True)))
 
         # If the coefficient is not written back to state, insert a
         # temporary field to solve for
         temp_dats = []
-        for field in self._eq.getTmpCoeffNames():
+        for fieldname in self._eq.getTmpCoeffNames():
+            from_field = self._eq.getFieldFromCoeff(fieldname)
             # Get field data for orginal coefficient (dat, map)
-            orig_data = field_data[self._eq.getFieldFromCoeff(field)]
-            datVar = Variable(field, OpDat)
-            call = opDeclVec(orig_data[0], field)
-            func.append(AssignmentOp(Declaration(datVar), call))
+            field = copy(self._fields[from_field])
+            call = opDeclVec(field.dat, fieldname)
+            field.dat = Variable(fieldname, OpDat)
+            func.append(AssignmentOp(Declaration(field.dat), call))
             # The temporary dat has the same associate map as the
             # origin it has been derived from
-            field_data[field] = datVar, orig_data[1]
-            temp_dats.append(datVar)
+            self._fields[fieldname] = field
+            temp_dats.append(field.dat)
 
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
             matform, vecform = forms
             matname = matform.form_data().name
             vecname = vecform.form_data().name
-            mdat, mmap = field_data[self._eq.getResultCoeffName(count)]
-            dim = ArrowOp(mdat, 'dim')
-            mfrom = ArrowOp(mmap, 'from')
+            f = self._fields[self._eq.getResultCoeffName(count)]
 
             # Get sparsity of the field we're solving for
             sparsity = Variable(matname+'_sparsity', OpSparsity)
-            call = opDeclSparsity(mmap, mmap, sparsity.name())
+            call = opDeclSparsity(f.map, f.map, sparsity.name())
             func.append(AssignmentOp(Declaration(sparsity), call))
 
             # Call the op_par_loops
@@ -225,32 +248,32 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             # Create a matrix
             matrix = Variable(matname+'_mat', OpMat)
-            decl = opDeclMat(sparsity, dim, matrix.name())
+            decl = opDeclMat(sparsity, self.dim, matrix.name())
             func.append(AssignmentOp(Declaration(matrix), decl))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
-            matArg = opArgMat(matrix, OpAll, mmap, OpAll, mmap, dim, OpInc)
+            matArg = opArgMat(matrix, OpAll, f.map, OpAll, f.map, Literal(self.dim), OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg, dtArg])
             itbounds = (numBasisFunctions(matform.form_data()),)*2
             # FIXME: To properly support multiple integrals, we need to get
             # the mappings per integral
             for _, name in matform.form_data().named_integrals:
-                func.append(opParLoop(name, opIterationSpace(mfrom, itbounds), arguments))
+                func.append(opParLoop(name, opIterationSpace(self.elem_set, itbounds), arguments))
 
             # Create the resulting vector
             vector = Variable(vecname+'_vec', OpDat)
             func.append(AssignmentOp(Declaration(vector),
-                opDeclVec(mdat, vector.name())))
+                opDeclVec(f.dat, vector.name())))
             # Vector
-            datArg = opArgDat(vector, OpAll, mmap, dim, OpInc)
+            datArg = opArgDat(vector, OpAll, f.map, Literal(self.dim), OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg, dtArg])
             # FIXME: To properly support multiple integrals, we need to get
             # the mappings per integral
             for _, name in vecform.form_data().named_integrals:
-                func.append(opParLoop(name, mfrom, arguments))
+                func.append(opParLoop(name, self.elem_set, arguments))
 
             # Solve
-            func.append(opSolve(matrix, vector, mdat))
+            func.append(opSolve(matrix, vector, f.dat))
 
             # Free temporaries
             func.append(opFreeVec(vector))

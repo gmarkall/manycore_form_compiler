@@ -316,26 +316,31 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   void* state = get_state();
-  op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 10, 0);
-  op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 8, 0);
-  op_sparsity A_sparsity = op_decl_sparsity(Velocity.map, Velocity.map, "A_sparsity");
-  op_mat A_mat = op_decl_mat(A_sparsity, Velocity.dat->dim, "double", 8, "A_mat");
-  op_par_loop(A_0, "A_0", op_iteration_space(Velocity.map->from, 6, 6), 
-              op_arg_mat(A_mat, OP_ALL, Velocity.map, OP_ALL, Velocity.map, 
-                         Velocity.dat->dim, "double", OP_INC), 
+  op_field_struct Coordinate_field = extract_op_vector_field(state, "Coordinate", 10, 0);
+  op_map Coordinate_element_dofs = Coordinate_field.map;
+  op_dat Coordinate = Coordinate_field.dat;
+  op_field_struct Velocity_field = extract_op_vector_field(state, "Velocity", 8, 0);
+  op_map Velocity_element_dofs = Velocity_field.map;
+  op_dat Velocity = Velocity_field.dat;
+  op_set Coordinate_elements = Coordinate_element_dofs->from;
+  op_sparsity A_sparsity = op_decl_sparsity(Velocity_element_dofs, Velocity_element_dofs, "A_sparsity");
+  op_mat A_mat = op_decl_mat(A_sparsity, 2, "double", 8, "A_mat");
+  op_par_loop(A_0, "A_0", op_iteration_space(Coordinate_elements, 6, 6), 
+              op_arg_mat(A_mat, OP_ALL, Velocity_element_dofs, OP_ALL, 
+                         Velocity_element_dofs, 2, "double", OP_INC), 
               op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
-                         Coordinate.dat->dim, "double", OP_READ));
-  op_dat RHS_vec = op_decl_vec(Velocity.dat, "RHS_vec");
-  op_par_loop(RHS_0, "RHS_0", Velocity.map->from, 
-              op_arg_dat(RHS_vec, OP_ALL, Velocity.map, Velocity.dat->dim, 
-                         "double", OP_INC), 
+              op_arg_dat(Coordinate, OP_ALL, Coordinate_element_dofs, 2, 
+                         "double", OP_READ));
+  op_dat RHS_vec = op_decl_vec(Velocity, "RHS_vec");
+  op_par_loop(RHS_0, "RHS_0", Coordinate_elements, 
+              op_arg_dat(RHS_vec, OP_ALL, Velocity_element_dofs, 2, "double", 
+                         OP_INC), 
               op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
-                         Coordinate.dat->dim, "double", OP_READ), 
-              op_arg_dat(Velocity.dat, OP_ALL, Velocity.map, 
-                         Velocity.dat->dim, "double", OP_READ));
-  op_solve(A_mat, RHS_vec, Velocity.dat);
+              op_arg_dat(Coordinate, OP_ALL, Coordinate_element_dofs, 2, 
+                         "double", OP_READ), 
+              op_arg_dat(Velocity, OP_ALL, Velocity_element_dofs, 2, "double", 
+                         OP_READ));
+  op_solve(A_mat, RHS_vec, Velocity);
   op_free_vec(RHS_vec);
   op_free_mat(A_mat);
 }

@@ -342,26 +342,31 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   void* state = get_state();
-  op_field_struct Coordinate = extract_op_vector_field(state, "Coordinate", 10, 0);
-  op_field_struct Tracer = extract_op_scalar_field(state, "Tracer", 6, 0);
-  op_sparsity A_sparsity = op_decl_sparsity(Tracer.map, Tracer.map, "A_sparsity");
-  op_mat A_mat = op_decl_mat(A_sparsity, Tracer.dat->dim, "double", 8, "A_mat");
-  op_par_loop(A_0, "A_0", op_iteration_space(Tracer.map->from, 3, 3), 
-              op_arg_mat(A_mat, OP_ALL, Tracer.map, OP_ALL, Tracer.map, 
-                         Tracer.dat->dim, "double", OP_INC), 
+  op_field_struct Coordinate_field = extract_op_vector_field(state, "Coordinate", 10, 0);
+  op_map Coordinate_element_dofs = Coordinate_field.map;
+  op_dat Coordinate = Coordinate_field.dat;
+  op_field_struct Tracer_field = extract_op_scalar_field(state, "Tracer", 6, 0);
+  op_map Tracer_element_dofs = Tracer_field.map;
+  op_dat Tracer = Tracer_field.dat;
+  op_set Coordinate_elements = Coordinate_element_dofs->from;
+  op_sparsity A_sparsity = op_decl_sparsity(Tracer_element_dofs, Tracer_element_dofs, "A_sparsity");
+  op_mat A_mat = op_decl_mat(A_sparsity, 2, "double", 8, "A_mat");
+  op_par_loop(A_0, "A_0", op_iteration_space(Coordinate_elements, 3, 3), 
+              op_arg_mat(A_mat, OP_ALL, Tracer_element_dofs, OP_ALL, 
+                         Tracer_element_dofs, 2, "double", OP_INC), 
               op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
-                         Coordinate.dat->dim, "double", OP_READ));
-  op_dat rhs_vec = op_decl_vec(Tracer.dat, "rhs_vec");
-  op_par_loop(rhs_0, "rhs_0", Tracer.map->from, 
-              op_arg_dat(rhs_vec, OP_ALL, Tracer.map, Tracer.dat->dim, 
-                         "double", OP_INC), 
-              op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
-              op_arg_dat(Coordinate.dat, OP_ALL, Coordinate.map, 
-                         Coordinate.dat->dim, "double", OP_READ), 
-              op_arg_dat(Tracer.dat, OP_ALL, Tracer.map, Tracer.dat->dim, 
+              op_arg_dat(Coordinate, OP_ALL, Coordinate_element_dofs, 2, 
                          "double", OP_READ));
-  op_solve(A_mat, rhs_vec, Tracer.dat);
+  op_dat rhs_vec = op_decl_vec(Tracer, "rhs_vec");
+  op_par_loop(rhs_0, "rhs_0", Coordinate_elements, 
+              op_arg_dat(rhs_vec, OP_ALL, Tracer_element_dofs, 2, "double", 
+                         OP_INC), 
+              op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
+              op_arg_dat(Coordinate, OP_ALL, Coordinate_element_dofs, 2, 
+                         "double", OP_READ), 
+              op_arg_dat(Tracer, OP_ALL, Tracer_element_dofs, 2, "double", 
+                         OP_READ));
+  op_solve(A_mat, rhs_vec, Tracer);
   op_free_vec(rhs_vec);
   op_free_mat(A_mat);
 }
