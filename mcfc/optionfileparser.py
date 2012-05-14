@@ -79,7 +79,8 @@ class OptionFileParser:
             phase = self.uflinput[key][0]
             self.uflinput[key] = ufl, self.states[phase]
 
-def testHook(inputFile, outputFile = None):
+def testHook(inputFile, outputFile=None, debug=False):
+    "debug is for compatibility with the auto test interface and ignored"
 
     # FIXME: this is an evil hack to reset coefficient numbers to 0 before
     # running the tests (necessary to make tests invariant of the order they

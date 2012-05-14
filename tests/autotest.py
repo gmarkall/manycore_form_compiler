@@ -116,14 +116,16 @@ def main():
         # Create the cuda outputs folder
         os.mkdir('outputs/op2', 0755)
 
-        multiTester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
+        multiTester.test(lambda infile, outfile, debug:
+                frontend.testHook(infile, outfile, debug, 'op2'),
             lambda name: "inputs/flml/" + name + ".flml",
             lambda name: "outputs/op2/" + name,
             lambda name: "expected/op2/" + name,
             flml_sources,
             'Running form compiler tests (OP2 backend, flml input)...')
 
-        multiTester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
+        multiTester.test(lambda infile, outfile, debug:
+                frontend.testHook(infile, outfile, debug, 'op2'),
             lambda name: "inputs/ufl/" + name + ".ufl",
             lambda name: "outputs/op2/" + name,
             lambda name: "expected/op2/" + name,
@@ -228,7 +230,7 @@ class AutoTester:
             expectedfile = self.expectfile(sourcefile)
 
             # Test hook returns 0 if successful, 1 if failed
-            hookfailed = self.testhook(inputfile, outputfile)
+            hookfailed = self.testhook(inputfile, outputfile, ~self.interactive)
 
             # Print a message if the test hook failed
             if hookfailed:

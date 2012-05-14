@@ -134,9 +134,9 @@ def main():
     run(inputFile, opts)
     return 0
 
-def testHook(inputFile, outputFile, backend = "cuda"):
+def testHook(inputFile, outputFile, debug=True, backend="cuda"):
 
-    opts = {'o': outputFile, 'b': backend}
+    opts = {'o': outputFile, 'b': backend, 'g': debug}
     run(inputFile, opts)
     return 0
 
