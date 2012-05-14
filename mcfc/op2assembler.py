@@ -106,13 +106,16 @@ class Field:
     def buildInitialiser(self, scope):
         # Get OP2 data structures
         var = Variable(self.name + '_field', OpFieldStruct)
+        scope.append(Declaration(var))
+        scope.append(Declaration(self.map))
+        scope.append(Declaration(self.dat))
         # FIXME: We stupidly default to requesting co-dimension 0.
         # This should be infered from the integral's measure.
-        scope.append(InitialisationOp(var, opExtractField(self.name, self.rank)))
-        scope.append(InitialisationOp(self.map, MemberAccess(var, 'map')))
+        scope.append(AssignmentOp(var, opExtractField(self.name, self.rank)))
+        scope.append(AssignmentOp(self.map, MemberAccess(var, 'map')))
         # The field dof set is not currently needed
         #scope.append(InitialisationOp(self.dof_set, MemberAccess(self.map, 'to', True)))
-        scope.append(InitialisationOp(self.dat, MemberAccess(var, 'dat')))
+        scope.append(AssignmentOp(self.dat, MemberAccess(var, 'dat')))
 
 class Op2AssemblerBackend(AssemblerBackend):
 
@@ -214,7 +217,8 @@ class Op2AssemblerBackend(AssemblerBackend):
         coord_field = self._fields['Coordinate']
         for f in self._fields.values():
             f.buildInitialiser(func)
-        func.append(InitialisationOp(self.elem_set, MemberAccess(coord_field.map, 'from', True)))
+        func.append(Declaration(self.elem_set))
+        func.append(AssignmentOp(self.elem_set, MemberAccess(coord_field.map, 'from', True)))
 
         # If the coefficient is not written back to state, insert a
         # temporary field to solve for

@@ -193,16 +193,26 @@ extern "C" void finalise_gpu_()
 extern "C" void run_model_(double* dt_pointer)
 {
   void* state = get_state();
-  op_field_struct Coordinate_field = extract_op_vector_field(state, "Coordinate", 10, 0);
-  op_map Coordinate_element_dofs = Coordinate_field.map;
-  op_dat Coordinate = Coordinate_field.dat;
-  op_field_struct Velocity_field = extract_op_vector_field(state, "Velocity", 8, 0);
-  op_map Velocity_element_dofs = Velocity_field.map;
-  op_dat Velocity = Velocity_field.dat;
-  op_field_struct Tracer_field = extract_op_scalar_field(state, "Tracer", 6, 0);
-  op_map Tracer_element_dofs = Tracer_field.map;
-  op_dat Tracer = Tracer_field.dat;
-  op_set Coordinate_elements = Coordinate_element_dofs->from;
+  op_field_struct Coordinate_field;
+  op_map Coordinate_element_dofs;
+  op_dat Coordinate;
+  Coordinate_field = extract_op_vector_field(state, "Coordinate", 10, 0);
+  Coordinate_element_dofs = Coordinate_field.map;
+  Coordinate = Coordinate_field.dat;
+  op_field_struct Velocity_field;
+  op_map Velocity_element_dofs;
+  op_dat Velocity;
+  Velocity_field = extract_op_vector_field(state, "Velocity", 8, 0);
+  Velocity_element_dofs = Velocity_field.map;
+  Velocity = Velocity_field.dat;
+  op_field_struct Tracer_field;
+  op_map Tracer_element_dofs;
+  op_dat Tracer;
+  Tracer_field = extract_op_scalar_field(state, "Tracer", 6, 0);
+  Tracer_element_dofs = Tracer_field.map;
+  Tracer = Tracer_field.dat;
+  op_set Coordinate_elements;
+  Coordinate_elements = Coordinate_element_dofs->from;
   op_sparsity Mass_sparsity = op_decl_sparsity(Tracer_element_dofs, Tracer_element_dofs, "Mass_sparsity");
   op_mat Mass_mat = op_decl_mat(Mass_sparsity, 2, "double", 8, "Mass_mat");
   op_par_loop(Mass_0, "Mass_0", op_iteration_space(Coordinate_elements, 3, 3), 
