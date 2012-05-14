@@ -500,12 +500,17 @@ extern "C" void run_model_(double* dt_pointer)
   int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
+  cudaMemset(globalVector, 0, 
+             sizeof(double) * state->getValsPerNode("t_adv") * numNodes);
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   M_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   double* VelocityCoeff = state->getElementValue("Velocity");
   double* TracerCoeff = state->getElementValue("Tracer");
   adv_rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
                                     VelocityCoeff, TracerCoeff);
+  vector_addto_spmv<<<gridXDim,blockXDim>>>(numNodes, numEle, t_adv_findrm, 
+                                            t_adv_colm, globalVector, 
+                                            localVector);
   cg_solve_lma(t_adv_findrm, t_adv_findrm_size, t_adv_colm, t_adv_colm_size, 
                globalMatrix, globalVector, numNodes, solutionVector, numEle, 
                localMatrix, eleNodes);
@@ -513,9 +518,14 @@ extern "C" void run_model_(double* dt_pointer)
   expand_data<<<gridXDim,blockXDim>>>(t_advCoeff, solutionVector, eleNodes, 
                                       numEle, state->getValsPerNode("t_adv"), 
                                       nodesPerEle);
+  cudaMemset(globalVector, 0, 
+             sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
   A_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   diff_rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
                                      t_advCoeff);
+  vector_addto_spmv<<<gridXDim,blockXDim>>>(numNodes, numEle, Tracer_findrm, 
+                                            Tracer_colm, globalVector, 
+                                            localVector);
   cg_solve_lma(Tracer_findrm, Tracer_findrm_size, Tracer_colm, 
                Tracer_colm_size, globalMatrix, globalVector, numNodes, 
                solutionVector, numEle, localMatrix, eleNodes);

@@ -239,27 +239,23 @@ class CudaAssemblerBackend(AssemblerBackend):
             matrix, vector = forms
             sparsity = self._sparsities[result]
             
-            # Zero the global matrix and vector
-            #buildAppendCudaMemsetZero(func, globalMatrix, sparsity['colm_size'])
-            #size = MultiplyOp(stateGetter(numValsPerNode, param=result), numNodes)
-            #buildAppendCudaMemsetZero(func, globalVector, size)
+            # Zero the global vector
+            size = MultiplyOp(stateGetter(numValsPerNode, param=result), numNodes)
+            buildAppendCudaMemsetZero(func, globalVector, size)
 
             # Generate calls for matrix assembly
             for _, name in matrix.form_data().named_integrals:
                 params = self._makeParameterListAndGetters(func, matrix, matrixParameters)
                 func.append(CudaKernelCall(name, params, gridXDim, blockXDim))
 
-            #    params = [ sparsity['findrm'], sparsity['colm'], globalMatrix, eleNodes, \
-            #                 localMatrix, numEle, nodesPerEle ]
-            #    func.append(CudaKernelCall('matrix_addto', params, gridXDim, blockXDim))
-
             # Generate calls for RHS assembly
             for _, name in vector.form_data().named_integrals:
                 params = self._makeParameterListAndGetters(func, vector, vectorParameters)
                 func.append(CudaKernelCall(name, params, gridXDim, blockXDim))
 
-             #   params = [ globalVector, eleNodes, localVector, numEle, nodesPerEle ]
-             #   func.append(CudaKernelCall('vector_addto', params, gridXDim, blockXDim))
+                params = [ numNodes, numEle, sparsity['findrm'], sparsity['colm'], \
+                           globalVector, localVector ]
+                func.append(CudaKernelCall('vector_addto_spmv', params, gridXDim, blockXDim))
             
             # Call the solve
             params = [ sparsity['findrm'], sparsity['findrm_size'], \

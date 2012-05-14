@@ -222,12 +222,17 @@ extern "C" void run_model_(double* dt_pointer)
   int nodesPerEle = state->getNodesPerEle("Coordinate");
   int blockXDim = 64;
   int gridXDim = 128;
+  cudaMemset(globalVector, 0, 
+             sizeof(double) * state->getValsPerNode("Tracer") * numNodes);
   double* CoordinateCoeff = state->getElementValue("Coordinate");
   Mass_0<<<gridXDim,blockXDim>>>(numEle, localMatrix, dt, CoordinateCoeff);
   double* TracerCoeff = state->getElementValue("Tracer");
   double* VelocityCoeff = state->getElementValue("Velocity");
   rhs_0<<<gridXDim,blockXDim>>>(numEle, localVector, dt, CoordinateCoeff, 
                                 TracerCoeff, VelocityCoeff);
+  vector_addto_spmv<<<gridXDim,blockXDim>>>(numNodes, numEle, Tracer_findrm, 
+                                            Tracer_colm, globalVector, 
+                                            localVector);
   cg_solve_lma(Tracer_findrm, Tracer_findrm_size, Tracer_colm, 
                Tracer_colm_size, globalMatrix, globalVector, numNodes, 
                solutionVector, numEle, localMatrix, eleNodes);
