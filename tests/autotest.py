@@ -24,14 +24,6 @@ usage: autotest.py [OPTIONS] [INPUT-FILE]
 import sys, os, shutil, getopt
 from subprocess import Popen, PIPE
 
-# A nicer traceback from IPython
-# Try IPython.core.ultratb first (recommended from 0.11)
-try:
-    from IPython.core import ultratb
-# If that fails fall back to ultraTB (deprecated as of 0.11)
-except ImportError:
-    from IPython import ultraTB as ultratb
-
 # For colouring diffs
 from pygments import highlight
 from pygments.lexers import DiffLexer
@@ -41,8 +33,6 @@ from pygments.formatters import TerminalFormatter
 from mcfc import frontend, optionfileparser
 
 def main():
-
-    sys.excepthook = ultratb.FormattedTB(mode='Context')
 
     opts, args = get_options()
     keys = opts.keys()
@@ -60,8 +50,6 @@ def main():
         print "Running in non-interactive mode."
         singleTester.interactive = False
         multiTester.interactive = False
-    else:
-        sys.excepthook = ultratb.FormattedTB(mode='Context')
     if 'replace-all' in keys or 'r' in keys:
         print "Replacing all changed expected results."
         singleTester.interactive = False
@@ -128,14 +116,16 @@ def main():
         # Create the cuda outputs folder
         os.mkdir('outputs/op2', 0755)
 
-        multiTester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
+        multiTester.test(lambda infile, outfile, debug:
+                frontend.testHook(infile, outfile, debug, 'op2'),
             lambda name: "inputs/flml/" + name + ".flml",
             lambda name: "outputs/op2/" + name,
             lambda name: "expected/op2/" + name,
             flml_sources,
             'Running form compiler tests (OP2 backend, flml input)...')
 
-        multiTester.test(lambda infile, outfile: frontend.testHook(infile, outfile, 'op2'),
+        multiTester.test(lambda infile, outfile, debug:
+                frontend.testHook(infile, outfile, debug, 'op2'),
             lambda name: "inputs/ufl/" + name + ".ufl",
             lambda name: "outputs/op2/" + name,
             lambda name: "expected/op2/" + name,
@@ -240,7 +230,7 @@ class AutoTester:
             expectedfile = self.expectfile(sourcefile)
 
             # Test hook returns 0 if successful, 1 if failed
-            hookfailed = self.testhook(inputfile, outputfile)
+            hookfailed = self.testhook(inputfile, outputfile, ~self.interactive)
 
             # Print a message if the test hook failed
             if hookfailed:
