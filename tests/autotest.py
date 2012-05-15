@@ -170,7 +170,8 @@ def main():
             # Create the visualiser outputs folder
             os.mkdir('outputs/objvisualiser', 0755)
 
-            multiTester.test(lambda infile, outfile: frontend.testHookVisualiser(infile, outfile, True),
+            multiTester.test(lambda infile, outfile, debug: \
+                    frontend.testHookVisualiser(infile, outfile, debug, True),
                 lambda name: "inputs/ufl/" + name + ".ufl",
                 lambda name: "outputs/objvisualiser/" + name,
                 lambda name: None,
