@@ -198,21 +198,21 @@ extern "C" void run_model_(double* dt_pointer)
   op_set Coordinate_elements;
   Coordinate_elements = Coordinate_element_dofs->from;
   op_sparsity A_sparsity = op_decl_sparsity(Tracer_element_dofs, Tracer_element_dofs, "A_sparsity");
-  op_mat A_mat = op_decl_mat(A_sparsity, 2, "double", 8, "A_mat");
+  op_mat A_mat = op_decl_mat(A_sparsity, 1, "double", 8, "A_mat");
   op_par_loop(A_0, "A_0", op_iteration_space(Coordinate_elements, 3, 3), 
               op_arg_mat(A_mat, op_i(1), Tracer_element_dofs, op_i(2), 
-                         Tracer_element_dofs, 2, "double", OP_INC), 
+                         Tracer_element_dofs, 1, "double", OP_INC), 
               op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
               op_arg_dat(Coordinate, OP_ALL, Coordinate_element_dofs, 2, 
                          "double", OP_READ));
   op_dat RHS_vec = op_decl_vec(Tracer, "RHS_vec");
   op_par_loop(RHS_0, "RHS_0", Coordinate_elements, 
-              op_arg_dat(RHS_vec, OP_ALL, Tracer_element_dofs, 2, "double", 
+              op_arg_dat(RHS_vec, OP_ALL, Tracer_element_dofs, 1, "double", 
                          OP_INC), 
               op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
               op_arg_dat(Coordinate, OP_ALL, Coordinate_element_dofs, 2, 
                          "double", OP_READ), 
-              op_arg_dat(Tracer, OP_ALL, Tracer_element_dofs, 2, "double", 
+              op_arg_dat(Tracer, OP_ALL, Tracer_element_dofs, 1, "double", 
                          OP_READ));
   op_solve(A_mat, RHS_vec, Tracer);
   op_free_vec(RHS_vec);

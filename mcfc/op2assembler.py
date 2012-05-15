@@ -59,7 +59,7 @@ opDeclVec = lambda origin, name: \
 opDeclSparsity = lambda rowmap, colmap, name: \
     FunctionCall('op_decl_sparsity', [rowmap, colmap, Literal(name)])
 opDeclMat = lambda sparsity, dim, name: \
-    FunctionCall('op_decl_mat', [sparsity, Literal(dim), real_kind, Literal(8), Literal(name)])
+    FunctionCall('op_decl_mat', [sparsity, dim, real_kind, Literal(8), Literal(name)])
 opFreeVec = lambda vec: \
     FunctionCall('op_free_vec', [vec])
 opFreeMat = lambda mat: \
@@ -91,7 +91,7 @@ class Field:
     def __init__(self, rank, name, dim, loc):
         self.rank = rank
         self.name = name
-        self.dim = dim
+        self.dim = dim**rank
         self.loc = loc
         self.dof_set = Variable(name+'_dofs', OpSet)
         self.map = Variable(name+'_element_dofs', OpMap)
@@ -102,7 +102,7 @@ class Field:
         scope.append(InitialisationOp(self.map, \
                 opDeclMap(elem_set, self.dof_set, self.loc, self.map.name())))
         scope.append(InitialisationOp(self.dat, \
-                opDeclDat(self.dof_set, self.dim**self.rank, self.name)))
+                opDeclDat(self.dof_set, self.dim, self.name)))
 
     def buildInitialiser(self, scope):
         # Get OP2 data structures
@@ -253,13 +253,13 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             # Create a matrix
             matrix = Variable(matname+'_mat', OpMat)
-            decl = opDeclMat(sparsity, self.dim, matrix.name())
+            decl = opDeclMat(sparsity, Literal(f.dim), matrix.name())
             func.append(AssignmentOp(Declaration(matrix), decl))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
             # FIXME: we need to use the op_i corresponding to which mapping we pass
             # (i.e. row or column map)
-            matArg = opArgMat(matrix, opI(Literal(1)), f.map, opI(Literal(2)), f.map, Literal(self.dim), OpInc)
+            matArg = opArgMat(matrix, opI(Literal(1)), f.map, opI(Literal(2)), f.map, Literal(f.dim), OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg, dtArg])
             itbounds = (numBasisFunctions(matform.form_data()),)*2
             # FIXME: To properly support multiple integrals, we need to get
@@ -272,7 +272,7 @@ class Op2AssemblerBackend(AssemblerBackend):
             func.append(AssignmentOp(Declaration(vector),
                 opDeclVec(f.dat, vector.name())))
             # Vector
-            datArg = opArgDat(vector, OpAll, f.map, Literal(self.dim), OpInc)
+            datArg = opArgDat(vector, OpAll, f.map, Literal(f.dim), OpInc)
             arguments = makeParameterListAndGetters(vecform, [datArg, dtArg])
             # FIXME: To properly support multiple integrals, we need to get
             # the mappings per integral
