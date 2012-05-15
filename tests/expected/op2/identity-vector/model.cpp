@@ -333,7 +333,7 @@ extern "C" void run_model_(double* dt_pointer)
   op_sparsity A_sparsity = op_decl_sparsity(Velocity_element_dofs, Velocity_element_dofs, "A_sparsity");
   op_mat A_mat = op_decl_mat(A_sparsity, 2, "double", 8, "A_mat");
   op_par_loop(A_0, "A_0", op_iteration_space(Coordinate_elements, 6, 6), 
-              op_arg_mat(A_mat, OP_ALL, Velocity_element_dofs, OP_ALL, 
+              op_arg_mat(A_mat, op_i(1), Velocity_element_dofs, op_i(2), 
                          Velocity_element_dofs, 2, "double", OP_INC), 
               op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
               op_arg_dat(Coordinate, OP_ALL, Coordinate_element_dofs, 2, 

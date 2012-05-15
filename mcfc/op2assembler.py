@@ -73,6 +73,7 @@ opArgMat = lambda mat, rowindex, rowmap, colindex, colmap, dim, access: \
 opFetchData = lambda dat: FunctionCall('op_fetch_data', [dat])
 opIterationSpace = lambda iterset, dims: \
     FunctionCall('op_iteration_space', [iterset, Literal(dims[0]), Literal(dims[1])])
+opI = lambda index: FunctionCall('op_i', [index])
 opParLoop = lambda kernel, iterspace, arguments: \
     FunctionCall('op_par_loop', [FunctionPointer(kernel), Literal(kernel), iterspace] + arguments)
 opSolve = lambda A, b, x: FunctionCall('op_solve', [A, b, x])
@@ -256,7 +257,9 @@ class Op2AssemblerBackend(AssemblerBackend):
             func.append(AssignmentOp(Declaration(matrix), decl))
             # Matrix
             # FIXME: should use mappings from the sparsity instead
-            matArg = opArgMat(matrix, OpAll, f.map, OpAll, f.map, Literal(self.dim), OpInc)
+            # FIXME: we need to use the op_i corresponding to which mapping we pass
+            # (i.e. row or column map)
+            matArg = opArgMat(matrix, opI(Literal(1)), f.map, opI(Literal(2)), f.map, Literal(self.dim), OpInc)
             arguments = makeParameterListAndGetters(matform, [matArg, dtArg])
             itbounds = (numBasisFunctions(matform.form_data()),)*2
             # FIXME: To properly support multiple integrals, we need to get

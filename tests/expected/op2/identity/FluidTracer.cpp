@@ -185,7 +185,7 @@ extern "C" void run_model_(double* dt_pointer)
   op_sparsity a_sparsity = op_decl_sparsity(Tracer_element_dofs, Tracer_element_dofs, "a_sparsity");
   op_mat a_mat = op_decl_mat(a_sparsity, 2, "double", 8, "a_mat");
   op_par_loop(a_0, "a_0", op_iteration_space(Coordinate_elements, 3, 3), 
-              op_arg_mat(a_mat, OP_ALL, Tracer_element_dofs, OP_ALL, 
+              op_arg_mat(a_mat, op_i(1), Tracer_element_dofs, op_i(2), 
                          Tracer_element_dofs, 2, "double", OP_INC), 
               op_arg_gbl(dt_pointer, 1, "double", OP_INC), 
               op_arg_dat(Coordinate, OP_ALL, Coordinate_element_dofs, 2, 
