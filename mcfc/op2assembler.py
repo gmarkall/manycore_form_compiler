@@ -29,6 +29,18 @@ from uflnamespace import domain2num_vertices as d2v
 # FIXME: Default to double for now
 real_kind = Literal('double')
 
+# Profiling
+elapsed = Variable('elapsed_time', Real())
+opTimer = lambda time: FunctionCall('op_timers_core', [Literal(0), AddressOfOp(time)])
+
+startTiming = lambda: opTimer(elapsed)
+
+def endTiming(time):
+    return [
+        MinusAssignmentOp(time, elapsed),
+        opTimer(elapsed),
+        PlusAssignmentOp(time, elapsed)
+        ]
 # OP2 data types
 # FIXME: introduce Type 'Struct' for these?
 OpSet = Class('op_set')
@@ -186,12 +198,25 @@ class Op2AssemblerBackend(AssemblerBackend):
 
         func.append(opExit())
 
+        if self._eq.opts['profiling']:
+            for name, (assemble_time, solve_time) in self._counters.items():
+                func.append(FunctionCall('printf', [Literal(name+" assembly time (ms): %f\\n"), assemble_time]))
+                func.append(FunctionCall('printf', [Literal(name+" solve time (ms): %f\\n"), solve_time]))
+
         return func
 
     def _buildHeadersAndGlobals(self):
         seq_includes = GlobalScope([Include('op_lib_cpp.h'), Include('op_seq_mat.h'), Include('ufl_utilities.h')])
         rose_includes = GlobalScope([Include('OP2_OXFORD.h')])
-        return PreprocessorScope('__EDG__', rose_includes, seq_includes)
+
+        if self._eq.opts['profiling']:
+            prof_decl = GlobalScope(PreprocessorScope('__EDG__', rose_includes, seq_includes))
+            for assemble_time, solve_time in self._counters.values():
+                prof_decl.append(InitialisationOp(assemble_time, Literal(0.0)))
+                prof_decl.append(InitialisationOp(solve_time, Literal(0.0)))
+            return prof_decl
+        else:
+            return PreprocessorScope('__EDG__', rose_includes, seq_includes)
 
     def _buildRunModel(self):
 
@@ -236,12 +261,24 @@ class Op2AssemblerBackend(AssemblerBackend):
             self._fields[fieldname] = field
             temp_dats.append(field.dat)
 
+        if self._eq.opts['profiling']:
+            # Declar elapsed time
+            func.append(InitialisationOp(elapsed, Literal(0.0)))
+            self._counters = {}
+
         for count, forms in self._eq.solves.items():
             # Unpack the bits of information we want
             matform, vecform = forms
-            matname = matform.form_data().name
-            vecname = vecform.form_data().name
+            matname, vecname = matform.form_data().name, vecform.form_data().name
             f = self._fields[self._eq.getResultCoeffName(count)]
+
+            if self._eq.opts['profiling']:
+                # Performance counter variables
+                assemble_time = Variable(f.name+'_assemble_time', Real())
+                solve_time = Variable(f.name+'_solve_time', Real())
+                self._counters[f.name] = (assemble_time, solve_time)
+                # Start timing assembly
+                func.append(startTiming())
 
             # Get sparsity of the field we're solving for
             sparsity = Variable(matname+'_sparsity', OpSparsity)
@@ -279,8 +316,18 @@ class Op2AssemblerBackend(AssemblerBackend):
             for _, name in vecform.form_data().named_integrals:
                 func.append(opParLoop(name, self.elem_set, arguments))
 
+            if self._eq.opts['profiling']:
+                # Stop timing assembly
+                func.append(endTiming(assemble_time))
+                # Start timing solve
+                func.append(startTiming())
+
             # Solve
             func.append(opSolve(matrix, vector, f.dat))
+
+            if self._eq.opts['profiling']:
+                # Stop timing solve
+                func.append(endTiming(solve_time))
 
             # Free temporaries
             func.append(opFreeVec(vector))
