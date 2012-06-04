@@ -199,9 +199,10 @@ class Op2AssemblerBackend(AssemblerBackend):
         func.append(opExit())
 
         if self._eq.opts['profiling']:
-            for name, (assemble_time, solve_time) in self._counters.items():
-                func.append(FunctionCall('printf', [Literal(name+" assembly time (ms): %f\\n"), assemble_time]))
-                func.append(FunctionCall('printf', [Literal(name+" solve time (ms): %f\\n"), solve_time]))
+            for name, (sparsity_time, assemble_time, solve_time) in self._counters.items():
+                func.append(FunctionCall('printf', [Literal(name+" sparsity build time (s): %f\\n"), sparsity_time]))
+                func.append(FunctionCall('printf', [Literal(name+" assembly time (s): %f\\n"), assemble_time]))
+                func.append(FunctionCall('printf', [Literal(name+" solve time (s): %f\\n"), solve_time]))
 
         return func
 
@@ -211,7 +212,8 @@ class Op2AssemblerBackend(AssemblerBackend):
 
         if self._eq.opts['profiling']:
             prof_decl = GlobalScope(PreprocessorScope('__EDG__', rose_includes, seq_includes))
-            for assemble_time, solve_time in self._counters.values():
+            for sparsity_time, assemble_time, solve_time in self._counters.values():
+                prof_decl.append(InitialisationOp(sparsity_time, Literal(0.0)))
                 prof_decl.append(InitialisationOp(assemble_time, Literal(0.0)))
                 prof_decl.append(InitialisationOp(solve_time, Literal(0.0)))
             return prof_decl
@@ -274,9 +276,10 @@ class Op2AssemblerBackend(AssemblerBackend):
 
             if self._eq.opts['profiling']:
                 # Performance counter variables
+                sparsity_time = Variable(f.name+'_sparsity_time', Real())
                 assemble_time = Variable(f.name+'_assemble_time', Real())
                 solve_time = Variable(f.name+'_solve_time', Real())
-                self._counters[f.name] = (assemble_time, solve_time)
+                self._counters[f.name] = (sparsity_time, assemble_time, solve_time)
                 # Start timing assembly
                 func.append(startTiming())
 
@@ -284,6 +287,12 @@ class Op2AssemblerBackend(AssemblerBackend):
             sparsity = Variable(matname+'_sparsity', OpSparsity)
             call = opDeclSparsity(f.map, f.map, sparsity.name())
             func.append(AssignmentOp(Declaration(sparsity), call))
+
+            if self._eq.opts['profiling']:
+                # Stop timing assembly
+                func.append(endTiming(sparsity_time))
+                # Start timing solve
+                func.append(startTiming())
 
             # Call the op_par_loops
             dtArg = opArgGbl(dtp, Literal(1), OpInc)
