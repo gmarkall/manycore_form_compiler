@@ -450,6 +450,11 @@ class PlusAssignmentOp(BinaryOp):
     def __init__(self, lhs, rhs):
         BinaryOp.__init__(self, lhs, rhs, ' += ')
 
+class MinusAssignmentOp(BinaryOp):
+
+    def __init__(self, lhs, rhs):
+        BinaryOp.__init__(self, lhs, rhs, ' -= ')
+
 class InitialisationOp(AssignmentOp):
 
     def unparse(self):
