@@ -308,11 +308,6 @@ extern "C" void initialise_gpu_()
   op_init(0, 0, 2);
 }
 
-extern "C" void finalise_gpu_()
-{
-  op_exit();
-}
-
 extern "C" void run_model_(double* dt_pointer)
 {
   void* state = get_state();
@@ -357,6 +352,11 @@ extern "C" void return_fields_()
   void* state = get_state();
   op_field_struct Velocity = extract_op_vector_field(state, "Velocity", 8, 0);
   op_fetch_data(Velocity.dat);
+}
+
+extern "C" void finalise_gpu_()
+{
+  op_exit();
 }
 
 

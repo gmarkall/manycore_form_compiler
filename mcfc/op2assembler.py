@@ -139,9 +139,9 @@ class Op2AssemblerBackend(AssemblerBackend):
         declarations = GlobalScope()
         declarations.append(self._buildFakeInitialiser())
         declarations.append(self._buildInitialiser())
-        declarations.append(self._buildFinaliser())
         declarations.append(self._buildRunModel())
         declarations.append(self._buildReturnFields())
+        declarations.append(self._buildFinaliser())
 
         # Build definitions
         # This comes last since it requires information from earlier steps

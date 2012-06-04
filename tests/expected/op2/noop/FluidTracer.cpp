@@ -35,11 +35,6 @@ extern "C" void initialise_gpu_()
   op_init(0, 0, 2);
 }
 
-extern "C" void finalise_gpu_()
-{
-  op_exit();
-}
-
 extern "C" void run_model_(double* dt_pointer)
 {
   void* state = get_state();
@@ -62,6 +57,11 @@ extern "C" void run_model_(double* dt_pointer)
 extern "C" void return_fields_()
 {
 
+}
+
+extern "C" void finalise_gpu_()
+{
+  op_exit();
 }
 
 
