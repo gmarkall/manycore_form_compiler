@@ -58,11 +58,11 @@ class UflEquation:
            method in a derived class to do any necessary initialisation."""
         pass
 
-    def execPipeline(self, fd, driver):
+    def execPipeline(self, fd, driver, opts=None):
         "Invokes the code generation pipeline"
         raise NotImplementedError("You're supposed to implement execPipeline()")
 
-    def execVisualisePipeline(self, outputFile, objvis):
+    def execVisualisePipeline(self, outputFile, objvis, opts=None):
         "Invokes the visualisation pipeline"
         raise NotImplementedError("You're supposed to implement execVisualisePipeline()")
 

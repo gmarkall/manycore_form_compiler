@@ -87,12 +87,14 @@ class FluidityEquation(UflEquation):
         self = formutils.partition(self)
         return self
 
-    def execPipeline(self, fd, driver):
+    def execPipeline(self, fd, driver, opts=None):
+        self.opts = opts
         self = self._execCommonPipeline()
 
         driver.drive(self, fd)
 
-    def execVisualisePipeline(self, outputFile, objvis):
+    def execVisualisePipeline(self, outputFile, objvis, opts=None):
+        self.opts = opts
         self = self._execCommonPipeline()
 
         self.visualise(outputFile, objvis)

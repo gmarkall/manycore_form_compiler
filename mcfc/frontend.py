@@ -100,10 +100,10 @@ def run(inputFile, opts = None):
         outputFile = outputFileBase + "/" + equation.name
 
         if vis:
-            equation.execVisualisePipeline(outputFile, objvis)
+            equation.execVisualisePipeline(outputFile, objvis, opts)
         else:
             with screen or open(outputFile+extensions[backend], 'w') as fd:
-                equation.execPipeline(fd, drivers[backend])
+                equation.execPipeline(fd, drivers[backend], opts)
 
 def _get_options():
     try: 
