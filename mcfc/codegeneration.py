@@ -291,17 +291,14 @@ class CudaKernelCall(FunctionCall):
 class Scope(Scoped):
 
     def __init__(self, statements=None):
-        s = as_list(statements)
-        s = filter(lambda x: not isinstance(x, NullExpression), s)
-        self._statements = s
+        self._statements = self._filter_nullexpr(statements)
 
-    def append(self, statement):
-        if not isinstance(statement, NullExpression):
-            self._statements.append(statement)
+    def append(self, statements):
+        self._statements.extend(self._filter_nullexpr(statements))
 
-    def prepend(self, statement):
-        if not isinstance(statement, NullExpression):
-            self._statements.insert(0, statement)
+    def prepend(self, statements):
+        for s in reversed(self._filter_nullexpr(statements)):
+            self._statements.insert(0, s)
 
     def find(self, matches):
         for s in self._statements:
@@ -323,6 +320,9 @@ class Scope(Scoped):
         decIndent()
         code += '\n' + getIndent() + '}'
         return code
+
+    def _filter_nullexpr(self, items):
+        return filter(lambda x: not isinstance(x, NullExpression), as_list(items))
 
     __str__ = unparse
 
