@@ -27,6 +27,7 @@
                       (warning: creates very big PDFs), implies --visualise
       -o:<filename>   to specify the output filename (- to print to stdout)
       -g, --debug     enable debugging mode (drop into pdb on error)
+      -p, --profiling instrument generated code for profiling
       -b:<backend>    to specify the backend (defaults to CUDA)"""
 
 # Python libs
@@ -40,6 +41,7 @@ extensions = {'cuda': '.cu', 'op2': '.cpp'}
 def run(inputFile, opts = None):
 
     # Parse options
+    generator_options = { 'profiling': False }
 
     # Debugging mode
     debug = False
@@ -80,6 +82,10 @@ def run(inputFile, opts = None):
         else:
             outputFileBase = os.path.splitext(opts['o'])[0]
 
+    # Profiling
+    if 'p' in opts or 'profiling' in opts:
+        generator_options['profiling'] = True
+
     # PDF visualiser
     vis = False
     if 'visualise' in opts or 'v' in opts:
@@ -100,15 +106,15 @@ def run(inputFile, opts = None):
         outputFile = outputFileBase + "/" + equation.name
 
         if vis:
-            equation.execVisualisePipeline(outputFile, objvis, opts)
+            equation.execVisualisePipeline(outputFile, objvis, generator_options)
         else:
             with screen or open(outputFile+extensions[backend], 'w') as fd:
-                equation.execPipeline(fd, drivers[backend], opts)
+                equation.execPipeline(fd, drivers[backend], generator_options)
 
 def _get_options():
     try: 
-        opts_list, args = getopt.getopt(sys.argv[1:], "b:ghvo:",
-            ["debug", "visualise", "objvisualise"])
+        opts_list, args = getopt.getopt(sys.argv[1:], "b:ghpvo:",
+            ["debug", "objvisualise", "profiling", "visualise"])
     except getopt.error, msg:
         print msg
         print __doc__
