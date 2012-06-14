@@ -76,16 +76,16 @@ __global__ void A_0(int n_ele, double* localTensor, double dt, double* c0)
           double ST0 = 0.0;
           double ST2 = 0.0;
           ST1 += -1 * CG1[i_r_0][i_g] * CG1[i_r_1][i_g];
-          double l95[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
-          double l35[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
+          double l1718[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
+          double l1218[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
           ST2 += c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0];
-          for(int i_d_5 = 0; i_d_5 < 2; i_d_5++)
+          for(int i_d_18 = 0; i_d_18 < 2; i_d_18++)
           {
-            for(int i_d_3 = 0; i_d_3 < 2; i_d_3++)
+            for(int i_d_12 = 0; i_d_12 < 2; i_d_12++)
             {
-              for(int i_d_9 = 0; i_d_9 < 2; i_d_9++)
+              for(int i_d_17 = 0; i_d_17 < 2; i_d_17++)
               {
-                ST0 += (l35[i_d_3][i_d_5] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_3] * (l95[i_d_9][i_d_5] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_1][i_g][i_d_9];
+                ST0 += (l1218[i_d_12][i_d_18] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_12] * (l1718[i_d_17][i_d_18] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_1][i_g][i_d_17];
               }
             }
           }

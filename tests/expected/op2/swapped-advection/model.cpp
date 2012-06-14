@@ -75,14 +75,14 @@ void rhs_0(double** localTensor, double* dt, double* c0[2], double* c1[1], doubl
       double ST1 = 0.0;
       double ST2 = 0.0;
       ST0 += CG1[i_r_0][i_g] * c_q1[i_g];
-      double l5[2] = { c_q2[i_g][1], c_q2[i_g][0] };
-      double l35[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
+      double l361[2] = { c_q2[i_g][1], c_q2[i_g][0] };
+      double l360361[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
       ST2 += c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0];
-      for(int i_d_5 = 0; i_d_5 < 2; i_d_5++)
+      for(int i_d_361 = 0; i_d_361 < 2; i_d_361++)
       {
-        for(int i_d_3 = 0; i_d_3 < 2; i_d_3++)
+        for(int i_d_360 = 0; i_d_360 < 2; i_d_360++)
         {
-          ST1 += (l35[i_d_3][i_d_5] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_3] * l5[i_d_5];
+          ST1 += (l360361[i_d_360][i_d_361] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_360] * l361[i_d_361];
         }
       }
       localTensor[i_r_0][0] += ST2 * (c_q1[i_g] * *dt * ST1 + ST0) * w[i_g];

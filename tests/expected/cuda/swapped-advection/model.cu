@@ -89,14 +89,14 @@ __global__ void rhs_0(int n_ele, double* localTensor, double dt, double* c0, dou
         double ST1 = 0.0;
         double ST2 = 0.0;
         ST0 += CG1[i_r_0][i_g] * c_q1[i_g];
-        double l5[2] = { c_q2[i_g][1], c_q2[i_g][0] };
-        double l35[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
+        double l184[2] = { c_q2[i_g][1], c_q2[i_g][0] };
+        double l183184[2][2] = { { c_q0[i_g][1][1], -1 * c_q0[i_g][0][1] }, { -1 * c_q0[i_g][1][0], c_q0[i_g][0][0] } };
         ST2 += c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0];
-        for(int i_d_5 = 0; i_d_5 < 2; i_d_5++)
+        for(int i_d_184 = 0; i_d_184 < 2; i_d_184++)
         {
-          for(int i_d_3 = 0; i_d_3 < 2; i_d_3++)
+          for(int i_d_183 = 0; i_d_183 < 2; i_d_183++)
           {
-            ST1 += (l35[i_d_3][i_d_5] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_3] * l5[i_d_5];
+            ST1 += (l183184[i_d_183][i_d_184] / (c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0])) * d_CG1[i_r_0][i_g][i_d_183] * l184[i_d_184];
           }
         }
         localTensor[i_ele + n_ele * i_r_0] += ST2 * (c_q1[i_g] * dt * ST1 + ST0) * w[i_g];

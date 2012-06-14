@@ -124,9 +124,9 @@ void A_0(double* localTensor, double* dt, double* c0[2], int i_r_0, int i_r_1)
     double ST1 = 0.0;
     double ST0 = 0.0;
     ST1 += c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0];
-    for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+    for(int i_d_355 = 0; i_d_355 < 2; i_d_355++)
     {
-      ST0 += CG1_v[i_d_0][i_r_0][i_g] * CG1_v[i_d_0][i_r_1][i_g];
+      ST0 += CG1_v[i_d_355][i_r_0][i_g] * CG1_v[i_d_355][i_r_1][i_g];
     }
     localTensor[0] += ST0 * ST1 * w[i_g];
   }
@@ -265,9 +265,9 @@ void RHS_0(double** localTensor, double* dt, double* c0[2], double* c1[2])
       double ST3 = 0.0;
       double ST2 = 0.0;
       ST3 += c_q0[i_g][0][0] * c_q0[i_g][1][1] + -1 * c_q0[i_g][0][1] * c_q0[i_g][1][0];
-      for(int i_d_0 = 0; i_d_0 < 2; i_d_0++)
+      for(int i_d_354 = 0; i_d_354 < 2; i_d_354++)
       {
-        ST2 += CG1_v[i_d_0][i_r_0][i_g] * c_q1[i_g][i_d_0];
+        ST2 += CG1_v[i_d_354][i_r_0][i_g] * c_q1[i_g][i_d_354];
       }
       localTensor[i_r_0][0] += ST2 * ST3 * w[i_g];
     }
