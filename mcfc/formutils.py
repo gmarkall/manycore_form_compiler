@@ -22,7 +22,6 @@
 # UFL libs
 from ufl.argument import Argument
 from ufl.coefficient import Coefficient
-from ufl.common import Counted
 # FIXME: adapt to UFL module refactoring in rev 1299
 try:
     from ufl.operatorbase import Operator
